@@ -1,0 +1,16 @@
+nimble
+glue
+stringr
+cli
+dplyr
+rmarkdown
+ggplot2
+coda
+microbenchmark
+StanHeaders
+rstan
+knitr
+nimbleHMC
+ggrepel
+magick
+MASS

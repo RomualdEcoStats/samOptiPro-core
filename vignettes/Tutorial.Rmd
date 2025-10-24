@@ -1,0 +1,404 @@
+---
+title: "Exploring Differentiability and Sampler Optimization in NIMBLE: A Step-by-Step Tutorial with *samOptiPro*"
+author: "Romuald H"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  bookdown::html_document2:
+    fig_caption: yes
+    number_sections: yes
+    toc: no
+  bookdown::pdf_document2:
+    fig_caption: yes
+    toc: no
+    latex_engine: xelatex  # Utiliser xelatex pour gérer Unicode
+  bookdown::word_document2:
+    fig_caption: yes
+    number_sections: yes
+    toc: no
+linestretch: 1.5
+site: bookdown::bookdown_site
+language: en-EN
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(coda)
+library(ggrepel)
+library(ggplot2)
+library(magick)
+library(MASS) 
+library(nimble)
+library(nimbleHMC)
+devtools::load_all("~/Scorff LCM_model1/samOptiPro")
+devtools::document()
+library(samOptiPro)
+knitr::opts_chunk$set(dev = "ragg_png",comment=NA, echo = FALSE,  cache=TRUE, message=FALSE,warning=FALSE, error=FALSE,fig.width=8,fig.height=4,bg="transparent", cache.lazy=FALSE)
+set.seed(123)
+ilogit <- plogis; logit <- qlogis
+`%||%` <- function(x, y) if (is.null(x)) y else x
+
+```
+
+#1. Introduction
+
+This tutorial demonstrates how to **diagnose differentiability** and **optimize MCMC sampling strategies** in complex Bayesian state–space models using the R package **`samOptiPro`** (Hounyeme *et al.*, 2025).  
+We illustrate the workflow on a simple population dynamics model, using `nimble` and `nimbleHMC` as the computational back-end.
+
+We will:
+- Build and simulate a **population growth model** with latent process and log-normal observations.
+- Diagnose **non-differentiable components** (to decide whether HMC/NUTS is applicable).
+- Automatically **benchmark samplers** (RW, Slice, AF_slice, HMC, NUTS) using `test_differentiability_block()`.
+- Assess **algorithmic (AE)** and **computational efficiency (CE)**.
+
+All results (traceplots, diagnostics, and performance summaries) are saved under `outputs/`.
+
+## 2. Model Definition — M3.nimble
+```{r M3.nimble/M3.nondiff}
+M3.nimble <- nimbleCode({
+  # priors
+  for(t in 1:(n-1)){
+    logit_theta[t] ~ dnorm(mean = 2, sd = 1)
+    theta[t] <- ilogit(logit_theta[t])
+  }
+  N[1] ~ dlnorm(meanlog = 10, sdlog = 5)
+
+  # process model
+  for(t in 1:(n-1)){
+    N[t+1] <- N[t] * theta[t]
+  }
+
+  # observation model
+  Nobs[1] ~ dlnorm(meanlog = log(N[1]), sdlog = sd_obs[1])
+  for(t in 3:n){
+    Nobs[t] ~ dlnorm(meanlog = log(N[t]), sdlog = sd_obs[t])
+  }
+})
+
+print(M3.nimble)
+
+# M3_nondiff
+M3_nondiff <- nimble::nimbleCode({
+  # priors
+  for(t in 1:(n-1)){
+    logit_theta[t] ~ dnorm(mean = 2, sd = 1)
+    theta[t] <- ilogit(logit_theta[t])
+  }
+  N[1] ~ dlnorm(meanlog = 10, sdlog = 5)
+
+  # process model
+  for(t in 1:(n-1)){
+    N[t+1] <- N[t] * theta[t]
+  }
+
+  # Modification : Rounding of a latent state used in likelihood: NON-DIFF
+  for(t in 1:n){
+    N_rounded[t] <- round(N[t])                          # <<< MOD (round)
+  }
+
+  # We plug plausibility into the rounded version.
+  Nobs[1] ~ dlnorm(meanlog = log(N_rounded[1]), sdlog = sd_obs[1])   # <<< MOD (use N_rounded)
+  for(t in 3:n){
+    Nobs[t] ~ dlnorm(meanlog = log(N_rounded[t]), sdlog = sd_obs[t]) # <<< MOD (use N_rounded)
+  }
+})
+
+print(M3_nondiff)
+```
+
+
+#3. Simulated Data and Initial Values
+
+```{r data, echo=FALSE}
+# Simulation constants
+time <- 8
+Const_nimble <- list(
+  n        = time,
+  sd_dummy = 0.05,
+  sd_obs   = c(0.05, rep(0.4, time - 1))
+)
+
+# Data simulation
+set.seed(42)
+Nobs  <- numeric(time)
+theta <- numeric(time - 1)
+Nobs[1] <- rlnorm(1, meanlog = 10, sdlog = 0.5)
+for(t in 1:(time - 1)){
+  theta[t]  <- runif(1, 0.7, 0.9)
+  Nobs[t+1] <- Nobs[t] * theta[t]
+}
+Data_nimble <- list(Nobs = Nobs)
+
+# Initial values
+Inits_nimble <- list(
+  N           = 2e4 * c(1, cumprod(rep(0.8, time - 1))),
+  logit_theta = rep(logit(0.8), time - 1)
+)
+
+```
+
+#4. Building and Compiling the Model
+```{r Building & Compiling}
+nimbleOptions(buildInterfacesForCompiledNestedNimbleFunctions = TRUE)
+nimbleOptions(MCMCsaveHistory = FALSE)
+
+monitors = c("N", "theta", "logit_theta")
+#(1)
+m  <- nimbleModel(code = M3.nimble, name = "M3",
+                  constants = Const_nimble,
+                  data = Data_nimble,
+                  inits = Inits_nimble,buildDerivs=TRUE)
+cm <- compileNimble(m)
+
+build_M3 <- function() list(
+  model    = m,
+  cmodel   = cm,
+  monitors = monitors,
+  code_text = paste(deparse(M3_nondiff), collapse = "\n")
+)
+#(2) 
+
+m2  <- nimbleModel(code = M3_nondiff, name = "M3_2",
+                  constants = Const_nimble,
+                  data = Data_nimble,
+                  inits = Inits_nimble)#, buildDerivs=TRUE
+cm2 <- compileNimble(m2)
+
+build_M3_2 <- function() list(
+  model2     = m2,
+  cmodel2    = cm2,
+  monitors  = monitors,
+  code_text = paste(deparse(M3_nondiff), collapse = "\n")
+)
+
+```
+#5. Diagnosing Differentiability and HMC Eligibility
+```{r Diagnosing Differentiability and HMC Eligibility,message=FALSE, warning=FALSE}
+cat("\n[MODEL STRUCTURE CHECK]\n")
+diag_s <- diagnose_model_structure(m)
+cat(sprintf("- Stochastic nodes   : %d\n", length(diag_s$stochastic_nodes)))
+cat(sprintf("- Deterministic nodes: %d\n", length(diag_s$deterministic_nodes)))
+
+diff <- test_differentiability(
+  build_M3,
+  monitors = monitors,
+  try_hmc  = TRUE,
+  nchains  = 3,
+  pilot_niter  = 4000,
+  pilot_burnin = 1000,
+  thin     = 2,
+  out_dir  = "outputs/diagnostics_preliminary"
+)
+
+diff$messages
+diff$plan
+diff$baseline$performance$summary
+diff$strategy$performance$summary
+
+#Non_diff
+cat("\n[MODEL STRUCTURE CHECK]\n")
+diag_s2 <- diagnose_model_structure(m2)
+cat(sprintf("- Stochastic nodes   : %d\n", length(diag_s2$stochastic_nodes)))
+cat(sprintf("- Deterministic nodes: %d\n", length(diag_s2$deterministic_nodes)))
+out2 <- run_structure_and_hmc_test(build_M3_2, include_data = FALSE, try_hmc = TRUE)
+
+diff2 <- test_differentiability(
+  build_M3_2,
+  monitors = monitors,
+  try_hmc  = TRUE,
+  nchains  = 3,
+  pilot_niter  = 4000,
+  pilot_burnin = 1000,
+  thin     = 2,
+  out_dir  = "outputs/diagnostics_preliminary2"
+)
+
+diff2$messages
+diff2$plan
+diff2$baseline$performance$summary
+diff2$strategy$performance$summary
+```
+#Adaptive Block Strategy — test_differentiability_block()
+```{r Adaptive Block Strategy — test_differentiability_block(),message=FALSE, warning=FALSE}
+diffB <- test_differentiability_block(
+  build_M3,
+  monitors = monitors,
+  try_hmc  = TRUE,
+  nchains  = 3,
+  pilot_niter  = 4000,
+  pilot_burnin = 1000,
+  thin     = 2,
+  out_dir  = "outputs/diagnostics_block",
+  family_mode = "auto",
+  corr_threshold = 0.3,
+  rwblock_control = list(adaptScaleOnly = TRUE)
+)
+
+diffB$messages
+diffB$plan$mode_global
+diffB$baseline$performance$summary
+diffB$strategy$performance$summary
+#Non_diff
+diffB2 <- test_differentiability_block(
+  build_M3_2,
+  monitors = monitors,
+  try_hmc  = TRUE,
+  nchains  = 3,
+  pilot_niter  = 4000,
+  pilot_burnin = 1000,
+  thin     = 2,
+  out_dir  = "outputs/diagnostics_block2",
+  family_mode = "auto",
+  corr_threshold = 0.3,
+  rwblock_control = list(adaptScaleOnly = TRUE)
+)
+
+diffB2$messages
+diffB2$plan$mode_global
+diffB2$baseline$performance$summary
+diffB2$strategy$performance$summary
+
+```
+#family_mode = "auto" lets the algorithm decide between:
+block sampling (using NUTS / AF_slice / RW_block when correlations are high), or slice_each (independent samplers otherwise).
+
+##7. Baseline MCMC and Performance Assessment
+
+```{r  Baseline MCMC and Performance Assessment,message=FALSE, warning=FALSE}
+n.iter   <- 1e6
+n.burnin <- 1e4
+n.thin   <- 2
+n.chains <- 3
+
+res_b <- run_baseline_config(
+  build_M3,
+  niter   = n.iter,
+  nburnin = n.burnin,
+  nchains = n.chains,
+  thin    = n.thin,
+  monitors = monitors
+)
+
+samples_ml <- as_mcmc_list_sop(res_b$samples, res_b$samples2,
+                               drop_loglik = FALSE, thin = n.thin)
+
+runtime_s <- res_b$runtime_s
+ap  <- assess_performance(samples_ml, runtime_s)
+bot <- identify_bottlenecks(samples_ml, res_b$runtime_s, top_k = 20)
+bot$details$algo   # worst bot in AE (low AE)
+bot$details$comp   # worst bot in CE (high cost)
+bot$details$joint  # worst bot "simultaniously" (rank aggregation)
+
+#Non diff
+res_b2 <- run_baseline_config(
+  build_M3_2,
+  niter   = n.iter,
+  nburnin = n.burnin,
+  nchains = n.chains,
+  thin    = n.thin,
+  monitors = monitors
+)
+
+samples_ml2 <- as_mcmc_list_sop(res_b2$samples, res_b2$samples2,
+                               drop_loglik = FALSE, thin = n.thin)
+
+runtime_s2 <- res_b2$runtime_s
+ap2  <- assess_performance(samples_ml2, runtime_s2)
+bot2 <- identify_bottlenecks(samples_ml2, res_b2$runtime_s, top_k = 20)
+bot2$details$algo 
+bot2$details$comp   
+bot2$details$joint  
+
+```
+
+#8. Visualization and Diagnostics
+```{r  Visualization and Diagnostics,message=FALSE, warning=FALSE}
+diag_tbl <- compute_diag_from_mcmc(samples_ml, runtime_s = res_b$runtime_s)
+
+plots_cv<-plot_convergence_checks(samples_ml,
+  out_dir = "outputs/diagnostics",
+  make_rhat_hist   = TRUE,
+  make_rhat_ecdf   = TRUE,
+  make_traces_rhat = FALSE,
+  make_traces_ae   = TRUE
+)
+
+print(plots_cv$rhat_ecdf)
+print(plots_cv$rhat_hist)
+print(plots_cv$traces_ae)
+
+
+plots_bn <- plot_bottlenecks(
+  diag_tbl,
+  out_dir = "outputs/diagnostics",
+  make_time_targets   = TRUE,
+  make_esss_targets   = TRUE,
+  make_esss_families  = TRUE,
+  make_time_families  = FALSE,
+  make_joint_targets  = FALSE,
+  make_joint_families = FALSE,
+  make_rhat_hist_targets    = TRUE,
+  make_rhat_ecdf_targets    = TRUE,
+  make_rhat_worst_targets   = TRUE,
+  make_rhat_median_families = TRUE
+)
+print(plots_bn$rhat_hist_targets)
+print(plots_bn$rhat_ecdf_targets)
+print(plots_bn$rhat_median_families)
+print(plots_bn$time_targets)
+print(plots_bn$esss_families)
+#Non diff
+diag_tbl2 <- compute_diag_from_mcmc(samples_ml2, runtime_s2 = res_b2$runtime_s)
+
+plots_cv2<-plot_convergence_checks(samples_ml2,
+  out_dir = "outputs/diagnostics2",
+  make_rhat_hist   = TRUE,
+  make_rhat_ecdf   = TRUE,
+  make_traces_rhat = FALSE,
+  make_traces_ae   = TRUE
+)
+
+print(plots_cv2$rhat_ecdf)
+print(plots_cv2$rhat_hist)
+print(plots_cv2$traces_ae)
+
+
+plots_bn2 <- plot_bottlenecks(
+  diag_tbl2,
+  out_dir = "outputs/diagnostics2",
+  make_time_targets   = TRUE,
+  make_esss_targets   = TRUE,
+  make_esss_families  = TRUE,
+  make_time_families  = FALSE,
+  make_joint_targets  = FALSE,
+  make_joint_families = FALSE,
+  make_rhat_hist_targets    = TRUE,
+  make_rhat_ecdf_targets    = TRUE,
+  make_rhat_worst_targets   = TRUE,
+  make_rhat_median_families = TRUE
+)
+print(plots_bn2$rhat_hist_targets)
+print(plots_bn2$rhat_ecdf_targets)
+print(plots_bn2$rhat_median_families)
+print(plots_bn2$time_targets)
+print(plots_bn2$esss_families)
+#L’ECDF (Empirical Cumulative Distribution Function) affiche la proportion cumulée de nœuds dont le Rhat est inférieur à un #certain seuil.
+```
+#plot_bottlenecks() visualizes the worst nodes in terms of ESS/s (Algorithmic Efficiency) and runtime (Computational Efficiency).
+plot_convergence_checks() produces traceplots, autocorrelation, and R-hat diagnostics for the top problematic parameters
+#9. Conclusions
+
+This workflow highlights how samOptiPro helps:
+
+Detect non-differentiable nodes that prevent HMC/NUTS usage.
+
+Automatically switch between gradient-based and non-gradient samplers.
+
+Quantify algorithmic and computational efficiency for each parameter family.
+
+Provide transparent diagnostic plots and benchmark reports.
+
+Even for a simple state–space model, the adaptive block design ensures faster convergence and improved mixing without manual tuning.
+#10. References

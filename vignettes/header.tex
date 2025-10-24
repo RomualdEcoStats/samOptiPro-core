@@ -1,0 +1,87 @@
+% ===========================
+% Thème & couleurs
+% ===========================
+\usetheme{Boadilla}
+\usecolortheme{spruce}
+\usefonttheme{default}             % Police beamer par défaut (LM)
+\useoutertheme[subsection=true]{miniframes}
+
+% On enlève les icônes de navigation + légendes numérotées
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{caption}[numbered]
+
+% Palette couleurs (définitions sûres)
+\usepackage{xcolor}
+\definecolor{MSUgreen}{HTML}{18453B}   % vert soutenu lisible
+\definecolor{HeadGray}{gray}{0.25}     % gris foncé pour bandeau
+\definecolor{SubGray}{gray}{0.45}      % gris moyen pour sous-bandeau
+
+% Couleurs du bandeau/entête miniframes
+\setbeamercolor{section in head/foot}{fg=white,    bg=HeadGray}
+\setbeamercolor{subsection in head/foot}{fg=white, bg=SubGray}
+
+% (Facultatif) zones titre/auteur en pied de page si utilisées par ton template
+\setbeamercolor{title in head/foot}{fg=black, bg=white!50!MSUgreen}
+\setbeamercolor{author in head/foot}{fg=white!85!MSUgreen, bg=MSUgreen}
+
+% ===========================
+% Typo & microtypographie
+% ===========================
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}               % meilleures césures/espaces
+
+% Marges de texte un peu augmentées pour limiter les coupures
+\setbeamersize{text margin left=0.9cm, text margin right=0.9cm}
+
+% ===========================
+% Images : jamais rognées
+% ===========================
+\usepackage{graphicx}
+% Par défaut : occuper la largeur, limiter la hauteur, conserver le ratio
+\setkeys{Gin}{width=\linewidth,height=0.80\textheight,keepaspectratio}
+% (Optionnel) chemins d’images
+% \graphicspath{{figs/}{plots/}{images/}}
+
+% ===========================
+% Code : listings + retour à la ligne
+% ===========================
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  breakatwhitespace=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  frame=single,
+  framerule=0.3pt,
+  tabsize=2,
+  numbers=left,
+  numberstyle=\tiny,
+  numbersep=6pt
+}
+% (Optionnel) couleurs douces pour listings
+\lstset{
+  keywordstyle=\bfseries,
+  commentstyle=\itshape,
+  stringstyle={}
+}
+% (Optionnel) un style R simple
+% \lstdefinelanguage{Rstat}{
+%   language=R,
+%   morekeywords={set.seed,library,readr,dplyr,ggplot2}
+% }
+% \lstset{language=Rstat}
+
+% ===========================
+% Titres longs & (cont.)
+% ===========================
+% Ajoute " (cont.) " automatiquement quand une frame est scindée par \framebreak
+\setbeamertemplate{frametitle continuation}[from second][(cont.)]
+
+% ===========================
+% (Optionnel) Nettoyage de l’entête/pied Boadilla si besoin
+% ===========================
+% \setbeamertemplate{footline}[frame number]   % juste le numéro de slide
+% \setbeamertemplate{headline}{}               % supprimer l’entête si tu préfères

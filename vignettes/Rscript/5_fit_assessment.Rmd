@@ -1,0 +1,297 @@
+---
+title: "Fit Assessment for model `r model_name`"
+author: "Remi Patin"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    css: toc.css
+    toc: true
+    toc_depth: 5
+    number_sections: true
+---
+
+```{r global_options,include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE,fig.width=8,fig.height=4,bg="transparent")
+```
+
+# Abundances
+
+## Smolt
+
+```{r}
+df_fit <- readRDS(glue("../outputs_figures/Fit Assessment/fit_N3_tot_{model_name}.rds"))
+
+subdf <- df_fit %>% 
+  mutate(year = 1993+year) %>% 
+  group_by(type, year) %>% 
+  summarize(minvalue = min(value),
+            maxvalue = max(value),
+            q25 = quantile(value, p = 0.25),
+            q75 = quantile(value, p = 0.75),
+            q50 = quantile(value, p = 0.5),
+            q5 = quantile(value, p = 0.05),
+            q95 = quantile(value, p = 0.95),
+            .groups = 'drop')
+
+ggplot(filter(subdf, type == "output"))+
+  geom_ribbon(aes(x=year, ymin = q5, ymax = q95), alpha = 0.25)+
+  geom_line(aes(x=year, y = q50), alpha = 0.5)+
+  geom_point(data = filter(subdf, type == "data"),
+             aes(x=year, y = q50),col = "red")+
+  geom_linerange(data = filter(subdf, type == "data"),
+             aes(x=year, ymin = q5, ymax = q95), size = 0.25,col = "red")+
+  scale_y_log10()+
+  xlab("Year")+
+  ylab("Smolt Abundance")
+
+```
+
+## 1SW
+
+```{r}
+df_fit <- readRDS(glue("../outputs_figures/Fit Assessment/fit_N6_{model_name}.rds"))
+
+subdf <- df_fit %>% 
+  mutate(year = 1993+year) %>% 
+  group_by(type, year) %>% 
+  summarize(minvalue = min(value),
+            maxvalue = max(value),
+            q25 = quantile(value, p = 0.25),
+            q75 = quantile(value, p = 0.75),
+            q50 = quantile(value, p = 0.5),
+            q5 = quantile(value, p = 0.05),
+            q95 = quantile(value, p = 0.95),
+            .groups = 'drop')
+
+ggplot(filter(subdf, type == "output"))+
+  geom_ribbon(aes(x=year, ymin = q5, ymax = q95), alpha = 0.25)+
+  geom_line(aes(x=year, y = q50), alpha = 0.5)+
+  geom_point(data = filter(subdf, type == "data"),
+             aes(x=year, y = q50),col = "red")+
+  geom_linerange(data = filter(subdf, type == "data"),
+             aes(x=year, ymin = q5, ymax = q95), size = 0.25,col = "red")+
+  scale_y_log10()+
+  xlab("Year")+
+  ylab("Return 1SW Abundance")
+
+```
+
+
+## 2SW
+
+```{r}
+df_fit <- readRDS(glue("../outputs_figures/Fit Assessment/fit_N9_{model_name}.rds"))
+
+subdf <- df_fit %>% 
+  mutate(year = 1993+year) %>% 
+  group_by(type, year) %>% 
+  summarize(minvalue = min(value),
+            maxvalue = max(value),
+            q25 = quantile(value, p = 0.25),
+            q75 = quantile(value, p = 0.75),
+            q50 = quantile(value, p = 0.5),
+            q5 = quantile(value, p = 0.05),
+            q95 = quantile(value, p = 0.95),
+            .groups = 'drop')
+
+ggplot(filter(subdf, type == "output"))+
+  geom_ribbon(aes(x=year, ymin = q5, ymax = q95), alpha = 0.25)+
+  geom_line(aes(x=year, y = q50), alpha = 0.5)+
+  geom_point(data = filter(subdf, type == "data"),
+             aes(x=year, y = q50),col = "red")+
+  geom_linerange(data = filter(subdf, type == "data"),
+             aes(x=year, ymin = q5, ymax = q95), size = 0.25,col = "red")+
+  scale_y_log10()+
+  xlab("Year")+
+  ylab("Return 2SW Abundance")
+
+```
+
+# Sex-ratio
+
+## Smolt
+
+```{r}
+df_fit <- readRDS(glue("../outputs_figures/Fit Assessment/fit_sex_ratio_smolt_{model_name}.rds"))
+
+subdf <- df_fit %>% 
+  mutate(year = 1993+year) %>% 
+  group_by(type, year) %>% 
+  summarize(minvalue = min(value),
+            maxvalue = max(value),
+            q25 = quantile(value, p = 0.25),
+            q75 = quantile(value, p = 0.75),
+            q50 = quantile(value, p = 0.5),
+            q5 = quantile(value, p = 0.05),
+            q95 = quantile(value, p = 0.95),
+            .groups = 'drop')
+
+ggplot(filter(subdf, type == "output"))+
+  geom_ribbon(aes(x=year, ymin = q5, ymax = q95), alpha = 0.25)+
+  geom_line(aes(x=year, y = q50), alpha = 0.5)+
+  geom_point(data = filter(subdf, type == "data"),
+             aes(x=year, y = q50),col = "red")+
+  geom_linerange(data = filter(subdf, type == "data"),
+             aes(x=year, ymin = q5, ymax = q95), size = 0.25,col = "red")+
+  xlab("Year")+
+  ylim(0,1)+
+  ylab("Prop. female in smolts")
+
+```
+
+## 1SW
+
+```{r}
+df_fit <- readRDS(glue("../outputs_figures/Fit Assessment/fit_sex_ratio_1SW_{model_name}.rds"))
+
+subdf <- df_fit %>% 
+  mutate(year = 1993+year) %>% 
+  group_by(type, year) %>% 
+  summarize(minvalue = min(value),
+            maxvalue = max(value),
+            q25 = quantile(value, p = 0.25),
+            q75 = quantile(value, p = 0.75),
+            q50 = quantile(value, p = 0.5),
+            q5 = quantile(value, p = 0.05),
+            q95 = quantile(value, p = 0.95),
+            .groups = 'drop')
+
+ggplot(filter(subdf, type == "output"))+
+  geom_ribbon(aes(x=year, ymin = q5, ymax = q95), alpha = 0.25)+
+  geom_line(aes(x=year, y = q50), alpha = 0.5)+
+  geom_point(data = filter(subdf, type == "data"),
+             aes(x=year, y = q50),col = "red")+
+  geom_linerange(data = filter(subdf, type == "data"),
+             aes(x=year, ymin = q5, ymax = q95), size = 0.25,col = "red")+
+  xlab("Year")+
+  ylim(0,1)+
+  ylab("Prop. female in 1SW returns")
+
+```
+
+## 2SW
+
+```{r}
+df_fit <- readRDS(glue("../outputs_figures/Fit Assessment/fit_sex_ratio_2SW_{model_name}.rds"))
+# df_fit <- readRDS(glue("outputs_figures/Fit Assessment/fit_sex_ratio_2SW_{model_name}.rds"))
+
+subdf <- df_fit %>% 
+  mutate(year = 1993+year) %>% 
+  group_by(type, year) %>% 
+  summarize(minvalue = min(value),
+            maxvalue = max(value),
+            q25 = quantile(value, p = 0.25),
+            q75 = quantile(value, p = 0.75),
+            q50 = quantile(value, p = 0.5),
+            q5 = quantile(value, p = 0.05),
+            q95 = quantile(value, p = 0.95),
+            .groups = 'drop')
+
+ggplot(filter(subdf, type == "output"))+
+  geom_ribbon(aes(x=year, ymin = q5, ymax = q95), alpha = 0.25)+
+  geom_line(aes(x=year, y = q50), alpha = 0.5)+
+  geom_point(data = filter(subdf, type == "data"),
+             aes(x=year, y = q50),col = "red")+
+  geom_linerange(data = filter(subdf, type == "data"),
+             aes(x=year, ymin = q5, ymax = q95), size = 0.25,col = "red")+
+  xlab("Year")+
+  ylim(0,1)+
+  ylab("Prop. female in 2SW returns")
+
+```
+
+# Homewater catches
+
+
+## 1SW
+
+```{r}
+df_fit <- readRDS(glue("../outputs_figures/Fit Assessment/fit_C6_hw_{model_name}.rds"))
+# df_fit <- readRDS(glue("outputs_figures/Fit Assessment/fit_C6_hw_{model_name}.rds"))
+
+subdf <- df_fit %>% 
+  mutate(year = 1993+year) %>% 
+  group_by(type, year) %>% 
+  summarize(minvalue = min(value),
+            maxvalue = max(value),
+            q25 = quantile(value, p = 0.25),
+            q75 = quantile(value, p = 0.75),
+            q50 = quantile(value, p = 0.5),
+            q5 = quantile(value, p = 0.05),
+            q95 = quantile(value, p = 0.95),
+            .groups = 'drop')
+
+ggplot(filter(subdf, type == "output"))+
+  geom_ribbon(aes(x=year, ymin = q5, ymax = q95), alpha = 0.25)+
+  geom_line(aes(x=year, y = q50), alpha = 0.5)+
+  geom_point(data = filter(subdf, type == "data"),
+             aes(x=year, y = q50),col = "red")+
+  geom_linerange(data = filter(subdf, type == "data"),
+             aes(x=year, ymin = q5, ymax = q95), size = 0.25,col = "red")+
+  scale_y_log10()+
+  xlab("Year")+
+  ylab("Homewater catches 1SW")
+
+```
+
+## 2SW
+
+```{r}
+df_fit <- readRDS(glue("../outputs_figures/Fit Assessment/fit_C9_hw_{model_name}.rds"))
+
+subdf <- df_fit %>% 
+  mutate(year = 1993+year) %>% 
+  group_by(type, year) %>% 
+  summarize(minvalue = min(value),
+            maxvalue = max(value),
+            q25 = quantile(value, p = 0.25),
+            q75 = quantile(value, p = 0.75),
+            q50 = quantile(value, p = 0.5),
+            q5 = quantile(value, p = 0.05),
+            q95 = quantile(value, p = 0.95),
+            .groups = 'drop')
+
+ggplot(filter(subdf, type == "output"))+
+  geom_ribbon(aes(x=year, ymin = q5, ymax = q95), alpha = 0.25)+
+  geom_line(aes(x=year, y = q50), alpha = 0.5)+
+  geom_point(data = filter(subdf, type == "data"),
+             aes(x=year, y = q50),col = "red")+
+  geom_linerange(data = filter(subdf, type == "data"),
+             aes(x=year, ymin = q5, ymax = q95), size = 0.25,col = "red")+
+  scale_y_log10()+
+  xlab("Year")+
+  ylab("Homewater catches 2SW")
+
+```
+
+
+# Smolt Freshwater age
+
+```{r}
+df_fit <- readRDS(glue("../outputs_figures/Fit Assessment/fit_freshwater_age_smolt_{model_name}.rds"))
+# df_fit <- readRDS(glue("outputs_figures/Fit Assessment/fit_freshwater_age_smolt_{model_name}.rds"))
+
+subdf <- df_fit %>% 
+  mutate(year = 1993+year) %>% 
+  group_by(type, year) %>% 
+  summarize(minvalue = min(value),
+            maxvalue = max(value),
+            q25 = quantile(value, p = 0.25),
+            q75 = quantile(value, p = 0.75),
+            q50 = quantile(value, p = 0.5),
+            q5 = quantile(value, p = 0.05),
+            q95 = quantile(value, p = 0.95),
+            .groups = 'drop')
+
+ggplot(filter(subdf, type == "output"))+
+  geom_ribbon(aes(x=year, ymin = q5, ymax = q95), alpha = 0.25)+
+  geom_line(aes(x=year, y = q50), alpha = 0.5)+
+  geom_point(data = filter(subdf, type == "data"),
+             aes(x=year, y = q50),col = "red")+
+  geom_linerange(data = filter(subdf, type == "data"),
+             aes(x=year, ymin = q5, ymax = q95), size = 0.25,col = "red")+
+  xlab("Year")+
+  ylim(0,1)+
+  ylab("Prop. smolt 1\nin migrating smolts")
+
+```

@@ -1,0 +1,534 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+  10pt,
+  ignorenonframetext,
+  aspectratio=169]{beamer}
+\usepackage{pgfpages}
+\setbeamertemplate{caption}[numbered]
+\setbeamertemplate{caption label separator}{: }
+\setbeamercolor{caption name}{fg=normal text.fg}
+\beamertemplatenavigationsymbolsempty
+% Prevent slide breaks in the middle of a paragraph
+\widowpenalties 1 10000
+\raggedbottom
+\setbeamertemplate{part page}{
+  \centering
+  \begin{beamercolorbox}[sep=16pt,center]{part title}
+    \usebeamerfont{part title}\insertpart\par
+  \end{beamercolorbox}
+}
+\setbeamertemplate{section page}{
+  \centering
+  \begin{beamercolorbox}[sep=12pt,center]{section title}
+    \usebeamerfont{section title}\insertsection\par
+  \end{beamercolorbox}
+}
+\setbeamertemplate{subsection page}{
+  \centering
+  \begin{beamercolorbox}[sep=8pt,center]{subsection title}
+    \usebeamerfont{subsection title}\insertsubsection\par
+  \end{beamercolorbox}
+}
+\AtBeginPart{
+  \frame{\partpage}
+}
+\AtBeginSection{
+  \ifbibliography
+  \else
+    \frame{\sectionpage}
+  \fi
+}
+\AtBeginSubsection{
+  \frame{\subsectionpage}
+}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\usetheme[]{metropolis}
+\usecolortheme{dove}
+\usefonttheme{professionalfonts}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\newif\ifbibliography
+\usepackage{listings}
+\newcommand{\passthrough}[1]{#1}
+\lstset{defaultdialect=[5.3]Lua}
+\lstset{defaultdialect=[x86masm]Assembler}
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+% ===========================
+% Thème & couleurs
+% ===========================
+\usetheme{Boadilla}
+\usecolortheme{spruce}
+\usefonttheme{default}             % Police beamer par défaut (LM)
+\useoutertheme[subsection=true]{miniframes}
+
+% On enlève les icônes de navigation + légendes numérotées
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{caption}[numbered]
+
+% Palette couleurs (définitions sûres)
+\usepackage{xcolor}
+\definecolor{MSUgreen}{HTML}{18453B}   % vert soutenu lisible
+\definecolor{HeadGray}{gray}{0.25}     % gris foncé pour bandeau
+\definecolor{SubGray}{gray}{0.45}      % gris moyen pour sous-bandeau
+
+% Couleurs du bandeau/entête miniframes
+\setbeamercolor{section in head/foot}{fg=white,    bg=HeadGray}
+\setbeamercolor{subsection in head/foot}{fg=white, bg=SubGray}
+
+% (Facultatif) zones titre/auteur en pied de page si utilisées par ton template
+\setbeamercolor{title in head/foot}{fg=black, bg=white!50!MSUgreen}
+\setbeamercolor{author in head/foot}{fg=white!85!MSUgreen, bg=MSUgreen}
+
+% ===========================
+% Typo & microtypographie
+% ===========================
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}               % meilleures césures/espaces
+
+% Marges de texte un peu augmentées pour limiter les coupures
+\setbeamersize{text margin left=0.9cm, text margin right=0.9cm}
+
+% ===========================
+% Images : jamais rognées
+% ===========================
+\usepackage{graphicx}
+% Par défaut : occuper la largeur, limiter la hauteur, conserver le ratio
+\setkeys{Gin}{width=\linewidth,height=0.80\textheight,keepaspectratio}
+% (Optionnel) chemins d’images
+% \graphicspath{{figs/}{plots/}{images/}}
+
+% ===========================
+% Code : listings + retour à la ligne
+% ===========================
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  breakatwhitespace=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  frame=single,
+  framerule=0.3pt,
+  tabsize=2,
+  numbers=left,
+  numberstyle=\tiny,
+  numbersep=6pt
+}
+% (Optionnel) couleurs douces pour listings
+\lstset{
+  keywordstyle=\bfseries,
+  commentstyle=\itshape,
+  stringstyle={}
+}
+% (Optionnel) un style R simple
+% \lstdefinelanguage{Rstat}{
+%   language=R,
+%   morekeywords={set.seed,library,readr,dplyr,ggplot2}
+% }
+% \lstset{language=Rstat}
+
+% ===========================
+% Titres longs & (cont.)
+% ===========================
+% Ajoute " (cont.) " automatiquement quand une frame est scindée par \framebreak
+\setbeamertemplate{frametitle continuation}[from second][(cont.)]
+
+% ===========================
+% (Optionnel) Nettoyage de l’entête/pied Boadilla si besoin
+% ===========================
+% \setbeamertemplate{footline}[frame number]   % juste le numéro de slide
+% \setbeamertemplate{headline}{}               % supprimer l’entête si tu préfères
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Optimizing Samplers in NIMBLE},
+  pdfauthor={Romuald H.},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Optimizing Samplers in NIMBLE}
+\author{Romuald H.}
+\date{21 octobre 2025}
+
+\begin{document}
+\frame{\titlepage}
+
+\begin{frame}[fragile]
+\#Introduction
+
+This tutorial demonstrates how to \textbf{diagnose differentiability}
+and \textbf{optimize MCMC sampling strategies} in complex Bayesian
+state--space models using the R package
+\textbf{\passthrough{\lstinline!samOptiPro!}} (Hounyeme \emph{et al.},
+2025).\\
+We illustrate the workflow on a simple population dynamics model, using
+\passthrough{\lstinline!nimble!} and \passthrough{\lstinline!nimbleHMC!}
+as the computational back-end.
+
+We will: - Build and simulate a \textbf{population growth model} with
+latent process and log-normal observations. - Identify bottelenecks
+(Algorithmic bottelenecks or and Time bottelelnecks) - Diagnose
+\textbf{non-differentiable components} (to decide whether HMC/NUTS is
+applicable). - Automatically \textbf{benchmark samplers} (RW, Slice,
+AF\_slice, HMC, NUTS) using
+\passthrough{\lstinline!test\_strategy\_block()!}. - Assess
+\textbf{algorithmic (AE)} and \textbf{computational efficiency (CE)}.
+
+All results (traceplots, diagnostics, and performance summaries) are
+saved under \passthrough{\lstinline!outputs/!}.
+\end{frame}
+
+\begin{frame}[fragile]{Step 0- Load packages}
+\phantomsection\label{step-0--load-packages}
+\#Step 1. Simulated Data, Initial Values and monitors
+
+\#Step 2. Model M3
+
+\begin{lstlisting}
+{
+    for (t in 1:(n - 1)) {
+        logit_theta[t] ~ dnorm(mean = 2, sd = 1)
+        theta[t] <- ilogit(logit_theta[t])
+    }
+    N[1] ~ dlnorm(meanlog = 10, sdlog = 5)
+    for (t in 1:(n - 1)) {
+        N[t + 1] <- N[t] * theta[t]
+    }
+    Nobs[1] ~ dlnorm(meanlog = log(N[1]), sdlog = sd_obs[1])
+    for (t in 3:n) {
+        Nobs[t] ~ dlnorm(meanlog = log(N[t]), sdlog = sd_obs[t])
+    }
+}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Step 3. Building and Compiling the Model}
+\phantomsection\label{step-3.-building-and-compiling-the-model}
+\end{frame}
+
+\begin{frame}[fragile]{Step 4 . Diagnosing Differentiability and HMC
+Eligibility}
+\phantomsection\label{step-4-.-diagnosing-differentiability-and-hmc-eligibility}
+\begin{lstlisting}
+
+[MODEL STRUCTURE CHECK]
+\end{lstlisting}
+
+\begin{lstlisting}
+- Stochastic nodes   : 8
+\end{lstlisting}
+
+\begin{lstlisting}
+- Deterministic nodes: 21
+\end{lstlisting}
+
+\begin{lstlisting}
+
+[STRUCTURE]
+- #stochastic nodes   : 8
+- #deterministic nodes: 21
+
+[NON-DIFF INDICES]
+- Non-diff functions detected : None
+- Distributions found in code  : dlnorm, dnorm
+- BUGS truncation ‘T(a,b)’ spotted : NO
+- Bounded latent nodes (bounds on naturally unbounded support) : NO
+- Naturally bounded latent nodes (e.g., dbeta/dunif/dtriangle)   : NO
+
+[HMC/NUTS BLOCKERS]
+- No explicit blockers detected at latent nodes.
+
+- HMC globally possible ? Yes
+
+[TEST DIFFERENTIABILITY / HMC]
+===== Monitors =====
+thin = 1: logit_theta, N
+===== Samplers =====
+RW sampler (8)
+  - logit_theta[]  (7 elements)
+  - N[]  (1 element)
+thin = 1: logit_theta, N, theta
+===== Monitors =====
+thin = 1: logit_theta, N
+===== Samplers =====
+NUTS sampler (1)
+  - logit_theta[1], logit_theta[2], logit_theta[3], logit_theta[4], logit_theta[5], logit_theta[6], logit_theta[7] 
+===== Comments =====
+\end{lstlisting}
+
+\begin{lstlisting}
+- HMC possible ? Yes
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Step 5. Baseline MCMC, Bottelenecks and
+Performance Assessment}
+\phantomsection\label{step-5.-baseline-mcmc-bottelenecks-and-performance-assessment}
+\begin{lstlisting}
+===== Monitors =====
+thin = 2: logit_theta, N, theta
+thin2 = 1: logit_theta, N
+===== Samplers =====
+RW sampler (8)
+  - logit_theta[]  (7 elements)
+  - N[]  (1 element)
+thin = 2: logit_theta, N, theta
+thin2 = 1: logit_theta, N
+thin = 2: logit_theta, N, theta
+thin2 = 2: logit_theta, N
+\end{lstlisting}
+
+\begin{lstlisting}
+|-------------|-------------|-------------|-------------|
+|-------------------------------------------------------|
+\end{lstlisting}
+
+\begin{lstlisting}
+|-------------|-------------|-------------|-------------|
+|-------------------------------------------------------|
+\end{lstlisting}
+
+\begin{lstlisting}
+|-------------|-------------|-------------|-------------|
+|-------------------------------------------------------|
+\end{lstlisting}
+
+\begin{lstlisting}
+[1] 21.226
+\end{lstlisting}
+
+\begin{lstlisting}
+# A tibble: 1 x 11
+  runtime_s n_chains n_iter n_params ESS_total ESS_per_s AE_mean AE_median
+      <dbl>    <int>  <int>    <int>     <dbl>     <dbl>   <dbl>     <dbl>
+1      21.2        3 495000       37 20730297.   976646.   0.377     0.324
+# i 3 more variables: CE_mean <dbl>, CE_median <dbl>, prop_rhat_ok <dbl>
+\end{lstlisting}
+
+\begin{lstlisting}
+    axis      family n_members    AE_med   CE_med    slowdown AE_rank CE_rank
+1  joint       theta         7 0.2737351 19150.88 0.002460045       1       1
+2  joint logit_theta        14 0.2839887 19868.24 0.002371223       2       2
+3  joint           N        16 0.4283805 29970.08 0.001571969       3       3
+4   algo       theta         7 0.2737351 19150.88 0.002460045       1       1
+5   algo logit_theta        14 0.2839887 19868.24 0.002371223       2       2
+6   algo           N        16 0.4283805 29970.08 0.001571969       3       3
+7   comp       theta         7 0.2737351 19150.88 0.002460045       1       1
+8   comp logit_theta        14 0.2839887 19868.24 0.002371223       2       2
+9   comp           N        16 0.4283805 29970.08 0.001571969       3       3
+10  slow       theta         7 0.2737351 19150.88 0.002460045       1       1
+11  slow logit_theta        14 0.2839887 19868.24 0.002371223       2       2
+12  slow           N        16 0.4283805 29970.08 0.001571969       3       3
+   SLOW_rank JOINT JOINT_rank
+1          1     3          1
+2          2     6          2
+3          3     9          3
+4          1     3          1
+5          2     6          2
+6          3     9          3
+7          1     3          1
+8          2     6          2
+9          3     9          3
+10         1     3          1
+11         2     6          2
+12         3     9          3
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Step 6-Adaptive Block Strategy ---
+test\_strategy\_block()}
+\phantomsection\label{step-6-adaptive-block-strategy-test_strategy_block}
+\begin{lstlisting}
+===== Monitors =====
+thin = 2: logit_theta, N, theta
+thin2 = 1: logit_theta, N
+===== Samplers =====
+RW sampler (8)
+  - logit_theta[]  (7 elements)
+  - N[]  (1 element)
+thin = 2: logit_theta, N, theta
+thin2 = 1: logit_theta, N
+thin = 2: logit_theta, N, theta
+thin2 = 2: logit_theta, N
+===== Monitors =====
+thin = 2: logit_theta, N, theta
+thin2 = 1: logit_theta, N
+===== Samplers =====
+RW sampler (8)
+  - logit_theta[]  (7 elements)
+  - N[]  (1 element)
+thin = 2: logit_theta, N, theta
+thin2 = 1: logit_theta, N
+thin = 2: logit_theta, N, theta
+thin2 = 2: logit_theta, N
+\end{lstlisting}
+
+\begin{lstlisting}
+|-------------|-------------|-------------|-------------|
+|-------------------------------------------------------|
+\end{lstlisting}
+
+\begin{lstlisting}
+|-------------|-------------|-------------|-------------|
+|-------------------------------------------------------|
+\end{lstlisting}
+
+\begin{lstlisting}
+|-------------|-------------|-------------|-------------|
+|-------------------------------------------------------|
+\end{lstlisting}
+
+\begin{lstlisting}
+[1] "familles ciblées: theta"
+\end{lstlisting}
+
+\begin{lstlisting}
+[1] "HMC_full"
+\end{lstlisting}
+
+\begin{lstlisting}
+              metric      value
+1 ESS_per_sec_median  0.3207935
+2          runtime_s 16.0590000
+\end{lstlisting}
+
+\begin{lstlisting}
+              metric      value
+1 ESS_per_sec_median  0.3207935
+2          runtime_s 16.0590000
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Step-7. Visualization and Diagnostics}
+\phantomsection\label{step-7.-visualization-and-diagnostics}
+\begin{lstlisting}[language=R]
+diag_tbl <- compute_diag_from_mcmc(samples_ml, runtime_s = res_b$runtime_s)
+
+plots_cv<-plot_convergence_checks(samples_ml,
+  out_dir = "outputs/diagnostics",
+  make_rhat_hist   = TRUE,
+  make_rhat_ecdf   = TRUE,
+  make_traces_rhat = FALSE,
+  make_traces_ae   = FALSE
+)
+
+print(plots_cv$rhat_ecdf)
+\end{lstlisting}
+
+\begin{figure}
+\includegraphics[width=0.9\linewidth]{Tutorial_M3b_files/figure-beamer/Visualization and Diagnostics-1} \end{figure}
+
+\begin{lstlisting}[language=R]
+print(plots_cv$rhat_hist)
+\end{lstlisting}
+
+\begin{figure}
+\includegraphics[width=0.9\linewidth]{Tutorial_M3b_files/figure-beamer/Visualization and Diagnostics-2} \end{figure}
+
+\begin{lstlisting}[language=R]
+plots_bn <- plot_bottlenecks(
+  diag_tbl,
+  out_dir = "outputs/diagnostics",
+  make_time_targets   = FALSE,
+  make_esss_targets   = FALSE,
+  make_esss_families  = TRUE,
+  make_time_families  = TRUE,
+  make_joint_targets  = FALSE,
+  make_joint_families = FALSE,
+  make_rhat_hist_targets    = FALSE,
+  make_rhat_ecdf_targets    = TRUE,
+  make_rhat_worst_targets   = FALSE,
+  make_rhat_median_families = TRUE
+)
+
+print(plots_bn$rhat_ecdf_targets)
+\end{lstlisting}
+
+\begin{figure}
+\includegraphics[width=0.9\linewidth]{Tutorial_M3b_files/figure-beamer/Visualization and Diagnostics-3} \end{figure}
+
+\begin{lstlisting}[language=R]
+print(plots_bn$rhat_median_families)
+\end{lstlisting}
+
+\begin{figure}
+\includegraphics[width=0.9\linewidth]{Tutorial_M3b_files/figure-beamer/Visualization and Diagnostics-4} \end{figure}
+
+\begin{lstlisting}[language=R]
+print(plots_bn$time_families)
+\end{lstlisting}
+
+\begin{figure}
+\includegraphics[width=0.9\linewidth]{Tutorial_M3b_files/figure-beamer/Visualization and Diagnostics-5} \end{figure}
+
+\begin{lstlisting}[language=R]
+print(plots_bn$esss_families)
+\end{lstlisting}
+
+\begin{figure}
+\includegraphics[width=0.9\linewidth]{Tutorial_M3b_files/figure-beamer/Visualization and Diagnostics-6} \end{figure}
+
+\begin{lstlisting}[language=R]
+#The Empirical Cumulative Distribution Function (ECDF) displays the cumulative proportion of nodes whose Rhat is below a certain threshold.
+#plot_bottlenecks() visualizes the worst nodes in terms of ESS/s (Algorithmic Efficiency) and runtime (Computational Efficiency).
+#plot_convergence_checks() produces traceplots, autocorrelation, and R-hat diagnostics for the top problematic parameters
+\end{lstlisting}
+
+\#9. Conclusions
+
+This workflow highlights how samOptiPro helps:
+
+Detect non-differentiable nodes that prevent HMC/NUTS usage.
+
+Automatically switch between gradient-based and non-gradient samplers.
+
+Quantify algorithmic and computational efficiency for each parameter
+family.
+
+Provide transparent diagnostic plots and benchmark reports.
+
+Even for a simple state--space model, the adaptive block design ensures
+faster convergence and improved mixing without manual tuning.
+
+\#10. References
+\end{frame}
+
+\end{document}
