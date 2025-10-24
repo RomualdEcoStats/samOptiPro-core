@@ -45,7 +45,7 @@ diagnose_model_structure(
 
 \item{node_of_interest}{Optional character vector of nodes to highlight or subset (reserved for user logic) (default \code{NULL}).}
 
-\item{sampler_times}{Optional numeric vector of per-sampler times aligned with \code{configureMCMC(model)$getSamplers()}.}
+\item{sampler_times}{Optional numeric vector of per-sampler times aligned with \code{nimble::configureMCMC(model)$getSamplers()}.}
 
 \item{sampler_times_unit}{Character label for time axis (e.g., \code{"seconds"}, \code{"ms"}) (default \code{"seconds"}).}
 
@@ -59,13 +59,13 @@ diagnose_model_structure(
 
 \item{profile_seed}{Optional integer seed for reproducibility (default \code{NULL}).}
 
-\item{np}{Proportion in (0,1] used elsewhere for “worst sampler” selection (kept for API compatibility) (default \code{0.10}).}
+\item{np}{Proportion in (0,1] used elsewhere for "worst sampler" selection (kept for API compatibility) (default \code{0.10}).}
 
 \item{by_family}{Logical; if \code{TRUE}, compute and plot family-level summaries in addition to parameter-level (default \code{TRUE}).}
 
 \item{family_stat}{One of \code{c("median","mean","sum")}; summary statistic for family-level aggregation (default \code{"median"}).}
 
-\item{time_normalize}{One of \code{c("none","per_node")}; if \code{"per_node"}, divide family time by the number of distinct nodes in the family (default \code{"none"}).}
+\item{time_normalize}{One of \code{c("none","per_node")}; if \code{"per_node"}, divide family time by the number of distinct nodes in the stats::family(default \code{"none"}).}
 
 \item{only_family_plots}{Logical; if \code{TRUE}, only family-level figures are exported (parameter plots not written).}
 

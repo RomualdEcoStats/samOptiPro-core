@@ -2,7 +2,7 @@
 % Please edit documentation in R/runners.R
 \name{run_baseline_coda}
 \alias{run_baseline_coda}
-\title{Run baseline et retourne un mcmc.list fusionné (samples + samples2)}
+\title{Run baseline et retourne un mcmc.list fusionne (samples + samples2)}
 \usage{
 run_baseline_coda(
   build_fn,
@@ -16,5 +16,5 @@ run_baseline_coda(
 )
 }
 \description{
-Run baseline et retourne un mcmc.list fusionné (samples + samples2)
+Run baseline et retourne un mcmc.list fusionne (samples + samples2)
 }

@@ -79,8 +79,8 @@ prints/plots diagnostics, and returns. Otherwise it switches to a
 stochastic bottleneck nodes, and iteratively applies samplers on 1 or more nodes
 (\code{nbot}) in the order:
 \itemize{
-\item scalar: \code{NUTS} → \code{slice} → \code{RW}
-\item block (when \code{nbot >= 2}): \code{NUTS_block} → \code{AF_slice} → \code{RW_block}
+\item scalar: \code{NUTS} -> \code{slice} -> \code{RW}
+\item block (when \code{nbot >= 2}): \code{NUTS_block} -> \code{AF_slice} -> \code{RW_block}
 }
 After each assignment, a short MCMC is run, a side-by-side comparison versus the
 baseline is printed (runtime, AE = ESS/iter, CE = ESS/s, Rhat), clean plots are saved

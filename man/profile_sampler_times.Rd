@@ -2,7 +2,7 @@
 % Please edit documentation in R/diagnostics.R
 \name{profile_sampler_times}
 \alias{profile_sampler_times}
-\title{Sampler time profiling aligned with \code{conf$getSamplers()}}
+\title{Profile sampler times per node/family}
 \usage{
 profile_sampler_times(
   model,
@@ -39,9 +39,9 @@ profile_sampler_times(
 
 \item{progress}{Logical; print simple 10\\% progress.}
 
-\item{cmodel}{A compiled \code{nimbleModel} (the \code{project} for compilation).}
+\item{cmodel}{A compiled \code{nimbleModel}.}
 
-\item{mcmc_conf}{An MCMC configuration (\code{configureMCMC(model)}); if \code{NULL}, an automatic attempt is made.}
+\item{mcmc_conf}{An MCMC configuration (e.g., \code{nimble::configureMCMC(model)}). If \code{NULL}, an automatic attempt is made.}
 
 \item{include_data}{Logical; include data nodes (default \code{FALSE}).}
 
@@ -64,31 +64,7 @@ profile_sampler_times(
 \item{...}{Additional arguments passed to \code{nimble::configureMCMC()} (e.g., \code{print = FALSE}, \code{useConjugacy = FALSE}).}
 }
 \value{
-A numeric vector of elapsed time per sampler (in seconds), padded or
-truncated to match the number of samplers in \code{conf}.
-
-A list with \code{stochastic_nodes}, \code{deterministic_nodes}, and \code{dims}.
-
-A list with:
-\itemize{
-\item \code{stochastic_nodes} (character): filtered stochastic nodes,
-\item \code{deterministic_nodes} (character): filtered deterministic nodes,
-\item \code{dims} (named list): dimensions for each base (root) variable (no indices),
-\item \code{nodes}: \code{NULL} (backward compatibility),
-\item \code{dependencies_df} (data.frame): table of (node, dependency) (NA if none),
-\item \code{dep_counts} (data.frame): (nodename, n, type, family) with n = #filtered deps,
-\item \code{dep_summary} (data.frame): median dependencies by (type, family),
-\item \code{plot_regular} (gg or \code{NULL}): ggplot medians by family for type == "Regular",
-\item \code{node_of_interest_deps} (character or \code{NULL}): downstream deps for requested node.
-}
-
-A list:
-\preformatted{
-  (stochastic_nodes, deterministic_nodes, dims, nodes = NULL,
-   dependencies_df, dep_counts, dep_summary, plot_regular,
-   node_of_interest_deps,
-   samplers_df, n_samplers, prop_worst)
-}
+A list with (at least) data frames per node/family and (optionally) ggplot objects.
 
 A list:
 \preformatted{
@@ -98,6 +74,8 @@ A list:
    samplers_df, n_samplers, prop_worst,
    mcmc_conf)  # configuration created internally
 }
+
+Profile per-sampler elapsed times (uncompiled MCMC, R-level granularity)
 
 A numeric vector of length \code{length(conf$getSamplers())}, aligned with the
 sampler order returned by \code{conf$getSamplers()}. Units are seconds.
@@ -110,29 +88,6 @@ by instrumenting calls to each samplerFunction$run() over a short run.
 Numeric vector of length \code{length(conf$getSamplers())}, seconds per sampler (aligned by index).
 }
 \description{
-Builds and compiles an MCMC from a provided configuration, runs
-\code{run(niter, time = TRUE)}, and returns per-sampler elapsed times
-aligned with the order of \code{conf$getSamplers()}.
-
-Analyze a NIMBLE model to list stochastic/deterministic nodes, the dimensions
-of base variables, and \strong{downstream dependencies} between nodes.
-Artificial nodes created by NIMBLE (e.g., \code{lifted_*}, \code{logProb_*}) are
-\strong{ignored}, as are nodes explicitly excluded via \code{removed_nodes}.
-Optionally, the function:
-\itemize{
-\item exports a CSV of dependencies per node,
-\item computes a family-level summary (base name without indices),
-\item draws a ggplot2 barplot of \strong{medians} of dependency counts per family
-(for regular nodes) if \code{plot_dependencies = TRUE}.
-}
-
-Analyze a NIMBLE model to obtain stochastic/deterministic nodes, dimensions,
-\strong{downstream dependencies} (filtered of artificial nodes), and \strong{samplers}
-(type & targets) from an MCMC configuration.
-Artificial nodes \code{lifted_*}, \code{logProb_*}, and \code{removed_nodes} are
-\strong{ignored} throughout. Optional: CSV export of dependencies and a ggplot2 barplot
-of median dependencies per family.
-
 Analyze a NIMBLE model: stochastic/deterministic nodes, dimensions,
 \strong{downstream dependencies} (ignoring artificial nodes), and \strong{samplers}
 (type & targets) from an MCMC configuration \strong{built internally} via
@@ -140,10 +95,15 @@ Analyze a NIMBLE model: stochastic/deterministic nodes, dimensions,
 
 Artificial nodes \code{lifted_*}, \code{logProb_*}, and \code{removed_nodes} are
 \strong{ignored} everywhere. Optionally: CSV export and ggplot2 barplot of
-\strong{medians} of dependencies by family (with \strong{labels = count}).
+\strong{medians} of dependencies by stats::family(with \strong{labels = count}).
 
 Build an uncompiled MCMC (\code{nimble::buildMCMC(conf)}) and measure wall-clock
 elapsed time spent in each sampler by instrumenting calls to \code{sampler$run()}
 over a short run. This preserves \strong{per-sampler granularity}, which is lost in
 compiled MCMC.
+}
+\examples{
+\dontrun{
+  # p <- profile_sampler_times(cmodel, mcmc_conf)
+}
 }

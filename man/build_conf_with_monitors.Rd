@@ -7,7 +7,7 @@
 build_conf_with_monitors(model, monitors = NULL, opts = samOptiPro_options())
 }
 \arguments{
-\item{model}{nimbleModel (ou compilé; on accepte les deux)}
+\item{model}{nimbleModel (ou compile; on accepte les deux)}
 
 \item{monitors}{optional character vector; if NULL, auto-discover}
 

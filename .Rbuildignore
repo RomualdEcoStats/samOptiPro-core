@@ -1,2 +1,11 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^^vignettes/Rscript/\.*$$
+^^vignettes/\.*_cache/\.*$$
+^^vignettes/\.*/__packages$$
+^^vignettes/\.*\\.tex$$
+^^vignettes/input_data/\.*$$
+^^vignettes/model/\.*$$
+^^vignettes/Test\\.R$$
+^^Tutorial\.*\\.Rmd$$
+^LICENSE\.md$

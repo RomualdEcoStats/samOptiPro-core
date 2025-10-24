@@ -9,12 +9,12 @@
 \arguments{
 \item{model}{nimbleModel}
 
-\item{opts}{list from samOptiPro_options(); champs supportés :
+\item{opts}{list from samOptiPro_options(); champs supportes :
 \itemize{
 \item include_data      : logical, inclure les data nodes dans l'exploration (rarement utile)
-\item include_logLik    : logical, inclure "logLik" dans la sélection par défaut
-\item extra_monitors    : character(), variables supplémentaires à monitorer (samples)
-\item extra_monitors2   : character(), variables supplémentaires à monitorer en monitors2 (samples2)
+\item include_logLik    : logical, inclure "logLik" dans la selection par defaut
+\item extra_monitors    : character(), variables supplementaires a monitorer (samples)
+\item extra_monitors2   : character(), variables supplementaires a monitorer en monitors2 (samples2)
 }}
 }
 \value{

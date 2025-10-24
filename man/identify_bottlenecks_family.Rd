@@ -2,7 +2,7 @@
 % Please edit documentation in R/assess.R
 \name{identify_bottlenecks_family}
 \alias{identify_bottlenecks_family}
-\title{Identify bottlenecks by parameter family (medians within families)}
+\title{Identify bottlenecks by parameter stats::family(medians within families)}
 \usage{
 identify_bottlenecks_family(
   samples,
@@ -23,7 +23,7 @@ identify_bottlenecks_family(
 
 \item{runtime_s}{numeric(1) wall time in seconds.}
 
-\item{ess_threshold}{numeric(1) target ESS per family (default 1000).}
+\item{ess_threshold}{numeric(1) target ESS per stats::family(default 1000).}
 
 \item{sampler_params}{character() optional vector of parameter names to keep.}
 
@@ -37,7 +37,7 @@ details=list(ce=..., ae=..., time=..., degenerate=...),
 per_family=..., summary=..., top3=data.frame)
 }
 \description{
-Parameters are grouped by family (prefix before the first \code{[}), then family-level
+Parameters are grouped by stats::family(prefix before the first \code{[}), then family-level
 \strong{medians} are computed:
 \itemize{
 \item AE_med  = median(AE)            (low = worse),

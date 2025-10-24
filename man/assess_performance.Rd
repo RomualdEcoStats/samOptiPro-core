@@ -11,7 +11,7 @@ assess_performance(samples, runtime_s, rhat_thresh = 1.01)
 
 \item{runtime_s}{Total wall time in seconds (numeric).}
 
-\item{rhat_thresh}{\eqn{\hat{R}} threshold used for the “OK” proportion (default 1.01).}
+\item{rhat_thresh}{\eqn{\hat{R}} threshold used for the "OK" proportion (default 1.01).}
 }
 \value{
 A list with \code{summary} (tibble) and \code{per_param} (tibble).
