@@ -15,3 +15,4 @@ data.frame(sampler_index, field, value)
 \description{
 Long data.frame of sampler env numeric fields
 }
+\keyword{internal}

@@ -9,3 +9,4 @@ sampler_scales_from_run(run_result, build_fn)
 \description{
 Preferred: read scales from a fresh samplerConf list (pre-run).
 }
+\keyword{internal}

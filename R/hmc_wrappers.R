@@ -26,6 +26,7 @@
 #'   out$diag_tbl
 #' }
 #' @export
+#' @keywords internal
 configure_hmc_safely <- function(build_fn,
                                  niter, nburnin, thin,
                                  monitors, nchains,

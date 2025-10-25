@@ -133,9 +133,10 @@ res <- test_strategy(
   out_dir  = "outputs/diagnostics"
 )
 }
-
+test_strategy
 }
 \seealso{
 \code{\link{configure_hmc_safely}},
 \code{\link{plot_convergence_checks}}, \code{\link{plot_bottlenecks}}
 }
+\keyword{internal}

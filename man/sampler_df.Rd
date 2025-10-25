@@ -11,3 +11,4 @@ sampler_df(samplers)
 Return a data.frame (name, type, target, scale) from a sampler container.
 Accepts: samplerConf list (conf$getSamplers()) or other sampler-like lists.
 }
+\keyword{internal}

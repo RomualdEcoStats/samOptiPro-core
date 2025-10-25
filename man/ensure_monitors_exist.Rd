@@ -18,3 +18,4 @@ sous-ensemble valide de \code{monitors}, avec warning soft si certains manquent
 Valide une liste de monitors donnee au NIVEAU VARIABLE (sans indices).
 Ne "coupe" plus selon les noeuds indexes ; on verifie juste que la VARIABLE existe.
 }
+\keyword{internal}

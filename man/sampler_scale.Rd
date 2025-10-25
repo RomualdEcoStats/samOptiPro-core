@@ -13,3 +13,4 @@ Extract a numeric scale proxy from a sampler object.
 For RW: control$scale ; For slice: control$width (returned as 'scale').
 Fallbacks: $scale (numeric or function) or environment(s)$scale.
 }
+\keyword{internal}

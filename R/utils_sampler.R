@@ -1,20 +1,20 @@
 # utils_sampler.R -- helpers for NIMBLE (ASCII only)
-
+#' @keywords internal
 `%||%` <- function(x, y) if (is.null(x)) y else x
-
+#' @keywords internal
 .as_list_safe <- function(x) {
   out <- tryCatch(as.list(x), error = function(e) x)
   if (!is.list(out)) out <- list(out)
   out
 }
-
+#' @keywords internal
 .get_type <- function(s) {
   t <- NA_character_
   try({ t <- s$type }, silent = TRUE)
   if (is.null(t) || is.na(t)) try({ t <- class(s)[1] }, silent = TRUE)
   t
 }
-
+#' @keywords internal
 .get_targets <- function(s) {
   tgt <- NA_character_
   try({
@@ -30,7 +30,7 @@
 }
 
 # --- helpers internes robustes pour les monitors ------------------------
-
+#' @keywords internal
 .us_tokenize_monitors <- function(x) {
   if (is.null(x)) return(character(0))
   x <- as.character(x)
@@ -41,7 +41,7 @@
   parts <- trimws(parts)
   parts[nzchar(parts)]
 }
-
+#' @keywords internal
 .us_sanitize_monitors <- function(x) {
   x <- .us_tokenize_monitors(x)
   # vire nombres nus (ex "1", "2.", "3.0") ET tokens de log
@@ -49,7 +49,7 @@
   unique(x[!bad])
 }
 
-
+#' @keywords internal
 # eclate "p[1, 1:3]" -> c("p[1,1]","p[1,2]","p[1,3]") (si bornes numeriques)
 .us_expand_compact_node <- function(node) {
   lb <- regexpr("\\[", node, fixed = TRUE)
@@ -79,11 +79,11 @@
 .us_expand_vars_to_nodes <- function(model, vars) {
   if (!length(vars)) return(character(0))
   vars <- unique(trimws(as.character(vars))); vars <- vars[nzchar(vars)]
-  
+
   # tous les noeuds connus, pour filtrage final
   all_nodes <- try(model$getNodeNames(stochOnly = FALSE, includeRHSonly = FALSE), silent = TRUE)
   if (inherits(all_nodes, "try-error") || is.null(all_nodes)) all_nodes <- character(0)
-  
+
   # essaie d'utiliser la metadonnee de forme (mins/maxs) quand dispo
   var_to_nodes <- function(v) {
     vi <- try(model$getVarInfo(v), silent = TRUE)
@@ -108,10 +108,11 @@
     # garde seulement ce que le modele connait
     cand[cand %in% all_nodes]
   }
-  
+
   out <- unique(unlist(lapply(vars, var_to_nodes), use.names = FALSE))
   out
 }
+#' @keywords internal
 .us_configure_with_monitors <- function(model, monitors = NULL) {
   `%||%` <- function(x, y) if (is.null(x)) y else x
   sanitize_roots <- function(x) {
@@ -120,29 +121,29 @@
     bad <- grepl("^\\d+(?:\\.\\d*)?$", x) | x %in% c("thin","=",":",",")
     unique(x[!bad])
   }
-  
+
   mons_in <- sanitize_roots(monitors %||% character(0))
-  
+
   is_loglike <- grepl("^logLik(\\[.*\\])?$|log_?lik|logdens|lpdf",
                       mons_in, ignore.case = TRUE, perl = TRUE)
   roots_main <- mons_in[!is_loglike]
   roots_ll   <- mons_in[ is_loglike]
-  
+
   all_vars <- unique(sub("\\[.*\\]$", "", model$getNodeNames(stochOnly = FALSE, includeData = FALSE)))
   roots_main <- roots_main[roots_main %in% all_vars]
   roots_ll   <- roots_ll  [roots_ll   %in% all_vars]
-  
+
   conf <- nimble::configureMCMC(model)
   try(silent = TRUE, conf$clearMonitors()); try(silent = TRUE, conf$clearMonitors2())
-  
+
   # DEBUG anti "1"
   cat("DEBUG(us) roots_main =", paste(roots_main, collapse="|"), "\n")
   stopifnot(!any(roots_main %in% c("1","thin","=",":",",")))
   cat("DEBUG(us) roots_ll   =", paste(roots_ll, collapse="|"), "\n")
-  
+
   nimble::configureMCMC(model, monitors = nodes, monitors2 = nodes)
- 
-  
+
+
   attr(conf, "._us_monitors")  <- roots_main
   attr(conf, "._us_monitors2") <- roots_ll
   conf
@@ -154,6 +155,7 @@
 #' For RW: control$scale ; For slice: control$width (returned as 'scale').
 #' Fallbacks: $scale (numeric or function) or environment(s)$scale.
 #' @export
+#' @keywords internal
 sampler_scale <- function(s) {
   val <- NA_real_
   try({
@@ -175,6 +177,7 @@ sampler_scale <- function(s) {
 #' Return a data.frame (name, type, target, scale) from a sampler container.
 #' Accepts: samplerConf list (conf$getSamplers()) or other sampler-like lists.
 #' @export
+#' @keywords internal
 sampler_df <- function(samplers) {
   L <- .as_list_safe(samplers)
   n <- length(L)
@@ -187,6 +190,7 @@ sampler_df <- function(samplers) {
 
 #' Build and compile an MCMC from a conf to access samplerFunctions.
 #' @export
+#' @keywords internal
 sampler_functions_from_conf <- function(conf, cmodel) {
   m  <- nimble::buildMCMC(conf)
   cm <- nimble::compileNimble(m, project = cmodel, resetFunctions = TRUE)
@@ -195,6 +199,7 @@ sampler_functions_from_conf <- function(conf, cmodel) {
 
 #' Preferred: read scales from a fresh samplerConf list (pre-run).
 #' @export
+#' @keywords internal
 sampler_scales_from_run <- function(run_result, build_fn) {
   built <- build_fn()
   # ? NE PAS passer monitors=... directement a configureMCMC : on pose explicitement
@@ -204,6 +209,7 @@ sampler_scales_from_run <- function(run_result, build_fn) {
 
 #' Convenience: directly return sampler_df from an existing conf.
 #' @export
+#' @keywords internal
 sampler_df_from_conf <- function(conf) {
   sampler_df(conf$getSamplers())
 }
@@ -216,6 +222,7 @@ sampler_df_from_conf <- function(conf) {
 #' @param thin thinning (kept for API symmetry; not used here)
 #' @return data.frame(name, type, target, scale)
 #' @export
+#' @keywords internal
 sampler_scales_after_run <- function(build_fn, niter = 2000, nburnin = 500, thin = 1) {
   built <- build_fn()
   conf  <- .us_configure_with_monitors(built$model, built$monitors %||% NULL)
@@ -246,6 +253,7 @@ sampler_scales_after_run <- function(build_fn, niter = 2000, nburnin = 500, thin
 #' @param conf a nimble MCMC configuration (from configureMCMC)
 #' @return character vector (length = length(conf$getSamplers()))
 #' @export
+#' @keywords internal
 sampler_targets <- function(conf) {
   s <- conf$getSamplers()
   vapply(s, function(si) {
@@ -258,6 +266,7 @@ sampler_targets <- function(conf) {
 #' @param cm compiled MCMC (from compileNimble(buildMCMC(...)))
 #' @return list of named lists (one per sampler)
 #' @export
+#' @keywords internal
 sampler_env_numeric_fields <- function(cm) {
   out <- list()
   sfun <- tryCatch(as.list(cm$samplerFunctions), error = function(e) cm$samplerFunctions)
@@ -283,6 +292,7 @@ sampler_env_numeric_fields <- function(cm) {
 #' @param cm compiled MCMC
 #' @return data.frame(sampler_index, field, value)
 #' @export
+#' @keywords internal
 sampler_env_dump <- function(cm) {
   lst <- sampler_env_numeric_fields(cm)
   idx <- rep.int(seq_along(lst), vapply(lst, length, integer(1)))

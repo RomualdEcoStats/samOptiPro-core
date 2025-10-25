@@ -23,3 +23,4 @@ data.frame(name, type, target, scale)
 Extract sampler scales after a short adaptive run.
 Runs a short MCMC to let samplers adapt, then inspects samplerFunctions envs.
 }
+\keyword{internal}

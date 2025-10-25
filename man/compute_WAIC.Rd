@@ -12,3 +12,4 @@ compute_WAIC(samples)
 \description{
 Compute WAIC from coda samples that include logLik[] columns
 }
+\keyword{internal}

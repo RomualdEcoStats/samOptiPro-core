@@ -518,6 +518,7 @@ as_mcmc_list_sop <- function(samples, samples2 = NULL, drop_loglik = FALSE, thin
 #'
 #' @return A compiled MCMC object as returned by \code{nimble::compileNimble()}.
 #' @export
+#' @keywords internal
 .compile_mcmc_with_build <- function(conf, build_obj, reset = TRUE, show = FALSE) {
   mcmc <- nimble::buildMCMC(conf)
   nimble::compileNimble(

@@ -20,3 +20,4 @@ A list with \code{summary} (tibble) and \code{per_param} (tibble).
 Computes, per parameter: ESS, \eqn{\hat{R}}, \strong{AE = ESS / (iters * chains)},
 \strong{CE = ESS / seconds}, and returns a global summary (including total ESS and ESS/s).
 }
+\keyword{internal}

@@ -24,3 +24,4 @@ character() de noms de variables sans indices (ex: "sd_proc","z","p","logLik")
 Retourne des NOMS DE VARIABLES (sans indices) pour laisser le runner
 poser ensuite les monitors correctement via conf$setMonitors / setMonitors2.
 }
+\keyword{internal}

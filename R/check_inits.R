@@ -6,6 +6,7 @@
 #' @param silent logical
 #' @return logical TRUE if valid; otherwise throws informative error
 #' @export
+#' @keywords internal
 checkInits <- function(model, inits, silent = FALSE) {
   if (!requireNamespace("nimble", quietly = TRUE)) {
     stop("Package 'nimble' is required for checkInits().")
@@ -36,6 +37,7 @@ checkInits <- function(model, inits, silent = FALSE) {
 #' @param ... forwarded to run_fn
 #' @return list(samples, runtime_s)
 #' @export
+#' @keywords internal
 checkInitsAndRun <- function(run_fn, inits, ...) {
   if (is.list(inits) && length(inits) > 0 && is.list(inits[[1]])) {
     # multiple chains inits

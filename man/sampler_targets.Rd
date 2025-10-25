@@ -15,3 +15,4 @@ character vector (length = length(conf$getSamplers()))
 \description{
 Targets (node names) for each sampler in a MCMC configuration
 }
+\keyword{internal}

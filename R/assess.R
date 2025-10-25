@@ -5,6 +5,7 @@
 #' @param x An object of class `mcmc.list`, `mcmc`, `data.frame`, or `matrix`.
 #' @return An object of class `mcmc.list`.
 #' @export
+#' @keywords internal
 #' @importFrom coda mcmc mcmc.list
 as_mcmc_list <- function(x){
   if (inherits(x, 'mcmc.list')) return(x)
@@ -25,8 +26,7 @@ as_mcmc_list <- function(x){
 #' @param rhat_thresh \eqn{\hat{R}} threshold used for the "OK" proportion (default 1.01).
 #' @return A list with `summary` (tibble) and `per_param` (tibble).
 #' @export
-#' @importFrom coda effectiveSize gelman.diag
-#' @importFrom tibble tibble
+#' @keywords internal
 #' @importFrom stats median
 assess_performance <- function(samples, runtime_s, rhat_thresh = 1.01){
   ml <- as_mcmc_list(samples)
@@ -114,6 +114,7 @@ assess_performance <- function(samples, runtime_s, rhat_thresh = 1.01){
 #'              details=list(ce=..., ae=..., time=..., degenerate=...),
 #'              per_param=..., summary=..., top3=data.frame)
 #' @export
+#' @keywords internal
 #' @importFrom stats median
 `%||%` <- function(a,b) if (is.null(a)) b else a
 .is_ignored <- function(x, patterns) {
@@ -183,6 +184,7 @@ assess_performance <- function(samples, runtime_s, rhat_thresh = 1.01){
 # Per-parameter bottlenecks (strict sampler-only)
 # ===============================
 #' @export
+#' @keywords internal
 identify_bottlenecks <- function(samples, runtime_s,
                                  ess_threshold = 1000,
                                  sampler_params = NULL,
@@ -342,6 +344,7 @@ plot_mcmc_histograms <- function(samples, runtime_s, rhat_thresh = 1.01, bins = 
 #'
 #' @export
 #' @importFrom coda as.mcmc mcmc mcmc.list
+#' @keywords internal
 merge_mcmc_samples <- function(res) {
   to_mlist <- function(x) {
     if (inherits(x, "mcmc.list")) return(x)
@@ -526,6 +529,7 @@ plot_family_rhat_bar <- function(samples, runtime_s,
 #' @return list(type="ok" or "degenerate_only",
 #'              details=list(ce=..., ae=..., time=..., degenerate=...),
 #'              per_family=..., summary=..., top3=data.frame)
+#'identify_bottlenecks_family
 #' @export
 #' @importFrom stats median
 identify_bottlenecks_family <- function(samples, runtime_s,

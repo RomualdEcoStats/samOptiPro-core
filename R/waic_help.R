@@ -1,6 +1,7 @@
 #' Compute WAIC from coda samples that include logLik[] columns
 #' @param samples coda::mcmc.list
 #' @export
+#' @keywords internal
 compute_WAIC <- function(samples) {
   stopifnot(requireNamespace("coda", quietly = TRUE))
   M <- as.matrix(samples[[1]])

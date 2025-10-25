@@ -35,6 +35,7 @@ identify_bottlenecks_family(
 list(type="ok" or "degenerate_only",
 details=list(ce=..., ae=..., time=..., degenerate=...),
 per_family=..., summary=..., top3=data.frame)
+identify_bottlenecks_family
 }
 \description{
 Parameters are grouped by stats::family(prefix before the first \code{[}), then family-level

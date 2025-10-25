@@ -9,3 +9,4 @@ sampler_functions_from_conf(conf, cmodel)
 \description{
 Build and compile an MCMC from a conf to access samplerFunctions.
 }
+\keyword{internal}

@@ -16,3 +16,4 @@ build_conf_with_monitors(model, monitors = NULL, opts = samOptiPro_options())
 \description{
 Build a fresh MCMC configuration with automatic monitors if missing
 }
+\keyword{internal}

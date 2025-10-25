@@ -1,7 +1,7 @@
 # constants_generic.R -- model-agnostic constants normalization
-
+#' @keywords internal
 `%||%` <- function(x, y) if (is.null(x)) y else x
-
+#' @keywords internal
 .collect_lengths <- function(Const) {
   lens <- integer()
   push <- function(v) { if (length(v)) return(length(v)); NA_integer_ }
@@ -15,7 +15,7 @@
   }
   lens[is.finite(lens) & lens > 0]
 }
-
+#' @keywords internal
 .pad_vec <- function(v, n, pad_rule) {
   if (length(v) == n) return(v)
   if (length(v) >  n) return(v[seq_len(n)])
@@ -29,7 +29,7 @@
   if (pad_rule == "zero") return(c(v, rep(0,        n - length(v))))
   c(v, rep(last, n - length(v))) # repeat_last
 }
-
+#' @keywords internal
 .pad_mat_cols <- function(M, n, pad_rule) {
   if (!is.matrix(M)) M <- as.matrix(M)
   p <- ncol(M)
@@ -49,6 +49,7 @@
 #' @param trim_rule logical (garder TRUE)
 #' @return constants list normalized (with integer 'n')
 #' @export
+#' @keywords internal
 normalize_constants_generic <- function(Const,
                                         n_rule = "min",
                                         pad_rule = "repeat_last",
@@ -56,7 +57,7 @@ normalize_constants_generic <- function(Const,
   C <- Const
   lens <- .collect_lengths(C)
   if (!length(lens)) stop("normalize_constants_generic: cannot infer series lengths from constants.")
-  
+
   if (!is.null(C$nyear) && n_rule == "nyear") {
     n <- as.integer(C$nyear)
   } else if (n_rule == "max") {
@@ -65,12 +66,12 @@ normalize_constants_generic <- function(Const,
     n <- as.integer(min(lens))
   }
   C$n <- n
-  
+
   # clean unfinished scalars
   for (f in names(C)) if (is.numeric(C[[f]]) && length(C[[f]]) == 1) {
     if (is.na(C[[f]]) || !is.finite(C[[f]])) C[[f]] <- 0
   }
-  
+
   # crop vector and matrix
   for (nm in names(C)) {
     x <- C[[nm]]
@@ -80,6 +81,6 @@ normalize_constants_generic <- function(Const,
       C[[nm]] <- .pad_mat_cols(x, n, pad_rule)
     }
   }
-  
+
   C
 }

@@ -9,3 +9,4 @@ merge_mcmc_samples(res)
 \description{
 Merge \code{res$samples} and \code{res$samples2} into a single \code{mcmc.list}
 }
+\keyword{internal}

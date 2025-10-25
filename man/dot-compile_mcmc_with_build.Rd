@@ -22,3 +22,4 @@ A compiled MCMC object as returned by \code{nimble::compileNimble()}.
 Always compiles the MCMC against the \strong{same} R-level model used during the
 build step (\code{build_obj$model}). This avoids subtle mismatches.
 }
+\keyword{internal}

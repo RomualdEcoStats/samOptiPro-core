@@ -15,3 +15,4 @@ list of named lists (one per sampler)
 \description{
 Numeric scalar fields in the environment of each compiled sampler function
 }
+\keyword{internal}

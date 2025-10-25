@@ -13,6 +13,7 @@
 #'   - extra_monitors2   : character(), variables supplementaires a monitorer en monitors2 (samples2)
 #' @return character() de noms de variables sans indices (ex: "sd_proc","z","p","logLik")
 #' @export
+#' @keywords internal
 .default_sanitize_roots <- function(x) {
   x <- as.character(x)
   x <- trimws(x)
@@ -25,17 +26,17 @@
 default_monitors <- function(model, opts = samOptiPro_options()) {
   include_data   <- isTRUE(opts$include_data)
   include_logLik <- isTRUE(opts$include_logLik)
-  
+
   stoch_nodes <- model$getNodeNames(stochOnly = TRUE, includeData = include_data)
   stoch_vars  <- unique(sub("\\[.*\\]$", "", stoch_nodes))
   mons <- .default_sanitize_roots(stoch_vars)
-  
+
   if (include_logLik) {
     all_nodes <- model$getNodeNames(stochOnly = FALSE, includeData = TRUE)
     all_vars  <- unique(sub("\\[.*\\]$", "", all_nodes))
     if ("logLik" %in% all_vars) mons <- unique(c(mons, "logLik"))
   }
-  
+
   if (!is.null(opts$extra_monitors)) {
     mons <- unique(c(mons, .default_sanitize_roots(opts$extra_monitors)))
   }
@@ -52,13 +53,14 @@ default_monitors <- function(model, opts = samOptiPro_options()) {
 #' @param monitors character() de noms de variables (ex: "z","p","sd_proc","logLik")
 #' @return sous-ensemble valide de `monitors`, avec warning soft si certains manquent
 #' @export
+#' @keywords internal
 ensure_monitors_exist <- function(model, monitors) {
   monitors <- .default_sanitize_roots(monitors)
   if (!length(monitors)) return(character(0))
-  
+
   all_nodes <- model$getNodeNames(stochOnly = FALSE, includeData = FALSE)
   all_vars  <- unique(sub("\\[.*\\]$", "", all_nodes))
-  
+
   keep <- monitors %in% all_vars
   if (!all(keep)) {
     bad <- monitors[!keep]

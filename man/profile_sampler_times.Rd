@@ -86,6 +86,7 @@ Builds an uncompiled MCMC and measures wall-clock time spent in each sampler
 by instrumenting calls to each samplerFunction$run() over a short run.
 
 Numeric vector of length \code{length(conf$getSamplers())}, seconds per sampler (aligned by index).
+profile_sampler_times
 }
 \description{
 Analyze a NIMBLE model: stochastic/deterministic nodes, dimensions,
@@ -107,3 +108,4 @@ compiled MCMC.
   # p <- profile_sampler_times(cmodel, mcmc_conf)
 }
 }
+\keyword{internal}

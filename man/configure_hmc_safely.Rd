@@ -47,3 +47,4 @@ runs it, and returns basic diagnostics.
   out$diag_tbl
 }
 }
+\keyword{internal}

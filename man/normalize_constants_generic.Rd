@@ -26,3 +26,4 @@ constants list normalized (with integer 'n')
 \description{
 Normalize constants in a model-agnostic way
 }
+\keyword{internal}

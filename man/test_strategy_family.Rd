@@ -70,6 +70,7 @@ test_strategy_family(
 }
 \value{
 A list describing baseline, steps, configurations, diagnostics, and plot paths.
+test_strategy_family
 }
 \description{
 If the model is differentiable and \code{try_hmc = TRUE}, this runs a full

@@ -9,3 +9,4 @@ sampler_df_from_conf(conf)
 \description{
 Convenience: directly return sampler_df from an existing conf.
 }
+\keyword{internal}

@@ -1,5 +1,5 @@
 # diagnostics.R -- target-level diagnostics (time + step proxy)
-
+#' @keywords internal
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
 # ----------------------------------------------------------------------
@@ -16,6 +16,7 @@
 #'
 #' @return A named numeric vector giving \code{sd(diff(.))} per parameter.
 #' @export
+#' @keywords internal
 proxy_step_sd <- function(samples, pattern) {
   stopifnot(inherits(samples, "mcmc.list"))
   mx <- as.matrix(samples[[1]])
@@ -47,6 +48,7 @@ proxy_step_sd <- function(samples, pattern) {
 #'   # p <- profile_sampler_times(cmodel, mcmc_conf)
 #' }
 #' @export
+#' @keywords internal
 profile_sampler_times <- function(conf, cmodel, niter = 5e4) {
   m  <- nimble::buildMCMC(conf)
   cm <- nimble::compileNimble(m, project = cmodel, resetFunctions = TRUE)
@@ -79,6 +81,7 @@ profile_sampler_times <- function(conf, cmodel, niter = 5e4) {
 #'
 #' @return A \code{data.frame} with columns \code{target}, \code{type}, \code{time_s}, \code{step_sd}.
 #' @export
+#' @keywords internal
 diagnostics_by_target <- function(build_fn, opts = samOptiPro_options(),
                                   niter = opts$time_profile_n, samples = NULL) {
   built <- build_fn()
@@ -149,6 +152,7 @@ diagnostics_by_target <- function(build_fn, opts = samOptiPro_options(),
 #' out <- run_structure_and_hmc_test(my_builder, include_data = FALSE, try_hmc = TRUE)
 #' if (!out$hmc$ok) message("HMC not feasible: ", out$hmc$error)
 #' }
+#' run_structure_and_hmc_test
 #' @export
 run_structure_and_hmc_test <- function(build_fn,
                                        include_data = FALSE,
@@ -694,7 +698,9 @@ run_structure_and_hmc_test <- function(build_fn,
 #' @param progress Logical; print simple 10\% progress.
 #'
 #' @return Numeric vector of length \code{length(conf$getSamplers())}, seconds per sampler (aligned by index).
+#' profile_sampler_times
 #' @export
+#' @keywords internal
 profile_sampler_times <- function(model,
                                   conf,
                                   niter    = 2000L,
@@ -852,6 +858,11 @@ diagnose_model_structure <- function(model,
   family_stat    <- match.arg(family_stat)
   time_normalize <- match.arg(time_normalize)
 
+  # (3) garantir des tracés au niveau des nœuds si by_family = FALSE
+  if (!isTRUE(by_family)) {
+    only_family_plots <- FALSE
+  }
+
   # -- 1) Universe of nodes ----------------------------------------------------
   all_nodes_raw <- model$getNodeNames(includeData = include_data)
   removed_nodes <- unique(c(removed_nodes %||% character(0)))
@@ -953,7 +964,7 @@ diagnose_model_structure <- function(model,
         if (length(tgt)) {
           tgt <- tgt[!.is_ignored(tgt, ignore_patterns)]
           tgt <- intersect(tgt, base_nodes)
-          tgt <- intersect(tgt, stochastic_nodes)   # <<< enforce stochastic here
+          tgt <- intersect(tgt, stochastic_nodes)   # **seuls nœuds stochastiques**
           if (length(tgt) == 0) tgt <- NA_character_
         } else {
           tgt <- NA_character_
@@ -976,9 +987,9 @@ diagnose_model_structure <- function(model,
   }
   prop_worst <- if (n_samplers > 0) max(1L, min(n_samplers, ceiling(n_samplers * np))) else 0L
 
-  # ---- Scope des temps = stoch ? base_nodes ? cibles des samplers ------------
+  # Nœuds ayant effectivement un sampler (donc stochastiques)
   has_sampler_nodes <- unique(unlist(samplers_df$TargetNodes))
-  has_sampler_nodes <- has_sampler_nodes[!is.na(has_sampler_nodes)]   # already stochastic via filter above
+  has_sampler_nodes <- has_sampler_nodes[!is.na(has_sampler_nodes)]
 
   # -- 7) Per-sampler timing: provided or auto-profiled ------------------------
   if (is.null(sampler_times) && isTRUE(auto_profile)) {
@@ -1004,9 +1015,8 @@ diagnose_model_structure <- function(model,
     }
   }
 
-  # Aggregation of times ONLY on stochastic nodes with a sampler
+  # Agrégation des temps (uniquement nœuds stochastiques avec sampler)
   per_param_times <- data.frame(parameter = character(0), sampler_time = numeric(0))
-
   if (!is.null(sampler_times)) {
     if (!is.numeric(sampler_times)) {
       warning("sampler_times is not numeric; ignoring sampler times.")
@@ -1017,13 +1027,11 @@ diagnose_model_structure <- function(model,
       sampler_times <- NULL
     }
   }
-
   if (!is.null(sampler_times) && n_samplers > 0 && length(has_sampler_nodes) > 0) {
     rows <- lapply(seq_len(n_samplers), function(i) {
       tgt <- samplers_df$TargetNodes[[i]]
       t_i <- sampler_times[i]
       if (is.null(tgt) || (length(tgt) == 1 && is.na(tgt))) return(NULL)
-      # target already stochastic; double safety:
       tgt <- intersect(tgt, has_sampler_nodes)
       if (!length(tgt)) return(NULL)
       data.frame(parameter = tgt, sampler_time = t_i, stringsAsFactors = FALSE)
@@ -1033,7 +1041,6 @@ diagnose_model_structure <- function(model,
       per_param_times <- stats::aggregate(sampler_time ~ parameter, data = long_tbl, FUN = sum)
     }
   }
-  # no zero-filling
 
   # -- 8) Tidy frames for parameter-level plots --------------------------------
   ord_nodes <- if (nrow(dep_counts) > 0) {
@@ -1046,7 +1053,7 @@ diagnose_model_structure <- function(model,
     stringsAsFactors   = FALSE
   )
 
-  # Times: RESTRICTED to nodes with a sampler (already stochastic)
+  # Temps : restreints aux nœuds avec sampler
   st_named    <- stats::setNames(per_param_times$sampler_time, per_param_times$parameter)
   time_nodes  <- intersect(ord_nodes, has_sampler_nodes)
   sampler_vec <- st_named[time_nodes]
@@ -1060,7 +1067,7 @@ diagnose_model_structure <- function(model,
     stringsAsFactors = FALSE
   )
 
-  # -- 9) Node of interest (filtered downstream deps) --------------------------
+  # -- 9) Node of interest ------------------------------------------------------
   node_of_interest_deps <- NULL
   if (!is.null(node_of_interest)) {
     if (node_of_interest %in% base_nodes) {
@@ -1076,7 +1083,8 @@ diagnose_model_structure <- function(model,
     }
   }
 
-  # -- 10) Family summaries (stat + optional normalization) --------------------
+  # -- 10) Family summaries -----------------------------------------------------
+  # (1) Dépendances par famille = toutes les familles présentes dans le modèle
   if (nrow(deps_df) > 0) {
     deps_df$fam <- .to_family(as.character(deps_df$parameter))
     dep_by_fam <- stats::aggregate(
@@ -1091,6 +1099,7 @@ diagnose_model_structure <- function(model,
     dep_by_fam <- data.frame(family = character(0), deps_stat = numeric(0))
   }
 
+  # (2) Temps par famille = uniquement nœuds stochastiques avec sampler
   if (nrow(sampler_df) > 0) {
     sampler_df$fam <- .to_family(as.character(sampler_df$parameter))
     time_by_fam <- stats::aggregate(
@@ -1113,7 +1122,7 @@ diagnose_model_structure <- function(model,
     time_by_fam <- data.frame(family = character(0), time_stat = numeric(0))
   }
 
-  # Family order based on deps, without injecting families absent from timing
+  # Ordres pour facettes/axes
   if (nrow(dep_by_fam) > 0) {
     ord_fam_all <- dep_by_fam$family[order(-dep_by_fam$deps_stat)]
   } else {
@@ -1129,7 +1138,6 @@ diagnose_model_structure <- function(model,
   if (nrow(fam_time_df) > 0) {
     ord_fam_time <- if (length(ord_fam_all)) intersect(ord_fam_all, fam_time_df$family) else fam_time_df$family
     fam_time_df$family <- factor(fam_time_df$family, levels = ord_fam_time)
-    # no zero-filling for families absent from timing
   }
 
   # -- 11) Plotting -------------------------------------------------------------
@@ -1160,9 +1168,9 @@ diagnose_model_structure <- function(model,
             ggplot2::geom_col(width = 1) +
             ggplot2::scale_x_discrete(expand = c(0, 0)) +
             ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.02, 0.05))) +
-            ggplot2::scale_fill_manual(name = "Legend", values = c("Total dependencies" = "grey50")) +
-            ggplot2::labs(title = "Number of downstream dependencies per parameter",
-                          x = "Parameter", y = "Count") +
+            ggplot2::scale_fill_manual(name = "", values = c("Total dependencies" = "orange")) +
+            ggplot2::labs(title = "Number of  dependencies per node",
+                          x = "Node", y = "Number of dependencies") +
             base_theme
         }
 
@@ -1173,9 +1181,9 @@ diagnose_model_structure <- function(model,
             ggplot2::geom_col(width = 1) +
             ggplot2::scale_x_discrete(expand = c(0, 0)) +
             ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.02, 0.05))) +
-            ggplot2::scale_fill_manual(name = "Legend", values = stats::setNames("grey35", time_label)) +
-            ggplot2::labs(title = "Time spent in samplers per parameter",
-                          x = "Parameter", y = time_label) +
+            ggplot2::scale_fill_manual(name = "", values = stats::setNames("blue", time_label)) +
+            ggplot2::labs(title = "Time spent in samplers per node",
+                          x = "Node", y = time_label) +
             base_theme
         }
 
@@ -1189,14 +1197,14 @@ diagnose_model_structure <- function(model,
       # -- family-level plots ---------------------------------------------------
       if (isTRUE(by_family)) {
         if (nrow(fam_deps_df) > 0) {
-          lab_dep <- sprintf("Downstream dependencies (%s by family)", family_stat)
+          lab_dep <- sprintf("Number dependencies (%s by family)", family_stat)
           plot_dependencies_family <- ggplot2::ggplot(
             fam_deps_df, ggplot2::aes(x = family, y = deps_stat, fill = "Deps by family")
           ) +
             ggplot2::geom_col(width = 1) +
             ggplot2::scale_x_discrete(expand = c(0,0)) +
             ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.02, 0.05))) +
-            ggplot2::scale_fill_manual(name = "Legend", values = c("Deps by family" = "grey50")) +
+            ggplot2::scale_fill_manual(name = "", values = c("Deps by family" = "orange")) +
             ggplot2::labs(title = lab_dep, x = "Family", y = family_stat) +
             base_theme +
             ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
@@ -1212,7 +1220,7 @@ diagnose_model_structure <- function(model,
             ggplot2::geom_col(width = 1) +
             ggplot2::scale_x_discrete(expand = c(0,0)) +
             ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.02, 0.05))) +
-            ggplot2::scale_fill_manual(name = "Legend", values = c("Time by family" = "grey35")) +
+            ggplot2::scale_fill_manual(name = "", values = c("Time by family" = "blue")) +
             ggplot2::labs(title = lab_tim, x = "Family",
                           y = sprintf("Time (%s)", sampler_times_unit)) +
             base_theme +
@@ -1247,7 +1255,7 @@ diagnose_model_structure <- function(model,
           }
         }
 
-        # Parameter-level plots (skip if only_family_plots = TRUE)
+        # Parameter-level plots (toujours actifs si by_family = FALSE)
         if (!isTRUE(only_family_plots)) {
           if (!is.null(plot_dependencies)) {
             ggplot2::ggsave(file.path(output_dir, "dependencies_per_parameter.png"),
@@ -1271,11 +1279,11 @@ diagnose_model_structure <- function(model,
         }
 
         # Family-level plots
-        if (!is.null(plot_dependencies_family)) {
+        if (nrow(fam_deps_df) > 0 && !is.null(plot_dependencies_family)) {
           ggplot2::ggsave(file.path(output_dir, sprintf("deps_by_family_%s.png", family_stat)),
                           plot = plot_dependencies_family, width = 12, height = 6, dpi = 300)
         }
-        if (!is.null(plot_sampler_time_family)) {
+        if (nrow(fam_time_df) > 0 && !is.null(plot_sampler_time_family)) {
           ggplot2::ggsave(file.path(output_dir, sprintf("sampler_time_by_family_%s_%s.png",
                                                         family_stat, time_normalize)),
                           plot = plot_sampler_time_family, width = 12, height = 6, dpi = 300)
@@ -1313,8 +1321,8 @@ diagnose_model_structure <- function(model,
     per_param_times       = per_param_times,   # only stochastic nodes with a sampler
     deps_df               = deps_df,
     sampler_df            = sampler_df,        # only stochastic nodes with a sampler
-    fam_deps_df           = fam_deps_df,
-    fam_time_df           = fam_time_df,       # only families present in timing
+    fam_deps_df           = fam_deps_df,       # deps: toutes familles du modèle
+    fam_time_df           = fam_time_df,       # time: familles filtrées aux nœuds avec samplers
     plots = list(
       plot_dependencies          = plot_dependencies,
       plot_sampler_time          = plot_sampler_time,
@@ -1325,6 +1333,7 @@ diagnose_model_structure <- function(model,
     )
   ))
 }
+
 
 #' Test and compare MCMC strategies on selected bottleneck nodes
 #'
@@ -1409,8 +1418,9 @@ diagnose_model_structure <- function(model,
 #'   out_dir  = "outputs/diagnostics"
 #' )
 #' }
-#'
+#'test_strategy
 #' @export
+#' @keywords internal
 test_strategy <- function(build_fn,
                           monitors            = NULL,   # optional, pass-through
                           try_hmc             = TRUE,   # full-model HMC path only; surgical ignores
@@ -1845,10 +1855,8 @@ test_strategy <- function(build_fn,
 #' @param slice_max_contractions Integer; informational safety for AF_slice.
 #'
 #' @return A list describing baseline, steps, configurations, diagnostics, and plot paths.
+#' test_strategy_family
 #' @export
-# ===========================================================
-# test_strategy_family(): HMC if possible, else surgical plan
-# ===========================================================
 test_strategy_family <- function(build_fn,
                                  monitors            = NULL,   # optional, just passed through
                                  try_hmc             = TRUE,   # only used for full-model path; surgical ignores

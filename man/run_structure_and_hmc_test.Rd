@@ -57,4 +57,5 @@ Its emphasis is \emph{HMC suitability} rather than structural load.
 out <- run_structure_and_hmc_test(my_builder, include_data = FALSE, try_hmc = TRUE)
 if (!out$hmc$ok) message("HMC not feasible: ", out$hmc$error)
 }
+run_structure_and_hmc_test
 }

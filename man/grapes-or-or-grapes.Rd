@@ -39,3 +39,4 @@ in \code{degenerate} and excluded from rankings.
 If you pass \code{sampler_params}, results are restricted to those parameters
 (useful to exclude deterministic monitors and keep stochastic nodes with samplers only).
 }
+\keyword{internal}

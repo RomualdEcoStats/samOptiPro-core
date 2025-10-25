@@ -18,3 +18,4 @@ A named numeric vector giving \code{sd(diff(.))} per parameter.
 Computes, for each parameter whose name matches \code{pattern}, the standard
 deviation of successive differences (a simple step-size proxy).
 }
+\keyword{internal}

@@ -33,3 +33,4 @@ if \code{samples} are provided.
 Note: uses a tolerant default monitor set followed by a robust configuration
 (no \code{monitors=} passed directly to \code{configureMCMC}).
 }
+\keyword{internal}

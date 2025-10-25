@@ -1,0 +1,37 @@
+# _pkgdown.yml
+url: "https://RomualdEcoStats.github.io/samOptiPro-core/"
+
+template:
+  bootstrap: 5
+
+navbar:
+  structure:
+    left:  [reference, articles]
+    right: [search, github]
+  components:
+    github:
+      icon: "fab fa-github"
+      aria-label: "Source on GitHub"
+      href: "https://github.com/RomualdEcoStats/samOptiPro-core"
+
+destination: docs
+
+reference:
+  - title: "Main functions"
+    contents:
+      - test_strategy
+      - diagnose_model_structure
+      - run_baseline_config
+      - run_hmc_all_nodes
+      - assess_performance
+      - identify_bottlenecks_family
+      - profile_sampler_times
+      - run_structure_and_hmc_test
+      - test_strategy_family
+  - title: "Plotting & diagnostics"
+    contents:
+      - starts_with("plot_")
+      - matches("^compute_diag_")
+  - title: "Helpers (internal)"
+    contents:
+      - starts_with("dot-")

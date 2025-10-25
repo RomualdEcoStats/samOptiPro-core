@@ -19,3 +19,4 @@ list(samples, runtime_s)
 \description{
 Check inits then run MCMC
 }
+\keyword{internal}

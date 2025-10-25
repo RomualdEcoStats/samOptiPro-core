@@ -18,3 +18,4 @@ run_baseline_coda(
 \description{
 Run baseline et retourne un mcmc.list fusionne (samples + samples2)
 }
+\keyword{internal}

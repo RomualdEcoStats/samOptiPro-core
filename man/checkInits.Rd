@@ -19,3 +19,4 @@ logical TRUE if valid; otherwise throws informative error
 \description{
 Robustly check initial values against a compiled NIMBLE model
 }
+\keyword{internal}

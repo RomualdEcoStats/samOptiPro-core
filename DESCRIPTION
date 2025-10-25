@@ -4,7 +4,7 @@ Version: 0.1.0
 Maintainer: Romuald Hounyeme <romuald.hounyeme@agrocampus-ouest.fr>
 Description: The 'samOptiPro' package provides a unified workflow for the analysis, optimization, and benchmarking of Bayesian Stock Assessment Models (SAMs) implemented in the 'nimble' framework. It includes tools to:   - diagnose model structure and differentiability,   - automatically configure and test samplers (RW, Slice, Block, HMC, NUTS),   - evaluate algorithmic (ESS/s) and computational efficiency (runtime),   - identify bottlenecks and non-differentiable nodes,   - visualize convergence diagnostics and efficiency trade-offs,   - run comparative experiments for adaptive or hybrid sampling strategies. Designed for complex ecological hierarchical models (e.g., salmon, eel recruitment), 'samOptiPro' extends the methodological base of 'samOpti' with advanced diagnostics, family-wise sampler grouping, and integration with 'nimbleHMC' for gradient-based inference.
 License: MIT + file LICENSE
-URL: https://github.com/RomualdEcoStats/samOptiPro-core
+URL: https://github.com/RomualdEcoStats/samOptiPro-core, https://RomualdEcoStats.github.io/samOptiPro-core/
 BugReports: https://github.com/RomualdEcoStats/samOptiPro-core/issues
 Encoding: UTF-8
 Type: Package

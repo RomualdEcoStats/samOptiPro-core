@@ -15,3 +15,4 @@ An object of class \code{mcmc.list}.
 \description{
 Converts an \code{mcmc.list} / \code{mcmc} / \code{data.frame} / \code{matrix} into a \code{coda}-compatible \code{mcmc.list}.
 }
+\keyword{internal}
