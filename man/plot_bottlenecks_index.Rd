@@ -14,7 +14,6 @@ plot_bottlenecks_index(
   make_bar_ae_median_all = TRUE,
   make_bar_ce_median_all = TRUE,
   make_bar_ce_worst_all = TRUE,
-  make_bar_time_top_all = TRUE,
   make_bar_rhat_worst = TRUE,
   make_bar_ess_q5 = TRUE,
   make_hist_ce = TRUE,

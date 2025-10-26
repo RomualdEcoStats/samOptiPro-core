@@ -10,56 +10,113 @@
 # PLOT BOTTLENECKS (targets & families): AE/CE, time, R-hat
 # --------------------------------------------------------------
 
-#' Plot bottlenecks (targets & families) with AE/CE, total time, and R-hat
+#' Plot MCMC Bottlenecks by Node or Family
 #'
-#' Creates only the requested figures (toggles). If a toggle is FALSE, the
-#' corresponding figure is neither computed nor saved. ECDF and joint
-#' scatter plots are intentionally removed.
+#' @description
+#' Generates a comprehensive diagnostic panel of MCMC bottlenecks using
+#' efficiency and convergence metrics computed per node or node family.
+#' The function can optionally restrict analyses to nodes that are
+#' effectively sampled (i.e. have associated samplers in the NIMBLE
+#' configuration), identified automatically via `conf.mcmc$getSamplers()`.
 #'
-#' @param diag_tbl Data frame with columns (flexible names supported):
-#'   \itemize{
-#'     \item \code{target} (if absent, rownames are used),
-#'     \item \code{AE} or \code{AE_ESS_per_it} (ESS/iter; small = worse),
-#'     \item \code{CE} or \code{ESS_per_sec} or \code{ess_per_s} (ESS/s; small = worse),
-#'     \item \code{ESS} or \code{ess} (optional, absolute ESS),
-#'     \item \code{time_s} (optional; total seconds per target),
-#'     \item \code{Rhat} (optional),
-#'     \item \code{Family} (otherwise derived from target prefix before '[').
-#'   }
-#' @param out_dir Output directory (created if missing).
-#' @param top_k Number of bars to show (worst/top).
-#' @param rhat_ref Reference R-hat threshold line (default 1.01).
+#' It produces publication-ready figures of:
+#' \itemize{
+#'   \item Median *Algorithmic Efficiency* (AE = ESS/iter) by node family;
+#'   \item Median *Computational Efficiency* (CE = ESS/s) by node family;
+#'   \item Worst targets by CE (lowest ESS/s);
+#'   \item Median or worst \eqn{\hat{R}} (Gelman–Rubin) by node or family.
+#' }
 #'
-#' @param make_time_targets  Barplot of top targets by total time.
-#' @param make_esss_targets  Barplot of worst targets by CE (ESS/s).
-#' @param make_esss_families Barplot of worst families by median CE.
-#' @param make_time_families Barplot of top families by total time.
-#' @param make_rhat_hist_targets Histogram of R-hat (targets).
-#' @param make_rhat_worst_targets Barplot of worst targets by R-hat.
-#' @param make_rhat_median_families Barplot of median R-hat by family.
-#' @param make_hist_ae_families Histogram of family medians (AE).
-#' @param make_hist_ce_families Histogram of family medians (CE).
+#' The function saves each plot both as PDF and PNG in the specified output directory.
+#' Bar widths and spacing are optimized for compact presentation.
 #'
-#' @return (Invisibly) a named list of ggplot objects actually created.
+#' @param diag_tbl `data.frame` or `tibble` containing diagnostics per target node.
+#'   Must include columns such as `target`, `Family`, `ESS`, `ESS_per_sec`, and optionally `Rhat`.
+#' @param out_dir Character string; path to output directory for saving figures
+#'   (default: `"outputs/diagnostics"`). Will be created recursively if missing.
+#' @param top_k Integer; number of worst or best nodes to display (default: `20L`).
+#' @param rhat_ref Numeric; reference threshold for Gelman–Rubin \eqn{\hat{R}} (default: `1.05`).
+#' @param sampled_only Logical; if `TRUE`, restricts plots to nodes that have an
+#'   explicit sampler in `conf.mcmc` and are present in `samples_ml`. Default: `FALSE`.
+#' @param conf.mcmc NIMBLE MCMC configuration object, typically produced by
+#'   `configureMCMC(model, ...)` or stored as `build_fn()$conf`. Used to extract
+#'   sampler-attached target nodes when `sampled_only = TRUE`.
+#' @param samples_ml Optional MCMC list (as returned by `runMCMC(..., nchains > 1)`),
+#'   used to match sampler targets with actual sample column names.
+#'
+#' @param make_esss_targets Logical; if `TRUE`, produces barplot of worst targets
+#'   by computational efficiency (default: `TRUE`).
+#' @param make_esss_families Logical; if `TRUE`, produces barplot of median
+#'   algorithmic efficiency (AE) by node family (default: `TRUE`).
+#' @param make_time_families Logical; if `TRUE`, produces barplot of median
+#'   computational efficiency (CE) by node family (default: `TRUE`).
+#' @param make_rhat_hist_targets Logical; if `TRUE`, produces barplot of median
+#'   Rhat per family (default: `TRUE`).
+#' @param make_rhat_worst_targets Logical; if `TRUE`, produces barplot of the
+#'   worst Rhat targets (default: `TRUE`).
+#' @param make_rhat_median_families Logical; if `TRUE`, produces an alias
+#'   of the median Rhat-by-family plot (default: `TRUE`).
+#'
+#' @details
+#' This function is a core visualization tool for diagnosing performance
+#' bottlenecks in large hierarchical Bayesian models (e.g., SAM-like or
+#' GEREM-type stock assessment models). It integrates runtime, efficiency,
+#' and convergence metrics in a standardized panel of plots, suitable for
+#' benchmarking, model comparison, or publication figures.
+#'
+#' When `sampled_only = TRUE`, it automatically extracts the list of stochastic
+#' nodes (targets) from `conf.mcmc$getSamplers()` and intersects them with the
+#' variable names present in `samples_ml`. This ensures only stochastically
+#' sampled nodes are visualized, excluding lifted or deterministic intermediates.
+#'
+#' @return
+#' Invisibly returns a named `list` of ggplot objects:
+#' \itemize{
+#'   \item `bar_family_algorithmic_eff` — Median AE by family;
+#'   \item `bar_family_computational_eff` — Median CE by family;
+#'   \item `bar_target_CE` — Worst targets by CE;
+#'   \item `rhat_family_template` — Median Rhat by family;
+#'   \item `rhat_worst_targets` — Worst targets by Rhat.
+#' }
+#' Each plot is also saved in `out_dir` as both `.pdf` and `.png`.
+#'
+#' @seealso
+#' \code{\link{identify_bottlenecks_family}},
+#' \code{\link{profile_sampler_times}},
+#' \code{\link{run_structure_and_hmc_test}}
+#'
+#' @examples
+#' \dontrun{
+#' # Example assuming an existing NIMBLE configuration and MCMC results:
+#' res <- plot_bottlenecks(
+#'   diag_tbl     = diag_tbl,
+#'   conf.mcmc    = conf.mcmc,
+#'   samples_ml   = samples_ml,
+#'   sampled_only = TRUE,
+#'   out_dir      = "outputs/diagnostics"
+#' )
+#' }
+#'
+#'
 #' @export
 plot_bottlenecks <- function(diag_tbl,
                              out_dir = "outputs/diagnostics",
                              top_k   = 20L,
-                             rhat_ref = 1.05,  # ton template montre 1.05 (-> 0.05 apres -1)
-                             # ---- toggles (only TRUE are produced) ----
-                             make_time_targets            = TRUE,
+                             rhat_ref = 1.05,
+                             sampled_only = FALSE,
+                             conf.mcmc    = NULL,
+                             samples_ml   = NULL,
                              make_esss_targets            = TRUE,
-                             make_esss_families           = TRUE,  # -> AE bar (steelblue)
-                             make_time_families           = TRUE,  # -> CE bar (green)
-                             make_rhat_hist_targets       = TRUE,  # -> Rhat-1 by Family (bar)
-                             make_rhat_worst_targets      = TRUE,  # -> Worst targets by Rhat (bar)
-                             make_rhat_median_families    = TRUE,  # (alias of the same family bar)
-                             make_hist_ae_families        = FALSE, # (desactives: on suit tes barplots)
+                             make_esss_families           = TRUE,
+                             make_time_families           = TRUE,
+                             make_rhat_hist_targets       = TRUE,
+                             make_rhat_worst_targets      = TRUE,
+                             make_rhat_median_families    = TRUE,
+                             make_hist_ae_families        = FALSE,
                              make_hist_ce_families        = FALSE) {
 
   if (is.null(diag_tbl) || !NROW(diag_tbl)) return(invisible(NULL))
   stopifnot(requireNamespace("ggplot2", quietly = TRUE))
-
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
   # ---------- utils ----------
@@ -75,7 +132,7 @@ plot_bottlenecks <- function(diag_tbl,
   }
   headn <- function(x, n) utils::head(x, n)
 
-  # ---------- normalize columns ----------
+  # ---------- normalisation colonnes ----------
   d <- as.data.frame(diag_tbl, stringsAsFactors = FALSE)
   if (!("target" %in% names(d))) {
     rn <- rownames(d); if (is.null(rn)) stop("plot_bottlenecks: missing 'target' column.")
@@ -83,140 +140,128 @@ plot_bottlenecks <- function(diag_tbl,
   }
   if (!("Family" %in% names(d))) d$Family <- sub("\\[.*", "", d$target)
 
-  # AE = ESS/iter
-  d$AE <- if ("AE_ESS_per_it" %in% names(d)) as_num(d$AE_ESS_per_it) else if ("AE" %in% names(d)) as_num(d$AE) else NA_real_
-  # CE = ESS/s
-  d$CE <- if ("ESS_per_sec" %in% names(d)) as_num(d$ESS_per_sec) else if ("ess_per_s" %in% names(d)) as_num(d$ess_per_s) else if ("CE" %in% names(d)) as_num(d$CE) else NA_real_
-  # ESS absolu
-  d$ESS_abs <- if ("ESS" %in% names(d)) as_num(d$ESS) else if ("ess" %in% names(d)) as_num(d$ess) else NA_real_
+  # ---------- filtre samplers only ----------
+  if (isTRUE(sampled_only)) {
+    sampler_targets <- character(0)
+    if (!is.null(conf.mcmc) && is.function(conf.mcmc$getSamplers)) {
+      smp <- conf.mcmc$getSamplers()
+      sampler_targets <- unique(unlist(lapply(smp, function(s) s$target)))
+    }
+    if (length(sampler_targets)) {
+      sampler_targets <- gsub("^lifted_|^logProb_", "", sampler_targets, perl = TRUE)
+    }
+    if (!is.null(samples_ml) && length(samples_ml) >= 1L) {
+      cn <- try(colnames(as.data.frame(samples_ml[[1]])), silent = TRUE)
+      if (!inherits(cn, "try-error") && length(cn)) {
+        sampler_targets <- intersect(sampler_targets, cn)
+      }
+    }
+    if (length(sampler_targets)) {
+      d <- d[d$target %in% sampler_targets, , drop = FALSE]
+    } else {
+      warning("sampled_only=TRUE mais aucune cible échantillonnée trouvée.")
+    }
+  }
 
-  # temps
+  # ---------- métriques ----------
+  d$AE <- if ("AE_ESS_per_it" %in% names(d)) as_num(d$AE_ESS_per_it) else if ("AE" %in% names(d)) as_num(d$AE) else NA_real_
+  d$CE <- if ("ESS_per_sec" %in% names(d)) as_num(d$ESS_per_sec) else if ("ess_per_s" %in% names(d)) as_num(d$ess_per_s) else if ("CE" %in% names(d)) as_num(d$CE) else NA_real_
+  d$ESS_abs <- if ("ESS" %in% names(d)) as_num(d$ESS) else if ("ess" %in% names(d)) as_num(d$ess) else NA_real_
   d$time_s <- as_num(if ("time_s" %in% names(d)) d$time_s else NA_real_)
   infer_ok <- is.finite(d$ESS_abs) & is.finite(d$CE) & d$CE > 0 & !is.finite(d$time_s)
   d$time_s[infer_ok] <- d$ESS_abs[infer_ok] / d$CE[infer_ok]
-
-  # Rhat
   d$Rhat <- if ("Rhat" %in% names(d)) as_num(d$Rhat) else NA_real_
 
-  # ---------- family-level aggregates ----------
+  # ---------- agrégations par famille ----------
   fam_ce   <- agg_safe(CE ~ Family,     d[is.finite(d$CE), ], median, na.rm = TRUE); names(fam_ce)[2]   <- "CE_median"
   fam_ae   <- agg_safe(AE ~ Family,     d[is.finite(d$AE), ], median, na.rm = TRUE); names(fam_ae)[2]   <- "AE_median"
   fam_time <- agg_safe(time_s ~ Family, d[is.finite(d$time_s), ], sum,    na.rm = TRUE); names(fam_time)[2] <- "time_sum"
 
-  # ---------- metrics barplots per your templates ----------
   res <- list()
   grouped_data <- merge(fam_ae, fam_ce, by = "Family", all = TRUE)
   names(grouped_data)[names(grouped_data) == "AE_median"] <- "MedianAlgorithmicEfficiency"
   names(grouped_data)[names(grouped_data) == "CE_median"] <- "MedianComputationalEfficiency_tot"
 
+  # ---------- AE et CE par famille (espacement réduit) ----------
   if (isTRUE(make_esss_families) && NROW(grouped_data)) {
-    algorithmic_plot_raw <- ggplot2::ggplot(grouped_data,
-                                            ggplot2::aes(x = stats::reorder(Family, MedianAlgorithmicEfficiency),
-                                                         y = MedianAlgorithmicEfficiency)) +
-      ggplot2::geom_bar(stat = "identity", fill = "steelblue") +
+    p1 <- ggplot2::ggplot(grouped_data,
+                          ggplot2::aes(x = stats::reorder(Family, MedianAlgorithmicEfficiency),
+                                       y = MedianAlgorithmicEfficiency)) +
+      ggplot2::geom_bar(stat = "identity", fill = "steelblue", width = 0.8) +  # width réduit
       ggplot2::labs(title = "Median Algorithmic Efficiency by Node Family",
                     x = "Node Family", y = "Median Algorithmic Efficiency") +
-      ggplot2::theme_minimal() +
+      ggplot2::theme_minimal(base_size = 12) +
       ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
-    save_fig(algorithmic_plot_raw, "bar_family_algorithmic_eff")
-    res$bar_family_algorithmic_eff <- algorithmic_plot_raw
+    save_fig(p1, "bar_family_algorithmic_eff")
+    res$bar_family_algorithmic_eff <- p1
   }
 
   if (isTRUE(make_time_families) && NROW(grouped_data)) {
-    computational_plot_raw_tot <- ggplot2::ggplot(grouped_data,
-                                                  ggplot2::aes(x = stats::reorder(Family, MedianComputationalEfficiency_tot),
-                                                               y = MedianComputationalEfficiency_tot)) +
-      ggplot2::geom_bar(stat = "identity", fill = "green") +
-      ggplot2::labs(title = "Median Computational Efficiency (Total Time) by Node Family",
-                    x = "Node Family", y = "Median Computational Efficiency (Total Time)") +
-      ggplot2::theme_minimal() +
+    p2 <- ggplot2::ggplot(grouped_data,
+                          ggplot2::aes(x = stats::reorder(Family, MedianComputationalEfficiency_tot),
+                                       y = MedianComputationalEfficiency_tot)) +
+      ggplot2::geom_bar(stat = "identity", fill = "darkgreen", width = 0.8) +
+      ggplot2::labs(title = "Median Computational Efficiency by Node Family",
+                    x = "Node Family", y = "Median Computational Efficiency (ESS/s)") +
+      ggplot2::theme_minimal(base_size = 12) +
       ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
-    save_fig(computational_plot_raw_tot, "bar_family_computational_eff_tot")
-    res$bar_family_computational_eff_tot <- computational_plot_raw_tot
+    save_fig(p2, "bar_family_computational_eff")
+    res$bar_family_computational_eff <- p2
   }
 
-  # ---------- targets: CE/time barplots (on garde le tri utile) ----------
+  # ---------- CE par target (espacement réduit) ----------
   d_ce <- d[is.finite(d$CE), , drop = FALSE]
-  d_tm <- d[is.finite(d$time_s), , drop = FALSE]
-
   if (isTRUE(make_esss_targets) && NROW(d_ce)) {
     d_worst <- headn(d_ce[order(d_ce$CE, -d_ce$time_s), ], min(top_k, NROW(d_ce)))
-    p <- ggplot2::ggplot(d_worst,
-                         ggplot2::aes(x = stats::reorder(target, CE), y = CE)) +
-      ggplot2::geom_bar(stat = "identity", fill = "grey60") +
-      ggplot2::labs(title = "Worst Targets by CE", x = "Targets", y = "ESS/s") +
-      ggplot2::theme_minimal() +
+    p3 <- ggplot2::ggplot(d_worst,
+                          ggplot2::aes(x = stats::reorder(target, CE), y = CE)) +
+      ggplot2::geom_bar(stat = "identity", fill = "grey50", width = 0.8) +
+      ggplot2::labs(title = "Worst Targets by Computational Efficiency (ESS/s)",
+                    x = "Targets", y = "ESS/s") +
+      ggplot2::theme_minimal(base_size = 12) +
       ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
-    save_fig(p, "bar_target_CE_worst")
-    res$bar_target_CE <- p
+    save_fig(p3, "bar_target_CE_worst")
+    res$bar_target_CE <- p3
   }
 
-  if (isTRUE(make_time_targets) && NROW(d_tm)) {
-    d_top <- headn(d_tm[order(-d_tm$time_s, d_tm$CE), ], min(top_k, NROW(d_tm)))
-    p <- ggplot2::ggplot(d_top,
-                         ggplot2::aes(x = stats::reorder(target, time_s), y = time_s)) +
-      ggplot2::geom_bar(stat = "identity", fill = "grey40") +
-      ggplot2::labs(title = "Top Targets by Time", x = "Targets", y = "Time (s)") +
-      ggplot2::theme_minimal() +
-      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
-    save_fig(p, "bar_target_time_top")
-    res$bar_target_time <- p
-  }
-
-  # ---------- RHAT (all "hist" now use your family bar template) ----------
+  # ---------- RHAT ----------
   d_r <- d[is.finite(d$Rhat), , drop = FALSE]
   if (NROW(d_r)) {
     fam_rhat <- agg_safe(Rhat ~ Family, data = d_r, FUN = stats::median, na.rm = TRUE)
     names(fam_rhat)[2] <- "median_Rhat"
 
     if (isTRUE(make_rhat_hist_targets) && NROW(fam_rhat)) {
-      p_rhat <- ggplot2::ggplot(fam_rhat,
-                                ggplot2::aes(x = stats::reorder(Family, median_Rhat), y = median_Rhat - 1)) +
-        ggplot2::geom_bar(stat = "identity", fill = "orange", color = "black") +
-        ggplot2::geom_hline(yintercept = (rhat_ref - 1), linetype = "dashed", color = "red", size = 1) +
-        ggplot2::xlab("Nodes") +
-        ggplot2::ylab("Median of Gelman-Rubin Rhat") +
-        ggplot2::theme_bw() +
-        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5)) +
-        ggplot2::scale_y_continuous(limits = c(0, rhat_ref - 1), labels = function(y) y + 1)
-      save_fig(p_rhat, "rhat_family_bars_template")
-      res$rhat_family_template <- p_rhat
-    }
-
-    if (isTRUE(make_rhat_median_families) && NROW(fam_rhat)) {
-      # alias (meme figure, nom different pour compat)
-      p_rhat2 <- ggplot2::ggplot(fam_rhat,
-                                 ggplot2::aes(x = stats::reorder(Family, median_Rhat), y = median_Rhat - 1)) +
-        ggplot2::geom_bar(stat = "identity", fill = "orange", color = "black") +
-        ggplot2::geom_hline(yintercept = (rhat_ref - 1), linetype = "dashed", color = "red", size = 1) +
-        ggplot2::xlab("Nodes") +
-        ggplot2::ylab("Median of Gelman-Rubin Rhat") +
-        ggplot2::theme_bw() +
-        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5)) +
-        ggplot2::scale_y_continuous(limits = c(0, rhat_ref - 1), labels = function(y) y + 1)
-      save_fig(p_rhat2, "rhat_median_families_template")
-      res$rhat_family_median <- p_rhat2
+      p4 <- ggplot2::ggplot(fam_rhat,
+                            ggplot2::aes(x = stats::reorder(Family, median_Rhat), y = median_Rhat - 1)) +
+        ggplot2::geom_bar(stat = "identity", fill = "orange", color = "black", width = 0.8) +
+        ggplot2::geom_hline(yintercept = (rhat_ref - 1),
+                            linetype = "dashed", color = "red", size = 1) +
+        ggplot2::xlab("Node Family") + ggplot2::ylab("Median Rhat - 1") +
+        ggplot2::theme_bw(base_size = 12) +
+        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 1))
+      save_fig(p4, "rhat_family_bars_template")
+      res$rhat_family_template <- p4
     }
 
     if (isTRUE(make_rhat_worst_targets)) {
       ord <- order(-d_r$Rhat, d_r$CE)
       rhat_worst <- headn(d_r[ord, , drop = FALSE], min(top_k, NROW(d_r)))
-      p <- ggplot2::ggplot(rhat_worst,
-                           ggplot2::aes(x = stats::reorder(target, Rhat), y = Rhat - 1)) +
-        ggplot2::geom_bar(stat = "identity", fill = "orange", color = "black") +
-        ggplot2::geom_hline(yintercept = (rhat_ref - 1), linetype = "dashed", color = "red", size = 1) +
-        ggplot2::xlab("Nodes") +
-        ggplot2::ylab("Median of Gelman-Rubin Rhat") +
-        ggplot2::theme_bw() +
-        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5)) +
-        ggplot2::scale_y_continuous(limits = c(0, rhat_ref - 1), labels = function(y) y + 1)
-      save_fig(p, "rhat_worst_targets_template")
-      res$rhat_worst_targets <- p
+      p5 <- ggplot2::ggplot(rhat_worst,
+                            ggplot2::aes(x = stats::reorder(target, Rhat), y = Rhat - 1)) +
+        ggplot2::geom_bar(stat = "identity", fill = "orange", color = "black", width = 0.8) +
+        ggplot2::geom_hline(yintercept = (rhat_ref - 1),
+                            linetype = "dashed", color = "red", size = 1) +
+        ggplot2::xlab("Targets") + ggplot2::ylab("Rhat - 1") +
+        ggplot2::theme_bw(base_size = 12) +
+        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 1))
+      save_fig(p5, "rhat_worst_targets_template")
+      res$rhat_worst_targets <- p5
     }
   }
 
   invisible(res)
 }
+
 # --------------------------------------------------------------
 # PLOT CONVERGENCE CHECKS (R-hat + traces)
 # --------------------------------------------------------------
@@ -444,7 +489,6 @@ plot_bottlenecks_index <- function(
     make_bar_ae_median_all = TRUE,
     make_bar_ce_median_all = TRUE,
     make_bar_ce_worst_all  = TRUE,
-    make_bar_time_top_all  = TRUE,
     # ---- SAMPLED-ONLY (unchanged) ----
     make_bar_rhat_worst = TRUE,
     make_bar_ess_q5     = TRUE,
@@ -501,9 +545,7 @@ plot_bottlenecks_index <- function(
   # Sorted frames for "all-nodes" panels
   ae_all_ord <- agg_all[order(agg_all$AE, agg_all$target), c("target","AE"), drop = FALSE]
   ce_all_ord <- agg_all[order(agg_all$CE, agg_all$target), c("target","CE"), drop = FALSE]
-  tm_all_ord <- agg_all[order(-agg_all$time_s, agg_all$target), c("target","time_s","CE"), drop = FALSE]
   ce_all_worst <- utils::head(ce_all_ord, min(top_k, nrow(ce_all_ord)))
-  tm_all_top   <- utils::head(tm_all_ord, min(top_k, nrow(tm_all_ord)))
 
   # ============================
   # SAMPLED-ONLY AGGREGATIONS
@@ -554,7 +596,6 @@ plot_bottlenecks_index <- function(
   # Sorted frames for sampled-only panels
   ae_s_ord  <- agg_s[order(agg_s$AE,  agg_s$target), c("target","AE"),  drop = FALSE]
   ce_s_ord  <- agg_s[order(agg_s$CE,  agg_s$target), c("target","CE"),  drop = FALSE]
-  tm_s_ord  <- agg_s[order(-agg_s$time_s, agg_s$target), c("target","time_s","CE"), drop = FALSE]
   rh_s_ord  <- agg_s[order(-agg_s$Rhat,    agg_s$target), c("target","Rhat","CE"), drop = FALSE]
   ess_s_ord <- agg_s[order(agg_s$ESS,      agg_s$target), c("target","ESS","CE"),  drop = FALSE]
 
@@ -564,35 +605,35 @@ plot_bottlenecks_index <- function(
   # NEW / REPLACEMENT PANELS
   # =========================
 
-  # (ALL NODES) AE median bar — full set (steelblue)
+  # (ALL NODES) AE  bar — full set (steelblue)
   if (make_bar_ae_median_all && nrow(ae_all_ord)) {
     p <- ggplot2::ggplot(ae_all_ord,
                          ggplot2::aes(x = stats::reorder(target, AE), y = AE)) +
       ggplot2::geom_bar(stat = "identity", fill = "steelblue") +
       ggplot2::labs(
-        title = "Median ESS/N by Target — All Nodes",
+        title = "ESS/N by Target — All Nodes",
         subtitle = paste0("All nodes with finite AE (n = ", nrow(ae_all_ord), ")"),
-        x = "Targets", y = "Median ESS/N"
+        x = "Targets", y = "ESS/N"
       ) +
       ggplot2::theme_minimal() +
       ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
-    save_fig(p, "AE_median_by_target__all_nodes")
+    save_fig(p, "AE_by_target__all_nodes")
     res$AE_median_by_target__all_nodes <- p
   }
 
-  # (ALL NODES) CE median bar — full set (green)
+  # (ALL NODES) CE bar — full set (green)
   if (make_bar_ce_median_all && nrow(ce_all_ord)) {
     p <- ggplot2::ggplot(ce_all_ord,
                          ggplot2::aes(x = stats::reorder(target, CE), y = CE)) +
       ggplot2::geom_bar(stat = "identity", fill = "green") +
       ggplot2::labs(
-        title = "Median CE ESS/s by Target — All Nodes",
+        title = "CE ESS/s by Target — All Nodes",
         subtitle = paste0("All nodes with finite CE (n = ", nrow(ce_all_ord), ")"),
-        x = "Targets", y = "Median ESS/s"
+        x = "Targets", y = "ESS/s"
       ) +
       ggplot2::theme_minimal() +
       ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
-    save_fig(p, "CE_median_by_target__all_nodes")
+    save_fig(p, "CE_by_target__all_nodes")
     res$CE_median_by_target__all_nodes <- p
   }
 
@@ -605,29 +646,12 @@ plot_bottlenecks_index <- function(
       ggplot2::labs(
         title = "Targets by CE ESS/s) — All Nodes",
         subtitle = paste0("Showing up to ", nrow(ce_all_worst), " worst targets"),
-        x = "Targets", y = "Median ESS/s"
+        x = "Targets", y = "ESS/s"
       ) +
       ggplot2::theme_minimal() +
       ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
     save_fig(p, "CE_worst_targets__all_nodes")
     res$CE_worst_targets__all_nodes <- p
-  }
-
-  # (ALL NODES) Top Time — top_k (grey40 + labels)
-  if (make_bar_time_top_all && nrow(tm_all_top)) {
-    p <- ggplot2::ggplot(tm_all_top,
-                         ggplot2::aes(x = stats::reorder(target, time_s), y = time_s)) +
-      ggplot2::geom_bar(stat = "identity", fill = "red") +
-      ggplot2::geom_text(ggplot2::aes(label = round(time_s, 2)), vjust = -0.5, size = 3) +
-      ggplot2::labs(
-        title = "Top Targets by Total Compute Time — All Nodes",
-        subtitle = paste0("Showing up to ", nrow(tm_all_top), " highest times"),
-        x = "Targets", y = "Total Time (s)"
-      ) +
-      ggplot2::theme_minimal() +
-      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
-    save_fig(p, "Time_top_targets__all_nodes")
-    res$Time_top_targets__all_nodes <- p
   }
 
   # =================
@@ -644,7 +668,7 @@ plot_bottlenecks_index <- function(
       ggplot2::labs(
         title = "Rhat (Rhat − 1) — Sampled Only",
         subtitle = paste0("Dashed line at Rhat = ", rhat_ref),
-        x = "Targets", y = "Median Rhat − 1"
+        x = "Targets", y = "Rhat − 1"
       ) +
       ggplot2::theme_bw() +
       ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5)) +
@@ -679,13 +703,13 @@ plot_bottlenecks_index <- function(
                          ggplot2::aes(x = stats::reorder(target, CE), y = CE)) +
       ggplot2::geom_bar(stat = "identity", fill = "green") +
       ggplot2::labs(
-        title = "Median ESS/s by Target — Sampled Only",
+        title = "ESS/s by Target — Sampled Only",
         subtitle = paste0("All sampled targets (n = ", nrow(ce_s_ord), ")"),
-        x = "Targets", y = "Median ESS/s"
+        x = "Targets", y = "ESS/s"
       ) +
       ggplot2::theme_minimal() +
       ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
-    save_fig(p, "CE_median_by_target__full_sampled_set")
+    save_fig(p, "CE_by_target__full_sampled_set")
     res$CE_median_by_target__full_sampled_set <- p
   }
   if (make_hist_ae && nrow(ae_s_ord)) {
@@ -693,23 +717,20 @@ plot_bottlenecks_index <- function(
                          ggplot2::aes(x = stats::reorder(target, AE), y = AE)) +
       ggplot2::geom_bar(stat = "identity", fill = "steelblue") +
       ggplot2::labs(
-        title = "Median ESS/N by Target — Sampled Only ",
+        title = "ESS/N by Target — Sampled Only ",
         subtitle = paste0("All sampled targets (n = ", nrow(ae_s_ord), ")"),
-        x = "Targets", y = "Median ESS/N"
+        x = "Targets", y = "ESS/N"
       ) +
       ggplot2::theme_minimal() +
       ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
-    save_fig(p, "AE_median_by_target__full_sampled_set")
+    save_fig(p, "AE_by_target__full_sampled_set")
     res$AE_median_by_target__full_sampled_set <- p
   }
 
   # ---- worst-node tables (you still have both universes available if needed) ----
   res$worst_nodes_all_computational      <- ce_all_worst
-  res$worst_nodes_all_time_top           <- tm_all_top
   res$worst_nodes_sampled_rhat           <- rh_s_ord
   res$worst_nodes_sampled_ess            <- ess_s_ord
 
   invisible(res)
 }
-
-

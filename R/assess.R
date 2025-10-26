@@ -195,24 +195,65 @@ identify_bottlenecks <- function(samples, runtime_s,
                                  auto_configure = TRUE,
                                  rhat_threshold = 1.01,
                                  ess_per_s_min = 0) {
+
   stopifnot(is.numeric(runtime_s), length(runtime_s) == 1L, is.finite(runtime_s))
 
+  # --- helper: columns present in samples ---
+  .sample_cols <- function(smp) {
+    if (is.null(smp)) return(character(0))
+    x <- try(as.data.frame(smp[[1]]), silent = TRUE)
+    if (inherits(x, "try-error")) {
+      x <- try(as.data.frame(smp), silent = TRUE)
+      if (inherits(x, "try-error")) return(character(0))
+    }
+    colnames(x)
+  }
+
+  # --- helper: derive sampler-attached targets via getSamplers() ---
+  .derive_sampler_params_from_conf <- function(mcmc_conf, samples, ignore_patterns, model, auto_configure) {
+    cfg <- mcmc_conf
+    if (is.null(cfg) && isTRUE(auto_configure) && !is.null(model)) {
+      cfg <- try(nimble::configureMCMC(model), silent = TRUE)
+      if (inherits(cfg, "try-error")) cfg <- NULL
+    }
+    tgts <- character(0)
+    if (!is.null(cfg) && is.function(cfg$getSamplers)) {
+      sams <- try(cfg$getSamplers(), silent = TRUE)
+      if (!inherits(sams, "try-error") && length(sams)) {
+        tgts <- unique(unlist(lapply(sams, function(s) s$target), use.names = FALSE))
+      }
+    }
+    # nettoie et restreint aux colonnes présentes
+    cols <- .sample_cols(samples)
+    if (length(ignore_patterns)) {
+      re <- paste(ignore_patterns, collapse = "|")
+      tgts <- tgts[!grepl(re, tgts, perl = TRUE)]
+    }
+    if (length(cols)) tgts <- intersect(tgts, cols)
+    unique(tgts)
+  }
+
+  # --- performance per parameter ---
   ap <- assess_performance(samples, runtime_s, rhat_thresh = rhat_threshold)
   pp <- as.data.frame(ap$per_param)
 
+  # --- ensure sampler_params come from getSamplers() if not provided ---
   if (is.null(sampler_params) || !length(sampler_params)) {
-    sampler_params <- .derive_sampler_params_auto(
-      samples       = samples,
-      model         = model,
-      mcmc_conf     = mcmc_conf,
+    sampler_params <- .derive_sampler_params_from_conf(
+      mcmc_conf       = mcmc_conf,
+      samples         = samples,
       ignore_patterns = ignore_patterns,
+      model           = model,
       auto_configure  = auto_configure
     )
   }
+
+  # --- enforce sampler-only filter if requested ---
   if (isTRUE(strict_sampler_only)) {
     if (!length(sampler_params)) {
       stop("identify_bottlenecks: strict_sampler_only=TRUE but no sampler-attached parameters could be derived. ",
-           "Provide `model` or `mcmc_conf`, or set strict_sampler_only=FALSE (not recommended).")
+           "Provide `mcmc_conf` (preferably) or `model` (with auto_configure=TRUE), ",
+           "or set strict_sampler_only=FALSE (not recommended).")
     }
     pp <- pp[pp$parameter %in% sampler_params, , drop = FALSE]
   } else if (length(sampler_params)) {
@@ -224,8 +265,9 @@ identify_bottlenecks <- function(samples, runtime_s,
          "Check that your samples contain the monitored stochastic nodes.")
   }
 
-  pp$slow_node_time <- ifelse(pp$CE > 0, ess_threshold / pp$CE, Inf)
-  pp$meet_target    <- is.finite(pp$slow_node_time) & (pp$slow_node_time <= runtime_s)
+  # --- targets and ranks (unchanged) ---
+  pp$slow_node_time  <- ifelse(pp$CE > 0, ess_threshold / pp$CE, Inf)
+  pp$meet_target     <- is.finite(pp$slow_node_time) & (pp$slow_node_time <= runtime_s)
   pp$below_ess_per_s <- if (isTRUE(ess_per_s_min > 0)) (pp$CE < ess_per_s_min) else FALSE
 
   is_degen   <- !is.finite(pp$ESS) | (pp$ESS <= 0) | !is.finite(pp$AE) | !is.finite(pp$CE)
@@ -250,7 +292,7 @@ identify_bottlenecks <- function(samples, runtime_s,
     out
   }
 
-  top_k    <- min(20L, nrow(valid))
+  top_k      <- min(20L, nrow(valid))
   worst_ce   <- take(o_ce,   top_k)
   worst_ae   <- take(o_ae,   top_k)
   worst_time <- take(o_time, top_k)
@@ -271,7 +313,6 @@ identify_bottlenecks <- function(samples, runtime_s,
     stringsAsFactors = FALSE
   )
 
-  # column order CE -> AE -> slow_node_time
   .reorder_cols_param <- function(df) {
     cols <- c("parameter","ESS","CE","AE","Rhat","slow_node_time",
               "meet_target","below_ess_per_s","CE_rank","AE_rank","TIME_rank")
@@ -298,16 +339,30 @@ identify_bottlenecks <- function(samples, runtime_s,
   )
   top3_list <- Filter(Negate(is.null), top3_list)
   top3 <- if (length(top3_list)) do.call(rbind, top3_list) else NULL
-  if (!is.null(top3)) rownames(top3) <- NULL
+
+  if (!is.null(top3) && nrow(top3)) {
+    # Remove duplicates (same parameter-axis pairs)
+    top3 <- top3[!duplicated(top3[, c("parameter", "axis")]), , drop = FALSE]
+    # Ensure consistent ordering by axis, then CE rank
+    top3 <- top3[order(top3$axis, top3$CE_rank, na.last = TRUE), , drop = FALSE]
+    rownames(top3) <- NULL
+  }
 
   list(
     type      = "ok",
-    details   = list(ce = worst_ce, ae = worst_ae, time = worst_time, degenerate = degenerate),
+    details   = list(
+      ce         = worst_ce,
+      ae         = worst_ae,
+      time       = worst_time,
+      degenerate = degenerate
+    ),
     per_param = valid,
     summary   = summary,
     top3      = top3
   )
 }
+
+
 #' Histograms for ESS / CE / AE / Rhat (ggplot2)
 #'
 #' @export
@@ -544,26 +599,61 @@ identify_bottlenecks_family <- function(samples, runtime_s,
                                         ess_per_s_min = 0) {
   stopifnot(is.numeric(runtime_s), length(runtime_s) == 1L, is.finite(runtime_s))
 
-  # 0) base metrics
+  # --- base metrics
   ap <- assess_performance(samples, runtime_s, rhat_thresh = rhat_threshold)
   pp <- as.data.frame(ap$per_param)
 
-  # A) auto-derive sampler params if not provided
+  # --- helper: columns present in samples ---
+  .sample_cols <- function(smp) {
+    if (is.null(smp)) return(character(0))
+    x <- try(as.data.frame(smp[[1]]), silent = TRUE)
+    if (inherits(x, "try-error")) {
+      x <- try(as.data.frame(smp), silent = TRUE)
+      if (inherits(x, "try-error")) return(character(0))
+    }
+    colnames(x)
+  }
+
+  # --- helper: derive sampler-attached targets via getSamplers() ---
+  .derive_sampler_params_from_conf <- function(mcmc_conf, samples, ignore_patterns, model, auto_configure) {
+    cfg <- mcmc_conf
+    if (is.null(cfg) && isTRUE(auto_configure) && !is.null(model)) {
+      cfg <- try(nimble::configureMCMC(model), silent = TRUE)
+      if (inherits(cfg, "try-error")) cfg <- NULL
+    }
+    tgts <- character(0)
+    if (!is.null(cfg) && is.function(cfg$getSamplers)) {
+      sams <- try(cfg$getSamplers(), silent = TRUE)
+      if (!inherits(sams, "try-error") && length(sams)) {
+        tgts <- unique(unlist(lapply(sams, function(s) s$target), use.names = FALSE))
+      }
+    }
+    cols <- .sample_cols(samples)
+    if (length(ignore_patterns)) {
+      re <- paste(ignore_patterns, collapse = "|")
+      tgts <- tgts[!grepl(re, tgts, perl = TRUE)]
+    }
+    if (length(cols)) tgts <- intersect(tgts, cols)
+    unique(tgts)
+  }
+
+  # --- derive sampler params if not provided ---
   if (is.null(sampler_params) || !length(sampler_params)) {
-    sampler_params <- .derive_sampler_params_auto(
-      samples       = samples,
-      model         = model,
-      mcmc_conf     = mcmc_conf,
+    sampler_params <- .derive_sampler_params_from_conf(
+      mcmc_conf       = mcmc_conf,
+      samples         = samples,
       ignore_patterns = ignore_patterns,
+      model           = model,
       auto_configure  = auto_configure
     )
   }
 
-  # Enforce sampler-only if requested
+  # --- enforce sampler-only filter ---
   if (isTRUE(strict_sampler_only)) {
     if (!length(sampler_params)) {
       stop("identify_bottlenecks_family: strict_sampler_only=TRUE but no sampler-attached parameters could be derived. ",
-           "Provide `model` or `mcmc_conf`, or set strict_sampler_only=FALSE (not recommended).")
+           "Provide `mcmc_conf` (recommended) or `model` (with auto_configure=TRUE), ",
+           "or set strict_sampler_only=FALSE (not recommended).")
     }
     pp <- pp[pp$parameter %in% sampler_params, , drop = FALSE]
   } else if (length(sampler_params)) {
@@ -575,10 +665,10 @@ identify_bottlenecks_family <- function(samples, runtime_s,
          "Check that your samples contain the monitored stochastic nodes.")
   }
 
-  # 1) add family
+  # --- 1) add family
   pp$family <- .family_of(pp$parameter)
 
-  # 2) family medians
+  # --- 2) family medians
   agg <- function(df) {
     data.frame(
       ESS_med   = stats::median(df$ESS, na.rm = TRUE),
@@ -592,12 +682,12 @@ identify_bottlenecks_family <- function(samples, runtime_s,
   per_family <- do.call(rbind, lapply(split(pp, pp$family), agg))
   per_family$family <- rownames(per_family); rownames(per_family) <- NULL
 
-  # 3) time-to-target
+  # --- 3) time-to-target
   per_family$slow_node_time <- ifelse(per_family$CE_med > 0, ess_threshold / per_family$CE_med, Inf)
   per_family$meet_target     <- is.finite(per_family$slow_node_time) & (per_family$slow_node_time <= runtime_s)
   per_family$below_ess_per_s <- if (isTRUE(ess_per_s_min > 0)) per_family$CE_med < ess_per_s_min else FALSE
 
-  # 4) degenerates
+  # --- 4) degenerates
   is_degen   <- !is.finite(per_family$ESS_med) | (per_family$ESS_med <= 0) |
     !is.finite(per_family$AE_med)  | !is.finite(per_family$CE_med)
   degenerate <- per_family[is_degen, , drop = FALSE]
@@ -628,7 +718,7 @@ identify_bottlenecks_family <- function(samples, runtime_s,
     ))
   }
 
-  # 5) ranks (worse: CE_med low, AE_med low, slow_node_time high)
+  # --- 5) ranks (CE low, AE low, slow_node_time high)
   CE_rank   <- rank(valid$CE_med,           ties.method = "min", na.last = "keep")
   AE_rank   <- rank(valid$AE_med,           ties.method = "min", na.last = "keep")
   TIME_rank <- rank(-valid$slow_node_time,  ties.method = "min", na.last = "keep")
@@ -668,7 +758,7 @@ identify_bottlenecks_family <- function(samples, runtime_s,
     stringsAsFactors = FALSE
   )
 
-  # column order (CE -> AE -> slow_node_time)
+  # --- reorder columns (CE → AE → slow_node_time)
   .reorder_cols_family <- function(df) {
     cols <- c("family","n_members","ESS_med","CE_med","AE_med","Rhat_med",
               "slow_node_time","meet_target","below_ess_per_s",
@@ -681,6 +771,7 @@ identify_bottlenecks_family <- function(samples, runtime_s,
   degenerate <- .reorder_cols_family(degenerate)
   valid      <- .reorder_cols_family(valid)
 
+  # --- top3 (deduplicated)
   mk_top3 <- function(df, axis_label) {
     if (is.null(df) || !nrow(df)) return(NULL)
     k <- min(3L, nrow(df))
@@ -696,7 +787,12 @@ identify_bottlenecks_family <- function(samples, runtime_s,
   )
   top3_list <- Filter(Negate(is.null), top3_list)
   top3 <- if (length(top3_list)) do.call(rbind, top3_list) else NULL
-  if (!is.null(top3)) rownames(top3) <- NULL
+
+  if (!is.null(top3) && nrow(top3)) {
+    top3 <- top3[!duplicated(top3[, c("family", "axis")]), , drop = FALSE]
+    top3 <- top3[order(top3$axis, top3$CE_rank, na.last = TRUE), , drop = FALSE]
+    rownames(top3) <- NULL
+  }
 
   list(
     type       = "ok",

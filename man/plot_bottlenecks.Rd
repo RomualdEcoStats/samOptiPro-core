@@ -2,14 +2,16 @@
 % Please edit documentation in R/plots.R
 \name{plot_bottlenecks}
 \alias{plot_bottlenecks}
-\title{Plot bottlenecks (targets & families) with AE/CE, total time, and R-hat}
+\title{Plot MCMC Bottlenecks by Node or Family}
 \usage{
 plot_bottlenecks(
   diag_tbl,
   out_dir = "outputs/diagnostics",
   top_k = 20L,
   rhat_ref = 1.05,
-  make_time_targets = TRUE,
+  sampled_only = FALSE,
+  conf.mcmc = NULL,
+  samples_ml = NULL,
   make_esss_targets = TRUE,
   make_esss_families = TRUE,
   make_time_families = TRUE,
@@ -21,46 +23,101 @@ plot_bottlenecks(
 )
 }
 \arguments{
-\item{diag_tbl}{Data frame with columns (flexible names supported):
-\itemize{
-\item \code{target} (if absent, rownames are used),
-\item \code{AE} or \code{AE_ESS_per_it} (ESS/iter; small = worse),
-\item \code{CE} or \code{ESS_per_sec} or \code{ess_per_s} (ESS/s; small = worse),
-\item \code{ESS} or \code{ess} (optional, absolute ESS),
-\item \code{time_s} (optional; total seconds per target),
-\item \code{Rhat} (optional),
-\item \code{Family} (otherwise derived from target prefix before '[').
-}}
+\item{diag_tbl}{\code{data.frame} or \code{tibble} containing diagnostics per target node.
+Must include columns such as \code{target}, \code{Family}, \code{ESS}, \code{ESS_per_sec}, and optionally \code{Rhat}.}
 
-\item{out_dir}{Output directory (created if missing).}
+\item{out_dir}{Character string; path to output directory for saving figures
+(default: \code{"outputs/diagnostics"}). Will be created recursively if missing.}
 
-\item{top_k}{Number of bars to show (worst/top).}
+\item{top_k}{Integer; number of worst or best nodes to display (default: \code{20L}).}
 
-\item{rhat_ref}{Reference R-hat threshold line (default 1.01).}
+\item{rhat_ref}{Numeric; reference threshold for Gelman–Rubin \eqn{\hat{R}} (default: \code{1.05}).}
 
-\item{make_time_targets}{Barplot of top targets by total time.}
+\item{sampled_only}{Logical; if \code{TRUE}, restricts plots to nodes that have an
+explicit sampler in \code{conf.mcmc} and are present in \code{samples_ml}. Default: \code{FALSE}.}
 
-\item{make_esss_targets}{Barplot of worst targets by CE (ESS/s).}
+\item{conf.mcmc}{NIMBLE MCMC configuration object, typically produced by
+\code{configureMCMC(model, ...)} or stored as \code{build_fn()$conf}. Used to extract
+sampler-attached target nodes when \code{sampled_only = TRUE}.}
 
-\item{make_esss_families}{Barplot of worst families by median CE.}
+\item{samples_ml}{Optional MCMC list (as returned by \code{runMCMC(..., nchains > 1)}),
+used to match sampler targets with actual sample column names.}
 
-\item{make_time_families}{Barplot of top families by total time.}
+\item{make_esss_targets}{Logical; if \code{TRUE}, produces barplot of worst targets
+by computational efficiency (default: \code{TRUE}).}
 
-\item{make_rhat_hist_targets}{Histogram of R-hat (targets).}
+\item{make_esss_families}{Logical; if \code{TRUE}, produces barplot of median
+algorithmic efficiency (AE) by node family (default: \code{TRUE}).}
 
-\item{make_rhat_worst_targets}{Barplot of worst targets by R-hat.}
+\item{make_time_families}{Logical; if \code{TRUE}, produces barplot of median
+computational efficiency (CE) by node family (default: \code{TRUE}).}
 
-\item{make_rhat_median_families}{Barplot of median R-hat by family.}
+\item{make_rhat_hist_targets}{Logical; if \code{TRUE}, produces barplot of median
+Rhat per family (default: \code{TRUE}).}
 
-\item{make_hist_ae_families}{Histogram of family medians (AE).}
+\item{make_rhat_worst_targets}{Logical; if \code{TRUE}, produces barplot of the
+worst Rhat targets (default: \code{TRUE}).}
 
-\item{make_hist_ce_families}{Histogram of family medians (CE).}
+\item{make_rhat_median_families}{Logical; if \code{TRUE}, produces an alias
+of the median Rhat-by-family plot (default: \code{TRUE}).}
 }
 \value{
-(Invisibly) a named list of ggplot objects actually created.
+Invisibly returns a named \code{list} of ggplot objects:
+\itemize{
+\item \code{bar_family_algorithmic_eff} — Median AE by family;
+\item \code{bar_family_computational_eff} — Median CE by family;
+\item \code{bar_target_CE} — Worst targets by CE;
+\item \code{rhat_family_template} — Median Rhat by family;
+\item \code{rhat_worst_targets} — Worst targets by Rhat.
+}
+Each plot is also saved in \code{out_dir} as both \code{.pdf} and \code{.png}.
 }
 \description{
-Creates only the requested figures (toggles). If a toggle is FALSE, the
-corresponding figure is neither computed nor saved. ECDF and joint
-scatter plots are intentionally removed.
+Generates a comprehensive diagnostic panel of MCMC bottlenecks using
+efficiency and convergence metrics computed per node or node family.
+The function can optionally restrict analyses to nodes that are
+effectively sampled (i.e. have associated samplers in the NIMBLE
+configuration), identified automatically via \code{conf.mcmc$getSamplers()}.
+
+It produces publication-ready figures of:
+\itemize{
+\item Median \emph{Algorithmic Efficiency} (AE = ESS/iter) by node family;
+\item Median \emph{Computational Efficiency} (CE = ESS/s) by node family;
+\item Worst targets by CE (lowest ESS/s);
+\item Median or worst \eqn{\hat{R}} (Gelman–Rubin) by node or family.
+}
+
+The function saves each plot both as PDF and PNG in the specified output directory.
+Bar widths and spacing are optimized for compact presentation.
+}
+\details{
+This function is a core visualization tool for diagnosing performance
+bottlenecks in large hierarchical Bayesian models (e.g., SAM-like or
+GEREM-type stock assessment models). It integrates runtime, efficiency,
+and convergence metrics in a standardized panel of plots, suitable for
+benchmarking, model comparison, or publication figures.
+
+When \code{sampled_only = TRUE}, it automatically extracts the list of stochastic
+nodes (targets) from \code{conf.mcmc$getSamplers()} and intersects them with the
+variable names present in \code{samples_ml}. This ensures only stochastically
+sampled nodes are visualized, excluding lifted or deterministic intermediates.
+}
+\examples{
+\dontrun{
+# Example assuming an existing NIMBLE configuration and MCMC results:
+res <- plot_bottlenecks(
+  diag_tbl     = diag_tbl,
+  conf.mcmc    = conf.mcmc,
+  samples_ml   = samples_ml,
+  sampled_only = TRUE,
+  out_dir      = "outputs/diagnostics"
+)
+}
+
+
+}
+\seealso{
+\code{\link{identify_bottlenecks_family}},
+\code{\link{profile_sampler_times}},
+\code{\link{run_structure_and_hmc_test}}
 }

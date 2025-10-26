@@ -216,20 +216,30 @@ samples_ml <- as_mcmc_list_sop(res_b$samples, res_b$samples2,
 runtime_s <- res_b$runtime_s   # Time total
 ap  <- assess_performance(samples_ml, runtime_s)
 
-bot <- identify_bottlenecks_family(samples_ml, runtime_s,
-                                        ess_threshold = 1000,
-                                        sampler_params = NULL,
-                                        model = m,
-                                        mcmc_conf = NULL,
-                                        ignore_patterns = c("^lifted_","^logProb_"),
-                                        strict_sampler_only = TRUE,
-                                        auto_configure = TRUE,
-                                        rhat_threshold = 1.01,
-                                        ess_per_s_min = 0)
+bot<-identify_bottlenecks(samples_ml, runtime_s,
+                                 ess_threshold = 1000,
+                                 sampler_params = NULL,
+                                 model = m,
+                                 mcmc_conf = NULL,
+                                 ignore_patterns = c("^lifted_","^logProb_"),
+                                 strict_sampler_only = TRUE,
+                                 auto_configure = TRUE,
+                                 rhat_threshold = 1.01,
+                                 ess_per_s_min = 0)
 runtime_s
 ap$summary
 bot$top3
-
+bot2<-identify_bottlenecks_family(samples_ml, runtime_s,
+                                 ess_threshold = 1000,
+                                 sampler_params = NULL,
+                                 model = m,
+                                 mcmc_conf = NULL,
+                                 ignore_patterns = c("^lifted_","^logProb_"),
+                                 strict_sampler_only = TRUE,
+                                 auto_configure = TRUE,
+                                 rhat_threshold = 1.01,
+                                 ess_per_s_min = 0)
+bot2$top3
 ```
 
 # Step 6-Adaptive Block Strategy — test_strategy_block()
@@ -319,52 +329,43 @@ diffB<-test_strategy(build_fn = build_M,
 
 # Step-7. Visualization and Diagnostics
 ```{r  Visualization and Diagnostics,message=FALSE, warning=FALSE,fig.cap="", out.width="90%",echo=TRUE, results='asis'}
-
 diag_tbl <- compute_diag_from_mcmc(samples_ml, runtime_s = res_b$runtime_s)
-#out_dir<-"outputs/diagnostics"
+conf.mcmc <- nimble::configureMCMC(m)
+
 plots_bn <- plot_bottlenecks(
   diag_tbl,
-  out_dir ="outputs/diagnostics",
-  top_k   = 15,
-  rhat_ref = 1.01,
-  make_time_targets         = TRUE,
-  make_esss_targets         = TRUE,
-  make_esss_families        = TRUE,
-  make_time_families        = TRUE,
-  make_rhat_hist_targets    = TRUE,
-  make_rhat_worst_targets   = TRUE,
-  make_rhat_median_families = TRUE,
-  make_hist_ae_families     = TRUE,
-  make_hist_ce_families     = TRUE
+  sampled_only = FALSE,            # set TRUE for sampled-only nodes
+  conf.mcmc = conf.mcmc,
+  samples_ml = samples_ml
 )
 
 plots_cv <- plot_convergence_checks(
   samples_ml,
-  out_dir ="outputs/diagnostics",   #file.path(outdir, "convergence"),
+  out_dir = "outputs/diagnostics",
   top_k_rhat = 8,
   top_k_aelow = 8,
-  runtime_s = 120,     # pretend 2 minutes total runtime
+  runtime_s = 120,                 # total runtime (adjust if needed)
   rhat_ref = 1.01,
-  make_rhat_hist   = TRUE,
+  make_rhat_hist = TRUE,
   make_traces_rhat = TRUE,
-  make_traces_ae   = TRUE,
+  make_traces_ae = TRUE,
   make_rhat_family_bars = TRUE
 )
 
-cat("\nCreated bottleneck figures:\n")
-print(names(plots_bn))
-cat("\nConvergence outputs:\n")
-print(names(plots_cv))
-conf.mcmc <- nimble::configureMCMC(m)
 plots_bi <- plot_bottlenecks_index(
-    diag_tbl,
-    out_dir = "outputs/diagnostics",
-    top_k   = 20L,
-    make_hist_ce = TRUE,
-    make_hist_ae = TRUE
+  diag_tbl,
+  out_dir = "outputs/diagnostics",
+  top_k = 20L,
+  make_hist_ce = TRUE,
+  make_hist_ae = TRUE
 )
-#plot_bottlenecks() visualizes the worst nodes in terms of ESS/s (Algorithmic Efficiency) and runtime (Computational Efficiency).
-#plot_convergence_checks() produces traceplots, autocorrelation, and R-hat diagnostics for the top problematic parameters
+
+cat("\nCreated bottleneck figures (plot_bottlenecks):\n")
+print(names(plots_bn))
+cat("\nConvergence outputs (plot_convergence_checks):\n")
+print(names(plots_cv))
+cat("\nIndex panels (plot_bottlenecks_index):\n")
+print(names(plots_bi))
 ```
 
 #9. Conclusions
