@@ -1,0 +1,22 @@
+---
+title: "Function: .sop_expand_var_nodes"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .sop_expand_var_nodes}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.sop_expand_var_nodes`
+
+Expand one root to nodes via getVarInfo()
+
+## Arguments
+```text
+mdl, v
+```
+
+## Example
+```r
+# .sop_expand_var_nodes()
+```

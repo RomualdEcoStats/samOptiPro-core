@@ -1,0 +1,22 @@
+---
+title: "Function: var_to_nodes"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: var_to_nodes}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `var_to_nodes`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# var_to_nodes()
+```

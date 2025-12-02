@@ -1,0 +1,22 @@
+---
+title: "Function: has_fun"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: has_fun}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `has_fun`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# has_fun()
+```

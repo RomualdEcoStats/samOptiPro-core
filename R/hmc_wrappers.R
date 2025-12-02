@@ -1,3 +1,5 @@
+## ---- Exported functions (1) ----
+
 #' Configure and run HMC/NUTS safely
 #'
 #' Sets up an HMC/NUTS configuration via \pkg{nimbleHMC}, compiles the MCMC,
@@ -59,3 +61,5 @@ configure_hmc_safely <- function(build_fn,
 
   list(conf = conf, res = out, diag_tbl = dg)
 }
+
+

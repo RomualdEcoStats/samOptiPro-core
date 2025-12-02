@@ -1,0 +1,22 @@
+---
+title: "Function: push"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: push}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `push`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# push()
+```

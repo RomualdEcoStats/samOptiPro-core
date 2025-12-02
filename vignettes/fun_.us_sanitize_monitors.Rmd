@@ -1,0 +1,22 @@
+---
+title: "Function: .us_sanitize_monitors"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .us_sanitize_monitors}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.us_sanitize_monitors`
+
+Drop numeric junk & control tokens from monitors
+
+## Arguments
+```text
+x
+```
+
+## Example
+```r
+# .us_sanitize_monitors()
+```

@@ -1,3 +1,5 @@
+## ---- Exported functions (1) ----
+
 #' Compute WAIC from coda samples that include logLik[] columns
 #' @param samples coda::mcmc.list
 #' @export
@@ -16,3 +18,5 @@ compute_WAIC <- function(samples) {
                               lppd = log(colMeans(exp(ll), na.rm = TRUE)),
                               p_waic = 2 * (log(colMeans(exp(ll), na.rm = TRUE)) - colMeans(ll, na.rm = TRUE))))
 }
+
+

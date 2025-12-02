@@ -30,9 +30,6 @@ test_strategy(
 )
 }
 \arguments{
-\item{build_fn}{Function (or prebuilt list with \code{$model}, \code{$conf})
-that returns a fresh build object used by samplers in this package.}
-
 \item{monitors}{Optional character vector of monitors passed to the build.}
 
 \item{try_hmc}{Logical. If \code{TRUE}, try a full-model HMC/NUTS run first
@@ -93,7 +90,6 @@ A list with elements such as:
 }
 }
 \description{
-Runs a small, reproducible workflow to (i) build a model via \code{build_fn},
 (ii) compute a baseline with the default MCMC configuration, then (iii)
 try alternative samplers in a \emph{strict}, user-defined order on one or two
 “bottleneck” targets (singleton and then optional block on the union).
@@ -116,6 +112,8 @@ The procedure:
 \item For each step, compile, run, compute diagnostics, and save plots.
 }
 When \code{ask = TRUE}, interactive yes/no prompts allow you to stop early.
+
+that returns a fresh build object used by samplers in this package.
 }
 \section{Side effects}{
 
@@ -126,7 +124,6 @@ Creates subfolders and PNG files (R-hat bars, traces/densities) under
 \examples{
 \dontrun{
 res <- test_strategy(
-  build_fn = my_build_fn,
   monitors = c("theta","beta"),
   try_hmc  = TRUE,
   nbot     = 2,

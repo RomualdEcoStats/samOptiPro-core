@@ -1,0 +1,22 @@
+---
+title: "Function: as_mcmc_list_sop"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: as_mcmc_list_sop}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `as_mcmc_list_sop`
+
+Convert various sample formats to coda::mcmc.list (optionally merging samples2)
+
+## Arguments
+```text
+samples, samples2, drop_loglik, thin
+```
+
+## Example
+```r
+# as_mcmc_list_sop()
+```

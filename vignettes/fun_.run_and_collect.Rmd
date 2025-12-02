@@ -1,0 +1,22 @@
+---
+title: "Function: .run_and_collect"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .run_and_collect}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.run_and_collect`
+
+NA
+
+## Arguments
+```text
+cmcmc, niter, nburnin, thin, nchains
+```
+
+## Example
+```r
+# .run_and_collect()
+```

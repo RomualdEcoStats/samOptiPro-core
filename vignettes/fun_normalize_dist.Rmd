@@ -1,0 +1,22 @@
+---
+title: "Function: normalize_dist"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: normalize_dist}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `normalize_dist`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# normalize_dist()
+```

@@ -1,0 +1,22 @@
+---
+title: "Function: .us_tokenize_monitors"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .us_tokenize_monitors}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.us_tokenize_monitors`
+
+Tokenize a monitors specification into clean symbols
+
+## Arguments
+```text
+x
+```
+
+## Example
+```r
+# .us_tokenize_monitors()
+```

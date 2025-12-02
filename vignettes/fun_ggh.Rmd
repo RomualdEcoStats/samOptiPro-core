@@ -1,0 +1,22 @@
+---
+title: "Function: ggh"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: ggh}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `ggh`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# ggh()
+```

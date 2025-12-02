@@ -1,0 +1,22 @@
+---
+title: "Function: mk_trace_density"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: mk_trace_density}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `mk_trace_density`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# mk_trace_density()
+```

@@ -1,0 +1,22 @@
+---
+title: "Function: .merge_mcmc"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .merge_mcmc}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.merge_mcmc`
+
+NA
+
+## Arguments
+```text
+samples, samples2
+```
+
+## Example
+```r
+# .merge_mcmc()
+```

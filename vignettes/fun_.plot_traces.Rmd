@@ -1,0 +1,22 @@
+---
+title: "Function: .plot_traces"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .plot_traces}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.plot_traces`
+
+Save trace plots for a set of nodes
+
+## Arguments
+```text
+mcmc_list, nodes, out_file_prefix
+```
+
+## Example
+```r
+# .plot_traces()
+```

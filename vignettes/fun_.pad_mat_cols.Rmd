@@ -1,0 +1,22 @@
+---
+title: "Function: .pad_mat_cols"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .pad_mat_cols}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.pad_mat_cols`
+
+NA
+
+## Arguments
+```text
+M, n, pad_rule
+```
+
+## Example
+```r
+# .pad_mat_cols()
+```

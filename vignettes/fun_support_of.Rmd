@@ -1,0 +1,22 @@
+---
+title: "Function: support_of"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: support_of}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `support_of`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# support_of()
+```

@@ -1,0 +1,22 @@
+---
+title: "Function: say"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: say}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `say`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# say()
+```

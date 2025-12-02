@@ -1,0 +1,22 @@
+---
+title: "Function: .to_family"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .to_family}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.to_family`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# .to_family()
+```

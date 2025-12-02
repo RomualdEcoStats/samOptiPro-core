@@ -1,0 +1,22 @@
+---
+title: "Function: default_monitors"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: default_monitors}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `default_monitors`
+
+NA
+
+## Arguments
+```text
+model, opts
+```
+
+## Example
+```r
+# default_monitors()
+```

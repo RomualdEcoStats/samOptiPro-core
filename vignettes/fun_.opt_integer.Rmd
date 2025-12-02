@@ -1,0 +1,22 @@
+---
+title: "Function: .opt_integer"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .opt_integer}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.opt_integer`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# .opt_integer()
+```

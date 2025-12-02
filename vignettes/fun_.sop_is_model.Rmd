@@ -1,0 +1,22 @@
+---
+title: "Function: .sop_is_model"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .sop_is_model}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.sop_is_model`
+
+Is this a nimble model?
+
+## Arguments
+```text
+x
+```
+
+## Example
+```r
+# .sop_is_model()
+```

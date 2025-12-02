@@ -1,0 +1,22 @@
+---
+title: "Function: agg"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: agg}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `agg`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# agg()
+```

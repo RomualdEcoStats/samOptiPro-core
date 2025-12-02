@@ -1,0 +1,22 @@
+---
+title: "Function: .log"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .log}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.log`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# .log()
+```

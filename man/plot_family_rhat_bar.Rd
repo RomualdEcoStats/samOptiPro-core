@@ -15,6 +15,18 @@ plot_family_rhat_bar(
   strict_sampler_only = TRUE,
   rhat_threshold = 1.05
 )
+
+plot_family_rhat_bar(
+  samples,
+  runtime_s,
+  sampler_params = NULL,
+  model = NULL,
+  mcmc_conf = NULL,
+  samplers_df = NULL,
+  ignore_patterns = c("^lifted_", "^logProb_"),
+  strict_sampler_only = TRUE,
+  rhat_threshold = 1.05
+)
 }
 \arguments{
 \item{samples}{mcmc.list/mcmc/data.frame/matrix}
@@ -27,8 +39,13 @@ plot_family_rhat_bar(
 }
 \value{
 a \code{ggplot} object (or \code{NULL} if no finite Rhat values)
+
+a \code{ggplot} object (or \code{NULL} if no finite Rhat values)
 }
 \description{
+Plots median(Rhat) by family on the y-axis transformed as median_Rhat - 1,
+so that the standard convergence threshold 1.05 appears at 0.05 on the axis.
+
 Plots median(Rhat) by family on the y-axis transformed as median_Rhat - 1,
 so that the standard convergence threshold 1.05 appears at 0.05 on the axis.
 }

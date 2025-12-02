@@ -1,0 +1,22 @@
+---
+title: "Function: time_it"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: time_it}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `time_it`
+
+NA
+
+## Arguments
+```text
+expr
+```
+
+## Example
+```r
+# time_it()
+```

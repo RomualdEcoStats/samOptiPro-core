@@ -1,0 +1,22 @@
+---
+title: "Function: as_num"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: as_num}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `as_num`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# as_num()
+```

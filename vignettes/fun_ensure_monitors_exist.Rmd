@@ -1,0 +1,22 @@
+---
+title: "Function: ensure_monitors_exist"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: ensure_monitors_exist}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `ensure_monitors_exist`
+
+Ensure monitors exist on the model (variable-aware)
+
+## Arguments
+```text
+model, monitors
+```
+
+## Example
+```r
+# ensure_monitors_exist()
+```

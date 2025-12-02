@@ -1,0 +1,22 @@
+---
+title: "Function: normalize_constants_generic"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: normalize_constants_generic}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `normalize_constants_generic`
+
+Normalize constants in a model-agnostic way
+
+## Arguments
+```text
+Const, n_rule, pad_rule, trim_rule
+```
+
+## Example
+```r
+# normalize_constants_generic()
+```

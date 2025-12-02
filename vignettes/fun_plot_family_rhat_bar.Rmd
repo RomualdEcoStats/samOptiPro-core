@@ -1,0 +1,22 @@
+---
+title: "Function: plot_family_rhat_bar"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: plot_family_rhat_bar}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `plot_family_rhat_bar`
+
+Family-level Rhat bar plot (harmonised style)
+
+## Arguments
+```text
+samples, runtime_s, sampler_params, model, mcmc_conf, samplers_df, ignore_patterns, strict_sampler_only, rhat_threshold
+```
+
+## Example
+```r
+# plot_family_rhat_bar()
+```

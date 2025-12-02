@@ -1,0 +1,22 @@
+---
+title: "Function: .safe_scalar_targets"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .safe_scalar_targets}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.safe_scalar_targets`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# .safe_scalar_targets()
+```

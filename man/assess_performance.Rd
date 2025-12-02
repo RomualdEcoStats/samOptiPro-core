@@ -2,22 +2,49 @@
 % Please edit documentation in R/assess.R
 \name{assess_performance}
 \alias{assess_performance}
-\title{ESS, Rhat, AE, CE and run-level summary}
+\title{Assess MCMC performance metrics (ESS, R-hat, AE, CE)}
 \usage{
 assess_performance(samples, runtime_s, rhat_thresh = 1.01)
 }
 \arguments{
-\item{samples}{\code{mcmc.list} / \code{mcmc} / \code{data.frame} compatible with \code{coda}.}
+\item{samples}{A list of MCMC samples or an object coercible via \code{as_mcmc_list()}.}
 
-\item{runtime_s}{Total wall time in seconds (numeric).}
+\item{runtime_s}{Total runtime of the MCMC run, in seconds (numeric scalar).}
 
-\item{rhat_thresh}{\eqn{\hat{R}} threshold used for the "OK" proportion (default 1.01).}
+\item{rhat_thresh}{Numeric threshold for R-hat convergence flag (default = 1.01).}
 }
 \value{
-A list with \code{summary} (tibble) and \code{per_param} (tibble).
+A named list with two tibbles:
+\describe{
+\item{summary}{A one-row tibble summarizing global diagnostics.}
+\item{per_param}{A tibble containing ESS, Rhat, AE, and CE per parameter.}
+}
 }
 \description{
-Computes, per parameter: ESS, \eqn{\hat{R}}, \strong{AE = ESS / (iters * chains)},
-\strong{CE = ESS / seconds}, and returns a global summary (including total ESS and ESS/s).
+Compute per-parameter and global performance diagnostics from an MCMC
+sample set, including Effective Sample Size (ESS), Gelman–Rubin R-hat,
+Algorithmic Efficiency (AE = ESS / total draws), and Computational Efficiency
+(CE = ESS / runtime in seconds).
 }
-\keyword{internal}
+\details{
+This function combines all chains into a single \code{mcmc.list} object and computes:
+\itemize{
+\item \strong{ESS}: Effective Sample Size, per parameter.
+\item \strong{Rhat}: Gelman–Rubin diagnostic (if ≥ 2 chains).
+\item \strong{AE}: Algorithmic Efficiency = ESS / total retained draws.
+\item \strong{CE}: Computational Efficiency = ESS / runtime (s).
+}
+If package \pkg{posterior} is available, its more robust implementations
+of \code{rhat()} are used automatically; otherwise, \pkg{coda} diagnostics are applied.
+}
+\examples{
+\dontrun{
+res <- run_baseline_config(build_M, niter=2000, nburnin=500, thin=2)
+perf <- assess_performance(res$samples, runtime_s = res$runtime_s)
+perf$summary
+}
+
+}
+\seealso{
+\code{\link[coda:effectiveSize]{coda::effectiveSize()}}, \code{\link[coda:gelman.diag]{coda::gelman.diag()}}, \code{\link[posterior:rhat]{posterior::rhat()}}
+}

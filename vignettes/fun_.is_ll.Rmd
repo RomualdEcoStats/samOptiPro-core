@@ -1,0 +1,22 @@
+---
+title: "Function: .is_ll"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .is_ll}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.is_ll`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# .is_ll()
+```

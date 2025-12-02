@@ -1,0 +1,22 @@
+---
+title: "Function: .sample_cols"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .sample_cols}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.sample_cols`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# .sample_cols()
+```

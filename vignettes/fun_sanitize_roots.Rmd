@@ -1,0 +1,22 @@
+---
+title: "Function: sanitize_roots"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: sanitize_roots}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `sanitize_roots`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# sanitize_roots()
+```

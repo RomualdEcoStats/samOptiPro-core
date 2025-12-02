@@ -1,4 +1,6 @@
 
+## ---- Exported functions (2) ----
+
 #' Robustly check initial values against a compiled NIMBLE model
 #'
 #' @param model a NIMBLE model object (or function that builds one)
@@ -30,6 +32,7 @@ checkInits <- function(model, inits, silent = FALSE) {
   invisible(TRUE)
 }
 
+
 #' Check inits then run MCMC
 #'
 #' @param run_fn function with signature function(inits) -> list(samples=samples, runtime_s=seconds)
@@ -47,3 +50,5 @@ checkInitsAndRun <- function(run_fn, inits, ...) {
   }
   run_fn(inits, ...)
 }
+
+

@@ -1,0 +1,22 @@
+---
+title: "Function: .us_configure_with_monitors"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .us_configure_with_monitors}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.us_configure_with_monitors`
+
+NA
+
+## Arguments
+```text
+model, monitors
+```
+
+## Example
+```r
+# .us_configure_with_monitors()
+```

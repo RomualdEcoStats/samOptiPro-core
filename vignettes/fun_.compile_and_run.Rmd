@@ -1,0 +1,22 @@
+---
+title: "Function: .compile_and_run"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .compile_and_run}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.compile_and_run`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# .compile_and_run()
+```

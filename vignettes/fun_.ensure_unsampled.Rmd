@@ -1,0 +1,22 @@
+---
+title: "Function: .ensure_unsampled"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .ensure_unsampled}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.ensure_unsampled`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# .ensure_unsampled()
+```

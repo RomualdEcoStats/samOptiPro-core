@@ -12,8 +12,6 @@ diagnostics_by_target(
 )
 }
 \arguments{
-\item{build_fn}{A builder function returning \code{list(model=, cmodel=, monitors=?)}.}
-
 \item{opts}{A list of options (e.g., from \code{samOptiPro_options()}).}
 
 \item{niter}{Integer; iterations for time profiling (defaults to \code{opts$time_profile_n}).}

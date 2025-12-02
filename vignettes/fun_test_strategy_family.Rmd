@@ -1,0 +1,22 @@
+---
+title: "Function: test_strategy_family"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: test_strategy_family}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `test_strategy_family`
+
+Family-based sampler strategy: full HMC if allowed, else surgical on bottlenecks
+
+## Arguments
+```text
+build_fn, monitors, try_hmc, nchains, pilot_niter, pilot_burnin, thin, out_dir, nbot, strict_scalar_seq, strict_block_seq, force_families, force_nodes, force_union, ask, ask_before_hmc, block_max, slice_control, rw_control, rwblock_control, af_slice_control, slice_max_contractions
+```
+
+## Example
+```r
+# test_strategy_family()
+```

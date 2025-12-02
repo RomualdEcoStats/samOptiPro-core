@@ -5,14 +5,20 @@
 \title{Check if derivatives/HMC are supported for a nimble model}
 \usage{
 .sop_supports_derivs(model)
+
+.sop_supports_derivs(model)
 }
 \arguments{
 \item{model}{Nimble model.}
 }
 \value{
 Logical.
+
+Logical.
 }
 \description{
+Check if derivatives/HMC are supported for a nimble model
+
 Check if derivatives/HMC are supported for a nimble model
 }
 \keyword{internal}

@@ -1,0 +1,22 @@
+---
+title: "Function: sampler_df"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: sampler_df}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `sampler_df`
+
+Return a data.frame (name, type, target, scale) from a sampler container.
+
+## Arguments
+```text
+samplers
+```
+
+## Example
+```r
+# sampler_df()
+```

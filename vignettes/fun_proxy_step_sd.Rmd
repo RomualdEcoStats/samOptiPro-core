@@ -1,0 +1,22 @@
+---
+title: "Function: proxy_step_sd"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: proxy_step_sd}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `proxy_step_sd`
+
+Step proxy: sd(diff(chain)) on columns matching a pattern
+
+## Arguments
+```text
+samples, pattern
+```
+
+## Example
+```r
+# proxy_step_sd()
+```

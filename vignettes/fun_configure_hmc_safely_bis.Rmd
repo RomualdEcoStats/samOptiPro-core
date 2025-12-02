@@ -1,0 +1,22 @@
+---
+title: "Function: configure_hmc_safely_bis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: configure_hmc_safely_bis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `configure_hmc_safely_bis`
+
+Configure and run HMC/NUTS safely (global / subset / auto)
+
+## Arguments
+```text
+build_fn, niter, nburnin, thin, nchains, monitors, nuts_mode, nuts_nodes, enable_WAIC, buildDerivs, compiler_cores, show_compiler_output, project_name, out_dir, inits, save_samples
+```
+
+## Example
+```r
+# configure_hmc_safely_bis()
+```

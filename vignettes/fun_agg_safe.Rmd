@@ -1,0 +1,22 @@
+---
+title: "Function: agg_safe"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: agg_safe}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `agg_safe`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# agg_safe()
+```

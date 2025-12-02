@@ -1,0 +1,22 @@
+---
+title: "Function: family_of"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: family_of}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `family_of`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# family_of()
+```

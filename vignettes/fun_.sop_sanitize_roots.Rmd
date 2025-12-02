@@ -1,0 +1,22 @@
+---
+title: "Function: .sop_sanitize_roots"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .sop_sanitize_roots}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.sop_sanitize_roots`
+
+Sanitize monitor roots (drop numerics & empties)
+
+## Arguments
+```text
+x
+```
+
+## Example
+```r
+# .sop_sanitize_roots()
+```

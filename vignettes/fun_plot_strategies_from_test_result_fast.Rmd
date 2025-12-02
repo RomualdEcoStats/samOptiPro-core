@@ -1,0 +1,22 @@
+---
+title: "Function: plot_strategies_from_test_result_fast"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: plot_strategies_from_test_result_fast}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `plot_strategies_from_test_result_fast`
+
+Plot strategy comparisons from test_strategy_family_fast results (fast path)
+
+## Arguments
+```text
+res, out_dir, per, top_k, top_by, export_rds, width, height, dpi
+```
+
+## Example
+```r
+# plot_strategies_from_test_result_fast()
+```

@@ -1,0 +1,22 @@
+---
+title: "Function: mk_plot_all"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: mk_plot_all}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `mk_plot_all`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# mk_plot_all()
+```

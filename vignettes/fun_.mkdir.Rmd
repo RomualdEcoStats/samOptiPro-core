@@ -1,0 +1,22 @@
+---
+title: "Function: .mkdir"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .mkdir}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.mkdir`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# .mkdir()
+```

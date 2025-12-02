@@ -2,98 +2,121 @@
 #' @keywords internal
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
-# ============ helpers ===================================================
-# !! Les predicates .sop_is_model / .sop_has_model_api sont definis
-# !! dans zzz_monitors_helpers.R et reutilises ici.
+## ---- Exported functions (4) ----
 
-# Fusionne samples + samples2 en un mcmc.list (chaine par chaine)
-# -- Helpers robustes ----------------------------------------------------
+#' Build a fresh MCMC configuration with automatic monitors if missing
+#' @param model nimbleModel (ou compile; on accepte les deux)
+#' @param monitors optional character vector; if NULL, auto-discover
+#' @param opts samOptiPro_options()
+#' @export
 #' @keywords internal
-.safe_as_mcmc_list <- function(x, start = 1L, thin = 1L) {
-  if (is.null(x)) return(NULL)
-  if (inherits(x, "mcmc.list")) return(x)
-  if (inherits(x, "mcmc"))      return(coda::mcmc.list(x))
-  if (is.matrix(x) || is.data.frame(x)) {
-    if (NCOL(x) == 0L) return(NULL)
-    return(coda::mcmc.list(coda::mcmc(as.matrix(x), start = start, thin = thin)))
-  }
-  if (is.list(x)) {
-    lst <- lapply(x, function(mat) {
-      if (is.null(mat)) return(NULL)
-      if (is.matrix(mat) || is.data.frame(mat)) {
-        if (NCOL(mat) == 0L) return(NULL)
-        return(coda::mcmc(as.matrix(mat), start = start, thin = thin))
-      }
-      if (inherits(mat, "mcmc")) return(mat)
-      NULL
-    })
-    lst <- Filter(Negate(is.null), lst)
-    if (!length(lst)) return(NULL)
-    return(coda::mcmc.list(lst))
-  }
-  NULL
-}
-#' @keywords internal
-.merge_mcmc <- function(samples, samples2) {
-  grab_mcpar <- function(obj) {
-    if (inherits(obj, "mcmc.list") && length(obj)) return(attr(obj[[1]], "mcpar"))
-    if (inherits(obj, "mcmc"))                     return(attr(obj, "mcpar"))
-    NULL
-  }
-  mp <- grab_mcpar(samples); if (is.null(mp)) mp <- grab_mcpar(samples2)
-  start <- if (!is.null(mp)) mp[1] else 1L
-  thin  <- if (!is.null(mp)) mp[3] else 1L
-
-  s1 <- .safe_as_mcmc_list(samples,  start = start, thin = thin)
-  s2 <- .safe_as_mcmc_list(samples2, start = start, thin = thin)
-
-  if (is.null(s1) && is.null(s2))
-    stop("No samples (samples/samples2) were produced.")
-
-  if (is.null(s2)) return(s1)
-  if (is.null(s1)) return(s2)
-
-  stopifnot(length(s1) == length(s2))
-  coda::mcmc.list(lapply(seq_along(s1), function(i) {
-    m1 <- as.matrix(s1[[i]]); m2 <- as.matrix(s2[[i]])
-    if (NCOL(m1) == 0L) return(s2[[i]])
-    if (NCOL(m2) == 0L) return(s1[[i]])
-    mp <- attr(s1[[i]], "mcpar"); if (is.null(mp)) mp <- attr(s2[[i]], "mcpar")
-    start <- if (!is.null(mp)) mp[1] else 1L
-    thin  <- if (!is.null(mp)) mp[3] else 1L
-    end   <- if (!is.null(mp)) mp[2] else (start + (NROW(m1) - 1L) * thin)
-    coda::mcmc(cbind(m1, m2), start = start, end = end, thin = thin)
-  }))
+build_conf_with_monitors <- function(model, monitors = NULL, opts = samOptiPro_options()) {
+  .configure_with_monitors(model, monitors = monitors, opts = opts)
 }
 
-# Lance un MCMC compile avec runMCMC pour recuperer samples + samples2 + runtime
-# NOTE: on ne s'appuie PAS sur un hypothetique 'res$runtime_s' retourne par runMCMC.
-#' @keywords internal
-.run_and_collect <- function(cmcmc, niter, nburnin, thin, nchains = 1L) {
-  t0 <- proc.time()
-  res <- nimble::runMCMC(
-    cmcmc,
-    niter    = as.integer(niter),
-    nburnin  = as.integer(nburnin),
-    thin     = as.integer(thin),
-    nchains  = as.integer(nchains),
-    samplesAsCodaMCMC = FALSE,  # <- pour garantir un retour {samples, samples2}
-    summary  = FALSE,
-    WAIC     = FALSE
-  )
-  t1 <- proc.time()
-  runtime_s <- unname((t1 - t0)[["elapsed"]])
-  if (!is.finite(runtime_s)) runtime_s <- NA_real_
 
-  # 'res' est une list avec $samples et eventuellement $samples2
+#' Run baseline et retourne un mcmc.list fusionne (samples + samples2)
+#' @export
+#' @keywords internal
+run_baseline_coda <- function(build_fn, niter,
+                              nburnin = floor(0.25 * niter),
+                              thin = 1L,
+                              monitors = NULL,
+                              nchains = 1L,
+                              drop_loglik = FALSE,
+                              opts = samOptiPro_options()) {
+  rb <- run_baseline_config(build_fn, niter = niter, nburnin = nburnin, thin = thin,
+                            monitors = monitors, nchains = nchains, opts = opts)
+  ml <- as_mcmc_list_sop(rb$samples, rb$samples2, drop_loglik = drop_loglik, thin = thin)
+  list(samples = ml, runtime_s = rb$runtime_s, conf = rb$conf)
+}
+
+
+#' Run baseline RW/Slice with robust compile/run
+#' Complete, robust version with safe opts resolution and fixed parallel loading
+#' Run a baseline MCMC configuration safely (sequential or parallel)
+#'
+#' @param build_fn Function with no args that, when called via .fresh_build(build_fn, ...),
+#'   returns list(conf = <MCMCconf>, cmodel = <model or compiled model>).
+#' @param niter,nburnin,thin MCMC schedule.
+#' @param monitors Character vector or NULL (passed to .fresh_build()).
+#' @param nchains Integer number of chains.
+#' @param opts Optional list of options (resolved like samOptiPro_options()).
+#' @param parallel Logical; if TRUE and nchains > 1, run 1 chain per worker.
+#' @param parallel_type "psock" or "fork".
+#' @param quiet Silence outputs/messages (also prevents progress bars).
+#' @param return_samples If FALSE, stream to CSV on disk (huge RAM savings).
+#' @param out_dir Where to write streamed CSVs when return_samples = FALSE.
+#'
+#' @return list(samples, samples2, runtime_s, conf, csv_files)
+#'   - If return_samples = FALSE, samples/samples2 are NULL and csv_files lists per-chain paths.
+#' @export
+run_baseline_config <- function(build_fn, niter,
+                                nburnin = floor(0.25 * niter),
+                                thin = 1L,
+                                monitors = NULL,
+                                nchains = 1L,
+                                opts = samOptiPro_options()) {
+  built <- .fresh_build(build_fn, monitors = monitors, thin = thin, opts = opts)
+
+
+  # Build MCMC en R puis compile avec 'project = built$cmodel'
+  mcmc  <- nimble::buildMCMC(built$conf)
+  cmcmc <- nimble::compileNimble(mcmc, project = built$cmodel, resetFunctions = TRUE)
+
+  out   <- .run_and_collect(cmcmc, niter = niter, nburnin = nburnin, thin = thin, nchains = nchains)
+
   list(
-    samples   = res$samples,
-    samples2  = res$samples2 %||% NULL,
-    runtime_s = as.numeric(runtime_s)
+    samples   = out$samples,
+    samples2  = out$samples2,
+    runtime_s = out$runtime_s,
+    conf      = built$conf
   )
 }
 
-# ============ fresh build ==============================================
+
+#' Run HMC/NUTS where possible; fallback samplers for uncovered nodes
+#' @export
+run_hmc_all_nodes <- function(build_fn, niter,
+                              nburnin = floor(0.25 * niter),
+                              thin = 1L,
+                              monitors = NULL,
+                              nchains = 1L,
+                              opts = samOptiPro_options()) {
+  built <- .fresh_build(build_fn, monitors = monitors, thin = thin, opts = opts)
+
+
+  hmc_ok <- TRUE
+  tryCatch({
+    if (!requireNamespace("nimbleHMC", quietly = TRUE)) stop("nimbleHMC not installed")
+    nimbleHMC::configureHMC(built$conf, model = built$model)
+  }, error = function(e) {
+    message("configureHMC failed: ", e$message)
+    hmc_ok <<- FALSE
+  })
+
+  # Rattrapage des noeuds non couverts
+  uns <- try(built$conf$getUnsampledNodes(), silent = TRUE)
+  if (!inherits(uns, "try-error") && length(uns)) {
+    for (u in uns) built$conf$addSampler(u, type = "slice")
+  }
+
+  mcmc  <- nimble::buildMCMC(built$conf)
+  cmcmc <- nimble::compileNimble(mcmc, project = built$cmodel, resetFunctions = TRUE)
+
+  out <- .run_and_collect(cmcmc, niter = niter, nburnin = nburnin, thin = thin, nchains = nchains)
+  list(
+    samples     = out$samples,
+    samples2    = out$samples2,
+    runtime_s   = out$runtime_s,
+    conf        = built$conf,
+    hmc_applied = hmc_ok
+  )
+}
+
+
+## ---- Internal functions (5) ----
+
 #' @keywords internal
 .fresh_build <- function(build_fn, monitors = NULL, thin = 1L, opts = samOptiPro_options()) {
   stopifnot(is.function(build_fn))
@@ -142,95 +165,98 @@
   )
 }
 
-# ============ runners ===================================================
 
-#' Run baseline RW/Slice with robust compile/run
-#' @export
-run_baseline_config <- function(build_fn, niter,
-                                nburnin = floor(0.25 * niter),
-                                thin = 1L,
-                                monitors = NULL,
-                                nchains = 1L,
-                                opts = samOptiPro_options()) {
-  built <- .fresh_build(build_fn, monitors = monitors, thin = thin, opts = opts)
+#' @keywords internal
+.merge_mcmc <- function(samples, samples2) {
+  grab_mcpar <- function(obj) {
+    if (inherits(obj, "mcmc.list") && length(obj)) return(attr(obj[[1]], "mcpar"))
+    if (inherits(obj, "mcmc"))                     return(attr(obj, "mcpar"))
+    NULL
+  }
+  mp <- grab_mcpar(samples); if (is.null(mp)) mp <- grab_mcpar(samples2)
+  start <- if (!is.null(mp)) mp[1] else 1L
+  thin  <- if (!is.null(mp)) mp[3] else 1L
+
+  s1 <- .safe_as_mcmc_list(samples,  start = start, thin = thin)
+  s2 <- .safe_as_mcmc_list(samples2, start = start, thin = thin)
+
+  if (is.null(s1) && is.null(s2))
+    stop("No samples (samples/samples2) were produced.")
+
+  if (is.null(s2)) return(s1)
+  if (is.null(s1)) return(s2)
+
+  stopifnot(length(s1) == length(s2))
+  coda::mcmc.list(lapply(seq_along(s1), function(i) {
+    m1 <- as.matrix(s1[[i]]); m2 <- as.matrix(s2[[i]])
+    if (NCOL(m1) == 0L) return(s2[[i]])
+    if (NCOL(m2) == 0L) return(s1[[i]])
+    mp <- attr(s1[[i]], "mcpar"); if (is.null(mp)) mp <- attr(s2[[i]], "mcpar")
+    start <- if (!is.null(mp)) mp[1] else 1L
+    thin  <- if (!is.null(mp)) mp[3] else 1L
+    end   <- if (!is.null(mp)) mp[2] else (start + (NROW(m1) - 1L) * thin)
+    coda::mcmc(cbind(m1, m2), start = start, end = end, thin = thin)
+  }))
+}
 
 
-  # Build MCMC en R puis compile avec 'project = built$cmodel'
-  mcmc  <- nimble::buildMCMC(built$conf)
-  cmcmc <- nimble::compileNimble(mcmc, project = built$cmodel, resetFunctions = TRUE)
+#' @keywords internal
+.run_and_collect <- function(cmcmc, niter, nburnin, thin, nchains = 1L) {
+  t0 <- proc.time()
+  res <- nimble::runMCMC(
+    cmcmc,
+    niter    = as.integer(niter),
+    nburnin  = as.integer(nburnin),
+    thin     = as.integer(thin),
+    nchains  = as.integer(nchains),
+    samplesAsCodaMCMC = FALSE,  # <- pour garantir un retour {samples, samples2}
+    summary  = FALSE,
+    WAIC     = FALSE
+  )
+  t1 <- proc.time()
+  runtime_s <- unname((t1 - t0)[["elapsed"]])
+  if (!is.finite(runtime_s)) runtime_s <- NA_real_
 
-  out   <- .run_and_collect(cmcmc, niter = niter, nburnin = nburnin, thin = thin, nchains = nchains)
-
+  # 'res' est une list avec $samples et eventuellement $samples2
   list(
-    samples   = out$samples,
-    samples2  = out$samples2,
-    runtime_s = out$runtime_s,
-    conf      = built$conf
+    samples   = res$samples,
+    samples2  = res$samples2 %||% NULL,
+    runtime_s = as.numeric(runtime_s)
   )
 }
 
-#' Run HMC/NUTS where possible; fallback samplers for uncovered nodes
-#' @export
-run_hmc_all_nodes <- function(build_fn, niter,
-                              nburnin = floor(0.25 * niter),
-                              thin = 1L,
-                              monitors = NULL,
-                              nchains = 1L,
-                              opts = samOptiPro_options()) {
-  built <- .fresh_build(build_fn, monitors = monitors, thin = thin, opts = opts)
+
+#' @keywords internal
+.safe_as_mcmc_list <- function(x, start = 1L, thin = 1L) {
+  if (is.null(x)) return(NULL)
+  if (inherits(x, "mcmc.list")) return(x)
+  if (inherits(x, "mcmc"))      return(coda::mcmc.list(x))
+  if (is.matrix(x) || is.data.frame(x)) {
+    if (NCOL(x) == 0L) return(NULL)
+    return(coda::mcmc.list(coda::mcmc(as.matrix(x), start = start, thin = thin)))
+  }
+  if (is.list(x)) {
+    lst <- lapply(x, function(mat) {
+      if (is.null(mat)) return(NULL)
+      if (is.matrix(mat) || is.data.frame(mat)) {
+        if (NCOL(mat) == 0L) return(NULL)
+        return(coda::mcmc(as.matrix(mat), start = start, thin = thin))
+      }
+      if (inherits(mat, "mcmc")) return(mat)
+      NULL
+    })
+    lst <- Filter(Negate(is.null), lst)
+    if (!length(lst)) return(NULL)
+    return(coda::mcmc.list(lst))
+  }
+  NULL
+}
 
 
-  hmc_ok <- TRUE
-  tryCatch({
-    if (!requireNamespace("nimbleHMC", quietly = TRUE)) stop("nimbleHMC not installed")
-    nimbleHMC::configureHMC(built$conf, model = built$model)
-  }, error = function(e) {
-    message("configureHMC failed: ", e$message)
-    hmc_ok <<- FALSE
-  })
-
-  # Rattrapage des noeuds non couverts
-  uns <- try(built$conf$getUnsampledNodes(), silent = TRUE)
-  if (!inherits(uns, "try-error") && length(uns)) {
-    for (u in uns) built$conf$addSampler(u, type = "slice")
+  grab_mcpar <- function(obj) {
+    if (inherits(obj, "mcmc.list") && length(obj)) return(attr(obj[[1]], "mcpar"))
+    if (inherits(obj, "mcmc"))                     return(attr(obj, "mcpar"))
+    NULL
   }
 
-  mcmc  <- nimble::buildMCMC(built$conf)
-  cmcmc <- nimble::compileNimble(mcmc, project = built$cmodel, resetFunctions = TRUE)
 
-  out <- .run_and_collect(cmcmc, niter = niter, nburnin = nburnin, thin = thin, nchains = nchains)
-  list(
-    samples     = out$samples,
-    samples2    = out$samples2,
-    runtime_s   = out$runtime_s,
-    conf        = built$conf,
-    hmc_applied = hmc_ok
-  )
-}
-
-#' Build a fresh MCMC configuration with automatic monitors if missing
-#' @param model nimbleModel (ou compile; on accepte les deux)
-#' @param monitors optional character vector; if NULL, auto-discover
-#' @param opts samOptiPro_options()
-#' @export
-#' @keywords internal
-build_conf_with_monitors <- function(model, monitors = NULL, opts = samOptiPro_options()) {
-  .configure_with_monitors(model, monitors = monitors, opts = opts)
-}
-# --- Convenience: executer et retourner un mcmc.list propre --------------
-
-#' Run baseline et retourne un mcmc.list fusionne (samples + samples2)
-#' @export
-#' @keywords internal
-run_baseline_coda <- function(build_fn, niter,
-                              nburnin = floor(0.25 * niter),
-                              thin = 1L,
-                              monitors = NULL,
-                              nchains = 1L,
-                              drop_loglik = FALSE,
-                              opts = samOptiPro_options()) {
-  rb <- run_baseline_config(build_fn, niter = niter, nburnin = nburnin, thin = thin,
-                            monitors = monitors, nchains = nchains, opts = opts)
-  ml <- as_mcmc_list_sop(rb$samples, rb$samples2, drop_loglik = drop_loglik, thin = thin)
-  list(samples = ml, runtime_s = rb$runtime_s, conf = rb$conf)
-}

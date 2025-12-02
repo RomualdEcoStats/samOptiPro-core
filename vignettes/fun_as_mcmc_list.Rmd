@@ -1,0 +1,22 @@
+---
+title: "Function: as_mcmc_list"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: as_mcmc_list}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `as_mcmc_list`
+
+Convert an object to `mcmc.list`
+
+## Arguments
+```text
+x
+```
+
+## Example
+```r
+# as_mcmc_list()
+```

@@ -1,0 +1,22 @@
+---
+title: "Function: identify_bottlenecks_family"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: identify_bottlenecks_family}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `identify_bottlenecks_family`
+
+Identify bottlenecks by parameter stats::family(medians within families)
+
+## Arguments
+```text
+samples, runtime_s, ess_threshold, sampler_params, model, mcmc_conf, ignore_patterns, strict_sampler_only, auto_configure, rhat_threshold, ess_per_s_min
+```
+
+## Example
+```r
+# identify_bottlenecks_family()
+```

@@ -1,0 +1,22 @@
+---
+title: "Function: .print_monitors"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .print_monitors}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.print_monitors`
+
+Pretty-print selected monitors (optional)
+
+## Arguments
+```text
+title, nodes, thin
+```
+
+## Example
+```r
+# .print_monitors()
+```

@@ -1,0 +1,22 @@
+---
+title: "Function: vmsg"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: vmsg}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `vmsg`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# vmsg()
+```

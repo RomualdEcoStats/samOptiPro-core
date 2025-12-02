@@ -1,5 +1,7 @@
 # monitors.R -- automatic monitor selection
 
+## ---- Exported functions (2) ----
+
 #' Discover default monitors from a nimble model (variable-level)
 #'
 #' Retourne des NOMS DE VARIABLES (sans indices) pour laisser le runner
@@ -21,26 +23,6 @@
   # vire tokens parasites courants
   bad <- grepl("^\\d+$", x) | x %in% c("thin", "=", ":", ",")
   unique(x[!bad])
-}
-
-default_monitors <- function(model, opts = samOptiPro_options()) {
-  include_data   <- isTRUE(opts$include_data)
-  include_logLik <- isTRUE(opts$include_logLik)
-
-  stoch_nodes <- model$getNodeNames(stochOnly = TRUE, includeData = include_data)
-  stoch_vars  <- unique(sub("\\[.*\\]$", "", stoch_nodes))
-  mons <- .default_sanitize_roots(stoch_vars)
-
-  if (include_logLik) {
-    all_nodes <- model$getNodeNames(stochOnly = FALSE, includeData = TRUE)
-    all_vars  <- unique(sub("\\[.*\\]$", "", all_nodes))
-    if ("logLik" %in% all_vars) mons <- unique(c(mons, "logLik"))
-  }
-
-  if (!is.null(opts$extra_monitors)) {
-    mons <- unique(c(mons, .default_sanitize_roots(opts$extra_monitors)))
-  }
-  mons
 }
 
 
@@ -67,6 +49,29 @@ ensure_monitors_exist <- function(model, monitors) {
     warning("Dropping non-existing monitor variables: ", paste(bad, collapse = ","))
   }
   unique(monitors[keep])
+}
+
+
+## ---- Internal functions (1) ----
+
+default_monitors <- function(model, opts = samOptiPro_options()) {
+  include_data   <- isTRUE(opts$include_data)
+  include_logLik <- isTRUE(opts$include_logLik)
+
+  stoch_nodes <- model$getNodeNames(stochOnly = TRUE, includeData = include_data)
+  stoch_vars  <- unique(sub("\\[.*\\]$", "", stoch_nodes))
+  mons <- .default_sanitize_roots(stoch_vars)
+
+  if (include_logLik) {
+    all_nodes <- model$getNodeNames(stochOnly = FALSE, includeData = TRUE)
+    all_vars  <- unique(sub("\\[.*\\]$", "", all_nodes))
+    if ("logLik" %in% all_vars) mons <- unique(c(mons, "logLik"))
+  }
+
+  if (!is.null(opts$extra_monitors)) {
+    mons <- unique(c(mons, .default_sanitize_roots(opts$extra_monitors)))
+  }
+  mons
 }
 
 

@@ -1,0 +1,22 @@
+---
+title: "Function: checkInits"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: checkInits}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `checkInits`
+
+Robustly check initial values against a compiled NIMBLE model
+
+## Arguments
+```text
+model, inits, silent
+```
+
+## Example
+```r
+# checkInits()
+```

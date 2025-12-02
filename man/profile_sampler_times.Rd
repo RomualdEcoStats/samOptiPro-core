@@ -2,110 +2,39 @@
 % Please edit documentation in R/diagnostics.R
 \name{profile_sampler_times}
 \alias{profile_sampler_times}
-\title{Profile sampler times per node/family}
+\title{Profile sampler times per MCMC sampler}
 \usage{
-profile_sampler_times(
-  model,
-  conf,
-  niter = 2000L,
-  burnin = 500L,
-  thin = 1L,
-  set_seed = NULL,
-  progress = FALSE
-)
-
-profile_sampler_times(
-  model,
-  conf,
-  niter = 2000L,
-  burnin = 500L,
-  thin = 1L,
-  set_seed = NULL,
-  progress = FALSE
-)
+profile_sampler_times(conf, cmodel, niter = 50000)
 }
 \arguments{
-\item{model}{\code{nimbleModel} (uncompiled), initialized.}
+\item{conf}{A NIMBLE MCMC configuration object (e.g. returned by
+\code{nimble::configureMCMC(model)}).}
 
-\item{conf}{MCMC configuration from \code{nimble::configureMCMC(model, ...)}.}
+\item{cmodel}{A compiled \code{nimbleModel} used as \code{project=} for
+\code{compileNimble()}.}
 
-\item{niter}{Total iterations including burn-in.}
-
-\item{burnin}{Number of warm-up iterations before timing.}
-
-\item{thin}{Thinning interval (\eqn{\ge} 1). If \code{> 1}, extra sweeps are advanced without timing.}
-
-\item{set_seed}{Integer or \code{NULL}; if not \code{NULL}, \code{set.seed()} for reproducibility.}
-
-\item{progress}{Logical; print simple 10\\% progress.}
-
-\item{cmodel}{A compiled \code{nimbleModel}.}
-
-\item{mcmc_conf}{An MCMC configuration (e.g., \code{nimble::configureMCMC(model)}). If \code{NULL}, an automatic attempt is made.}
-
-\item{include_data}{Logical; include data nodes (default \code{FALSE}).}
-
-\item{removed_nodes}{Character vector; nodes to exclude (e.g., ESS = 0).}
-
-\item{ignore_patterns}{Character vector; regex to ignore
-(default \code{c("^lifted_", "^logProb_")}).}
-
-\item{plot_dependencies}{Logical; if \code{TRUE}, barplot (ggplot2) of medians per family.}
-
-\item{output_dir}{Character or \code{NULL}; directory for CSV/PNG exports
-(\code{NULL} = no export).}
-
-\item{save_csv}{Logical; if \code{TRUE}, write \code{dependencies_per_node.csv} to \code{output_dir}.}
-
-\item{node_of_interest}{Character or \code{NULL}; node whose filtered downstream deps are requested.}
-
-\item{np}{Numeric in (0,1]; proportion for \code{prop_worst = ceil(n_samplers * np)} (default \code{0.10}).}
-
-\item{...}{Additional arguments passed to \code{nimble::configureMCMC()} (e.g., \code{print = FALSE}, \code{useConjugacy = FALSE}).}
+\item{niter}{Integer scalar; number of MCMC iterations to run for profiling.
+Default \code{5e4}.}
 }
 \value{
-A list with (at least) data frames per node/family and (optionally) ggplot objects.
-
-A list:
-\preformatted{
-  (stochastic_nodes, deterministic_nodes, dims, nodes = NULL,
-   dependencies_df, dep_counts, dep_summary, plot_regular,
-   node_of_interest_deps,
-   samplers_df, n_samplers, prop_worst,
-   mcmc_conf)  # configuration created internally
-}
-
-Profile per-sampler elapsed times (uncompiled MCMC, R-level granularity)
-
-A numeric vector of length \code{length(conf$getSamplers())}, aligned with the
-sampler order returned by \code{conf$getSamplers()}. Units are seconds.
-
-Profile per-sampler elapsed times (uncompiled MCMC, R-level granularity)
-
-Builds an uncompiled MCMC and measures wall-clock time spent in each sampler
-by instrumenting calls to each samplerFunction$run() over a short run.
-
-Numeric vector of length \code{length(conf$getSamplers())}, seconds per sampler (aligned by index).
-profile_sampler_times
+A numeric vector of length equal to the number of samplers in
+\code{conf}, giving the per-sampler elapsed time (in seconds). If NIMBLE
+reports fewer/more entries than samplers, the vector is padded/truncated
+accordingly with \code{NA}s.
 }
 \description{
-Analyze a NIMBLE model: stochastic/deterministic nodes, dimensions,
-\strong{downstream dependencies} (ignoring artificial nodes), and \strong{samplers}
-(type & targets) from an MCMC configuration \strong{built internally} via
-\code{nimble::configureMCMC(model, ...)}.
-
-Artificial nodes \code{lifted_*}, \code{logProb_*}, and \code{removed_nodes} are
-\strong{ignored} everywhere. Optionally: CSV export and ggplot2 barplot of
-\strong{medians} of dependencies by stats::family(with \strong{labels = count}).
-
-Build an uncompiled MCMC (\code{nimble::buildMCMC(conf)}) and measure wall-clock
-elapsed time spent in each sampler by instrumenting calls to \code{sampler$run()}
-over a short run. This preserves \strong{per-sampler granularity}, which is lost in
-compiled MCMC.
+Compile (once) and run a NIMBLE MCMC configured in \code{conf}, with
+per-sampler timing enabled, then return the vector of times (seconds) for
+each sampler defined in \code{conf}. A small in-session cache avoids
+recompilation when the sampler signature (types/targets) is unchanged.
 }
 \examples{
 \dontrun{
-  # p <- profile_sampler_times(cmodel, mcmc_conf)
+  model  <- nimbleModel(code, constants = Const, data = Data, inits = Inits)
+  cmodel <- compileNimble(model)
+  conf   <- configureMCMC(model)
+  ts <- profile_sampler_times(conf, cmodel, niter = 1e4)
+  print(ts)
 }
+
 }
-\keyword{internal}

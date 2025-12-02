@@ -1,0 +1,22 @@
+---
+title: "Function: profile_sampler_times"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: profile_sampler_times}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `profile_sampler_times`
+
+Compile (once) and run a NIMBLE MCMC configured in \code{conf}, with
+
+## Arguments
+```text
+conf, cmodel, niter
+```
+
+## Example
+```r
+# profile_sampler_times()
+```

@@ -1,0 +1,22 @@
+---
+title: "Function: .sop_detect_nondiff_functions"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .sop_detect_nondiff_functions}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.sop_detect_nondiff_functions`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# .sop_detect_nondiff_functions()
+```

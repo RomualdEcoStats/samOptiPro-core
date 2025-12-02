@@ -1,0 +1,22 @@
+---
+title: "Function: strip_loglik_cols"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: strip_loglik_cols}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `strip_loglik_cols`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# strip_loglik_cols()
+```

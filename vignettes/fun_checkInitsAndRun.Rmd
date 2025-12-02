@@ -1,0 +1,22 @@
+---
+title: "Function: checkInitsAndRun"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: checkInitsAndRun}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `checkInitsAndRun`
+
+Check inits then run MCMC
+
+## Arguments
+```text
+run_fn, inits, ...
+```
+
+## Example
+```r
+# checkInitsAndRun()
+```

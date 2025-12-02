@@ -1,0 +1,22 @@
+---
+title: "Function: .get_targets"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .get_targets}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.get_targets`
+
+NA
+
+## Arguments
+```text
+s
+```
+
+## Example
+```r
+# .get_targets()
+```

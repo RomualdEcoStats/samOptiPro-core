@@ -1,0 +1,22 @@
+---
+title: "Function: .collect_lengths"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .collect_lengths}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.collect_lengths`
+
+NA
+
+## Arguments
+```text
+Const
+```
+
+## Example
+```r
+# .collect_lengths()
+```

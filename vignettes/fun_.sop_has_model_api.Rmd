@@ -1,0 +1,22 @@
+---
+title: "Function: .sop_has_model_api"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .sop_has_model_api}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.sop_has_model_api`
+
+Heuristic check that an object exposes nimble model API
+
+## Arguments
+```text
+x
+```
+
+## Example
+```r
+# .sop_has_model_api()
+```

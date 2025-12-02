@@ -14,10 +14,6 @@ run_structure_and_hmc_test(
 )
 }
 \arguments{
-\item{build_fn}{A zero-arg function returning a list with at least
-\code{model} (\code{nimbleModel}); optional elements: \code{cmodel}, \code{monitors},
-\code{code_text} (or \code{code}) used to strengthen non-diff detection.}
-
 \item{include_data}{Logical; include data nodes in counts and scans. Default \code{FALSE}.}
 
 \item{try_hmc}{Logical; if \code{TRUE}, attempt a brief HMC/NUTS run. Default \code{TRUE}.}
@@ -37,7 +33,6 @@ An invisible list with components:
 }
 }
 \description{
-Inspects a NIMBLE model produced by \code{build_fn()} to:
 \itemize{
 \item count stochastic vs. deterministic nodes (optionally including data),
 \item parse the model code to detect non-differentiable functions and BUGS-style truncation,
@@ -51,6 +46,9 @@ non-differentiable deterministic ops feeding latents),
 Compared to \code{diagnose_model_structure()}, this function does not filter nodes by
 ignore patterns or explicit removals and does not compute dependency fan-out.
 Its emphasis is \emph{HMC suitability} rather than structural load.
+
+\code{model} (\code{nimbleModel}); optional elements: \code{cmodel}, \code{monitors},
+\code{code_text} (or \code{code}) used to strengthen non-diff detection.
 }
 \examples{
 \dontrun{

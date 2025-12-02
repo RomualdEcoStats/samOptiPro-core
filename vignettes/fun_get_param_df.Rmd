@@ -1,0 +1,22 @@
+---
+title: "Function: get_param_df"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: get_param_df}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `get_param_df`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# get_param_df()
+```

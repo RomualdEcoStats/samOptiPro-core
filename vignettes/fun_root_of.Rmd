@@ -1,0 +1,22 @@
+---
+title: "Function: root_of"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: root_of}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `root_of`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# root_of()
+```

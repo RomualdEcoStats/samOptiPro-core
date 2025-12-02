@@ -1,0 +1,22 @@
+---
+title: "Function: sampler_targets"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: sampler_targets}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `sampler_targets`
+
+Targets (node names) for each sampler in a MCMC configuration
+
+## Arguments
+```text
+conf
+```
+
+## Example
+```r
+# sampler_targets()
+```

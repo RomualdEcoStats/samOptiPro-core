@@ -1,0 +1,22 @@
+---
+title: "Function: .sop_is_chol_ok"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .sop_is_chol_ok}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.sop_is_chol_ok`
+
+Cholesky check
+
+## Arguments
+```text
+S
+```
+
+## Example
+```r
+# .sop_is_chol_ok()
+```

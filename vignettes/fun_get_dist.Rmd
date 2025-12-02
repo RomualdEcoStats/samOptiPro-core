@@ -1,0 +1,22 @@
+---
+title: "Function: get_dist"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: get_dist}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `get_dist`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# get_dist()
+```

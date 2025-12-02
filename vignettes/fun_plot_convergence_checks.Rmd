@@ -1,0 +1,22 @@
+---
+title: "Function: plot_convergence_checks"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: plot_convergence_checks}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `plot_convergence_checks`
+
+Plot convergence diagnostics (R-hat & traces) with family-level R-hat bars
+
+## Arguments
+```text
+samples, out_dir, top_k_rhat, top_k_aelow, runtime_s, rhat_ref, make_rhat_hist, make_traces_rhat, make_traces_ae, make_rhat_family_bars
+```
+
+## Example
+```r
+# plot_convergence_checks()
+```

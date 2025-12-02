@@ -1,0 +1,22 @@
+---
+title: "Function: sampler_functions_from_conf"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: sampler_functions_from_conf}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `sampler_functions_from_conf`
+
+Build and compile an MCMC from a conf to access samplerFunctions.
+
+## Arguments
+```text
+conf, cmodel
+```
+
+## Example
+```r
+# sampler_functions_from_conf()
+```

@@ -1,0 +1,22 @@
+---
+title: "Function: plot_bottlenecks_fast"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: plot_bottlenecks_fast}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `plot_bottlenecks_fast`
+
+Fast bottleneck plots (samplers-only) for large models
+
+## Arguments
+```text
+diag_tbl, sampled_only, conf.mcmc, samples_ml, out_dir
+```
+
+## Example
+```r
+# plot_bottlenecks_fast()
+```

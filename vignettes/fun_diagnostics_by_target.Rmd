@@ -1,0 +1,22 @@
+---
+title: "Function: diagnostics_by_target"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: diagnostics_by_target}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `diagnostics_by_target`
+
+Target-level diagnostics (time + optional step-size proxy)
+
+## Arguments
+```text
+build_fn, opts, niter, samples
+```
+
+## Example
+```r
+# diagnostics_by_target()
+```

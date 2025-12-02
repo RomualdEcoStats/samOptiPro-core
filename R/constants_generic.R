@@ -1,46 +1,10 @@
 # constants_generic.R -- model-agnostic constants normalization
 #' @keywords internal
 `%||%` <- function(x, y) if (is.null(x)) y else x
-#' @keywords internal
-.collect_lengths <- function(Const) {
-  lens <- integer()
-  push <- function(v) { if (length(v)) return(length(v)); NA_integer_ }
-  for (nm in names(Const)) {
-    x <- Const[[nm]]
-    if (is.numeric(x) || is.integer(x)) {
-      lens <- c(lens, push(x))
-    } else if (is.matrix(x)) {
-      lens <- c(lens, ncol(x))
-    }
-  }
-  lens[is.finite(lens) & lens > 0]
-}
-#' @keywords internal
-.pad_vec <- function(v, n, pad_rule) {
-  if (length(v) == n) return(v)
-  if (length(v) >  n) return(v[seq_len(n)])
-  if (length(v) == 0) {
-    if (pad_rule == "NA")   return(rep(NA_real_, n))
-    if (pad_rule == "zero") return(rep(0, n))
-    return(rep(0, n))
-  }
-  last <- utils::tail(v, 1)
-  if (pad_rule == "NA")   return(c(v, rep(NA_real_, n - length(v))))
-  if (pad_rule == "zero") return(c(v, rep(0,        n - length(v))))
-  c(v, rep(last, n - length(v))) # repeat_last
-}
-#' @keywords internal
-.pad_mat_cols <- function(M, n, pad_rule) {
-  if (!is.matrix(M)) M <- as.matrix(M)
-  p <- ncol(M)
-  if (p == n) return(M)
-  if (p >  n) return(M[, seq_len(n), drop = FALSE])
-  last <- M[, p, drop = FALSE]
-  add  <- if (pad_rule == "NA") matrix(NA_real_, nrow(M), n - p)
-  else if (pad_rule == "zero") matrix(0, nrow(M), n - p)
-  else last[, rep(1, n - p), drop = FALSE]
-  cbind(M, add)
-}
+
+
+
+## ---- Exported functions (1) ----
 
 #' Normalize constants in a model-agnostic way
 #' @param Const list of constants
@@ -84,3 +48,56 @@ normalize_constants_generic <- function(Const,
 
   C
 }
+
+
+## ---- Internal functions (4) ----
+
+#' @keywords internal
+.collect_lengths <- function(Const) {
+  lens <- integer()
+  push <- function(v) { if (length(v)) return(length(v)); NA_integer_ }
+  for (nm in names(Const)) {
+    x <- Const[[nm]]
+    if (is.numeric(x) || is.integer(x)) {
+      lens <- c(lens, push(x))
+    } else if (is.matrix(x)) {
+      lens <- c(lens, ncol(x))
+    }
+  }
+  lens[is.finite(lens) & lens > 0]
+}
+
+
+#' @keywords internal
+.pad_mat_cols <- function(M, n, pad_rule) {
+  if (!is.matrix(M)) M <- as.matrix(M)
+  p <- ncol(M)
+  if (p == n) return(M)
+  if (p >  n) return(M[, seq_len(n), drop = FALSE])
+  last <- M[, p, drop = FALSE]
+  add  <- if (pad_rule == "NA") matrix(NA_real_, nrow(M), n - p)
+  else if (pad_rule == "zero") matrix(0, nrow(M), n - p)
+  else last[, rep(1, n - p), drop = FALSE]
+  cbind(M, add)
+}
+
+
+#' @keywords internal
+.pad_vec <- function(v, n, pad_rule) {
+  if (length(v) == n) return(v)
+  if (length(v) >  n) return(v[seq_len(n)])
+  if (length(v) == 0) {
+    if (pad_rule == "NA")   return(rep(NA_real_, n))
+    if (pad_rule == "zero") return(rep(0, n))
+    return(rep(0, n))
+  }
+  last <- utils::tail(v, 1)
+  if (pad_rule == "NA")   return(c(v, rep(NA_real_, n - length(v))))
+  if (pad_rule == "zero") return(c(v, rep(0,        n - length(v))))
+  c(v, rep(last, n - length(v))) # repeat_last
+}
+
+
+  push <- function(v) { if (length(v)) return(length(v)); NA_integer_ }
+
+

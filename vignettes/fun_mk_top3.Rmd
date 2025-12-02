@@ -1,0 +1,22 @@
+---
+title: "Function: mk_top3"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: mk_top3}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `mk_top3`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# mk_top3()
+```

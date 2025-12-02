@@ -1,0 +1,22 @@
+---
+title: "Function: .head6"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .head6}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.head6`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# .head6()
+```

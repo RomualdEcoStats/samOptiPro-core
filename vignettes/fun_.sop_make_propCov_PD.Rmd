@@ -1,0 +1,22 @@
+---
+title: "Function: .sop_make_propCov_PD"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .sop_make_propCov_PD}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.sop_make_propCov_PD`
+
+Try to make a symmetric matrix positive definite (nearPD/shrinkage/jitter)
+
+## Arguments
+```text
+S, jitter_seq, shrink_grid
+```
+
+## Example
+```r
+# .sop_make_propCov_PD()
+```

@@ -1,0 +1,22 @@
+---
+title: "Function: .reorder_cols_family"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .reorder_cols_family}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.reorder_cols_family`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# .reorder_cols_family()
+```

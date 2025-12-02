@@ -1,0 +1,22 @@
+---
+title: "Function: headn"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: headn}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `headn`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# headn()
+```

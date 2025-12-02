@@ -1,0 +1,22 @@
+---
+title: "Function: .configure_with_monitors"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .configure_with_monitors}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.configure_with_monitors`
+
+Build a configureMCMC with sanitized/expanded monitors
+
+## Arguments
+```text
+model, monitors, thin, thin2, opts
+```
+
+## Example
+```r
+# .configure_with_monitors()
+```

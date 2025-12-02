@@ -1,0 +1,22 @@
+---
+title: "Function: .fam_metrics"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: .fam_metrics}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `.fam_metrics`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# .fam_metrics()
+```

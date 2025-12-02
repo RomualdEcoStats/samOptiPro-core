@@ -1,0 +1,22 @@
+---
+title: "Function: take"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: take}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `take`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# take()
+```

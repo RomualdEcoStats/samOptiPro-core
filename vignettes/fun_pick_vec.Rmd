@@ -1,0 +1,22 @@
+---
+title: "Function: pick_vec"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Function: pick_vec}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# `pick_vec`
+
+NA
+
+## Arguments
+```text
+NA
+```
+
+## Example
+```r
+# pick_vec()
+```

@@ -28,6 +28,8 @@ reference:
       - profile_sampler_times
       - run_structure_and_hmc_test
       - test_strategy_family
+      - configure_hmc_safely_bis
+      - test_strategy_family_fast
   - title: "Plotting & diagnostics"
     contents:
       - starts_with("plot_")
