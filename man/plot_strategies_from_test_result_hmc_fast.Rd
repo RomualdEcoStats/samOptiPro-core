@@ -2,7 +2,7 @@
 % Please edit documentation in R/plots.R
 \name{plot_strategies_from_test_result_hmc_fast}
 \alias{plot_strategies_from_test_result_hmc_fast}
-\title{@export}
+\title{Plot HMC-only strategy comparisons (fast path)}
 \usage{
 plot_strategies_from_test_result_hmc_fast(
   res,
@@ -13,6 +13,23 @@ plot_strategies_from_test_result_hmc_fast(
   show_rhat_label = TRUE
 )
 }
+\arguments{
+\item{res}{Result object from \code{test_strategy_family_fast()} or
+\code{configure_hmc_safely()} in HMC-only mode.}
+
+\item{out_dir}{Output directory for plots; created if needed.}
+
+\item{per}{Aggregation level: \code{"target"} or \code{"family"}.}
+
+\item{top_k}{Integer; number of keys kept for plotting.}
+
+\item{top_by}{Metric used to rank keys: \code{"CE"} or \code{"AE"}.}
+
+\item{show_rhat_label}{Logical; if \code{TRUE}, show Rhat labels on bars.}
+}
+\value{
+Invisibly, a list with aggregated data and ggplot objects.
+}
 \description{
-@export
+Plot HMC-only strategy comparisons (fast path)
 }

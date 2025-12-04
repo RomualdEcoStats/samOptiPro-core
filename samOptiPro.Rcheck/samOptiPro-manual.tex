@@ -1,0 +1,3415 @@
+\nonstopmode{}
+\documentclass[a4paper]{book}
+\usepackage[times,inconsolata,hyper]{Rd}
+\usepackage{makeidx}
+\makeatletter\@ifl@t@r\fmtversion{2018/04/01}{}{\usepackage[utf8]{inputenc}}\makeatother
+% \usepackage{graphicx} % @USE GRAPHICX@
+\makeindex{}
+\begin{document}
+\chapter*{}
+\begin{center}
+{\textbf{\huge Package `samOptiPro'}}
+\par\bigskip{\large \today}
+\end{center}
+\ifthenelse{\boolean{Rd@use@hyper}}{\hypersetup{pdftitle = {samOptiPro: Optimization and Diagnostics Tools for Bayesian Stock Assessment Models in NIMBLE}}}{}
+\ifthenelse{\boolean{Rd@use@hyper}}{\hypersetup{pdfauthor = {Romuald Hounyeme; Etienne Rivot}}}{}
+\begin{description}
+\raggedright{}
+\item[Title]\AsIs{Optimization and Diagnostics Tools for Bayesian Stock Assessment
+Models in NIMBLE}
+\item[Version]\AsIs{0.1.0}
+\item[Maintainer]\AsIs{Romuald Hounyeme }\email{romuald.hounyeme@agrocampus-ouest.fr}\AsIs{}
+\item[Description]\AsIs{The 'samOptiPro' package provides a unified workflow for the analysis, optimization, and benchmarking of Bayesian Stock Assessment Models (SAMs)
+implemented in the 'nimble' framework. It includes tools to: - diagnose model structure and differentiability, - automatically configure and
+test samplers (RW, Slice, Block, HMC, NUTS), - evaluate algorithmic (ESS/s) and computational efficiency (runtime), - identify bottlenecks and
+non-differentiable nodes, - visualize convergence diagnostics and efficiency trade-offs, - run comparative experiments for adaptive or hybrid
+sampling strategies. Designed for complex ecological hierarchical models (e.g., salmon, eel recruitment), 'samOptiPro' extends the
+methodological base of 'samOpti' with advanced diagnostics, family-wise sampler grouping, and integration with 'nimbleHMC' for gradient-based
+inference.}
+\item[License]\AsIs{MIT + file LICENSE}
+\item[URL]\AsIs{}\url{https://github.com/RomualdEcoStats/samOptiPro-core}\AsIs{}
+\item[BugReports]\AsIs{}\url{https://github.com/RomualdEcoStats/samOptiPro-core/issues}\AsIs{}
+\item[Encoding]\AsIs{UTF-8}
+\item[Type]\AsIs{Package}
+\item[Roxygen]\AsIs{list(markdown = TRUE)}
+\item[RoxygenNote]\AsIs{7.3.3}
+\item[Depends]\AsIs{R (>= 4.2)}
+\item[Imports]\AsIs{coda, data.table, dplyr, ggplot2, ggrepel, gridExtra,
+magrittr, Matrix, methods, nimble (>= 1.3.0), nimbleHMC (>=
+0.1.1), purrr, stats, stringr, tibble, utils}
+\item[Suggests]\AsIs{cowplot, patchwork, reshape2, scales, testthat (>= 3.0.0),
+tidyr, knitr, rmarkdown, posterior}
+\item[VignetteBuilder]\AsIs{knitr}
+\item[NeedsCompilation]\AsIs{no}
+\item[Author]\AsIs{Romuald Hounyeme [aut, cre],
+Etienne Rivot [aut],
+Rémi Patin [ctb],
+Hilaire Drouineau [ctb]}
+\end{description}
+\Rdcontents{Contents}
+\HeaderA{.avail\_vars}{Available variable roots present in a model}{.avail.Rul.vars}
+\keyword{internal}{.avail\_vars}
+%
+\begin{Description}
+Available variable roots present in a model
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.avail_vars(model)
+\end{verbatim}
+\end{Usage}
+\HeaderA{.barrier\_before\_block}{Temporarily switch nimble buildDir (clear compiled \& GC)}{.barrier.Rul.before.Rul.block}
+\keyword{internal}{.barrier\_before\_block}
+%
+\begin{Description}
+Temporarily switch nimble buildDir (clear compiled \& GC)
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.barrier_before_block(tag = "scalar_to_block")
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{tag}] Character tag used in the temporary directory name.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+TRUE (invisibly).
+\end{Value}
+\HeaderA{.compile\_mcmc\_with\_build}{Compile a nimble MCMC for a given build object}{.compile.Rul.mcmc.Rul.with.Rul.build}
+\keyword{internal}{.compile\_mcmc\_with\_build}
+%
+\begin{Description}
+Always compiles the MCMC against the same R-level model used during the
+build step (\code{build\_obj\$model}). This avoids subtle mismatches.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.compile_mcmc_with_build(conf, build_obj, reset = TRUE, show = FALSE)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{conf}] A \code{configureMCMC} object.
+
+\item[\code{build\_obj}] A list returned by your build function (must contain
+\code{\$model}).
+
+\item[\code{reset}] Logical; passed to \code{nimble::compileNimble()}.
+
+\item[\code{show}] Logical; show compiler output.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A compiled MCMC object as returned by \code{nimble::compileNimble()}.
+\end{Value}
+\HeaderA{.configure\_with\_monitors}{Build a configureMCMC with sanitized/expanded monitors}{.configure.Rul.with.Rul.monitors}
+\keyword{internal}{.configure\_with\_monitors}
+%
+\begin{Description}
+Build a configureMCMC with sanitized/expanded monitors
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.configure_with_monitors(
+  model,
+  monitors = NULL,
+  thin = 1L,
+  thin2 = NULL,
+  opts = samOptiPro_options()
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{model}] Nimble model (R-level or compiled).
+
+\item[\code{monitors}] Monitors roots (optional).
+
+\item[\code{thin}, \code{thin2}] Thinning for \code{monitors} / \code{monitors2}.
+
+\item[\code{opts}] Optional package options.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A \code{configureMCMC} object with thin/thin2 harmonised and the
+attributes \code{.\_sop\_monitors\_roots}, \code{.\_sop\_monitors2\_roots},
+\code{.\_sop\_monitors\_nodes}, \code{.\_sop\_monitors2\_nodes}.
+\end{Value}
+\HeaderA{.default\_sanitize\_roots}{Discover default monitors from a nimble model (variable-level)}{.default.Rul.sanitize.Rul.roots}
+\keyword{internal}{.default\_sanitize\_roots}
+%
+\begin{Description}
+Retourne des NOMS DE VARIABLES (sans indices) pour laisser le runner
+poser ensuite les monitors correctement via conf\$setMonitors / setMonitors2.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.default_sanitize_roots(x)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{model}] nimbleModel
+
+\item[\code{opts}] list from samOptiPro\_options(); champs supportes :
+\begin{itemize}
+
+\item{} include\_data      : logical, inclure les data nodes dans l'exploration (rarement utile)
+\item{} include\_logLik    : logical, inclure "logLik" dans la selection par defaut
+\item{} extra\_monitors    : character(), variables supplementaires a monitorer (samples)
+\item{} extra\_monitors2   : character(), variables supplementaires a monitorer en monitors2 (samples2)
+
+\end{itemize}
+
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+character() de noms de variables sans indices (ex: "sd\_proc","z","p","logLik")
+\end{Value}
+\HeaderA{.plot\_rhat\_bar}{Save a bar chart of R-hat for selected nodes}{.plot.Rul.rhat.Rul.bar}
+\keyword{internal}{.plot\_rhat\_bar}
+%
+\begin{Description}
+Save a bar chart of R-hat for selected nodes
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.plot_rhat_bar(diag_tbl, nodes, out_file)
+\end{verbatim}
+\end{Usage}
+\HeaderA{.plot\_traces}{Save trace plots for a set of nodes}{.plot.Rul.traces}
+\keyword{internal}{.plot\_traces}
+%
+\begin{Description}
+Save trace plots for a set of nodes
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.plot_traces(mcmc_list, nodes, out_file_prefix)
+\end{verbatim}
+\end{Usage}
+\HeaderA{.print\_monitors}{Pretty-print selected monitors (optional)}{.print.Rul.monitors}
+\keyword{internal}{.print\_monitors}
+%
+\begin{Description}
+Pretty-print selected monitors (optional)
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.print_monitors(title, nodes, thin = 1L)
+\end{verbatim}
+\end{Usage}
+\HeaderA{.restore\_builddir}{Restore previous nimble buildDir if it was changed}{.restore.Rul.builddir}
+\keyword{internal}{.restore\_builddir}
+%
+\begin{Description}
+Restore previous nimble buildDir if it was changed
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.restore_builddir()
+\end{verbatim}
+\end{Usage}
+\HeaderA{.sop\_cbind\_align}{Bind two matrices by row count (truncate to common minimum)}{.sop.Rul.cbind.Rul.align}
+\keyword{internal}{.sop\_cbind\_align}
+%
+\begin{Description}
+Bind two matrices by row count (truncate to common minimum)
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.sop_cbind_align(m1, m2)
+\end{verbatim}
+\end{Usage}
+\HeaderA{.sop\_detect\_chain\_prefix}{Detect chain prefix "chainK." in column names}{.sop.Rul.detect.Rul.chain.Rul.prefix}
+\keyword{internal}{.sop\_detect\_chain\_prefix}
+%
+\begin{Description}
+Detect chain prefix "chainK." in column names
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.sop_detect_chain_prefix(nms)
+\end{verbatim}
+\end{Usage}
+\HeaderA{.sop\_expand\_roots\_to\_nodes}{Expand many roots to nodes}{.sop.Rul.expand.Rul.roots.Rul.to.Rul.nodes}
+\keyword{internal}{.sop\_expand\_roots\_to\_nodes}
+%
+\begin{Description}
+Expand many roots to nodes
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.sop_expand_roots_to_nodes(mdl, roots)
+\end{verbatim}
+\end{Usage}
+\HeaderA{.sop\_expand\_var\_nodes}{Expand one root to nodes via getVarInfo()}{.sop.Rul.expand.Rul.var.Rul.nodes}
+\keyword{internal}{.sop\_expand\_var\_nodes}
+%
+\begin{Description}
+Expand one root to nodes via getVarInfo()
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.sop_expand_var_nodes(mdl, v)
+\end{verbatim}
+\end{Usage}
+\HeaderA{.sop\_get\_uncompiled\_model}{Return the R-level (uncompiled) nimble model when given either R or compiled model}{.sop.Rul.get.Rul.uncompiled.Rul.model}
+\keyword{internal}{.sop\_get\_uncompiled\_model}
+%
+\begin{Description}
+Return the R-level (uncompiled) nimble model when given either R or compiled model
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.sop_get_uncompiled_model(x)
+\end{verbatim}
+\end{Usage}
+\HeaderA{.sop\_has\_model\_api}{Heuristic check that an object exposes nimble model API}{.sop.Rul.has.Rul.model.Rul.api}
+\keyword{internal}{.sop\_has\_model\_api}
+%
+\begin{Description}
+Heuristic check that an object exposes nimble model API
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.sop_has_model_api(x)
+\end{verbatim}
+\end{Usage}
+\HeaderA{.sop\_is\_chol\_ok}{Cholesky check}{.sop.Rul.is.Rul.chol.Rul.ok}
+\keyword{internal}{.sop\_is\_chol\_ok}
+%
+\begin{Description}
+Cholesky check
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.sop_is_chol_ok(S)
+\end{verbatim}
+\end{Usage}
+\HeaderA{.sop\_is\_model}{Is this a nimble model?}{.sop.Rul.is.Rul.model}
+\keyword{internal}{.sop\_is\_model}
+%
+\begin{Description}
+Is this a nimble model?
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.sop_is_model(x)
+\end{verbatim}
+\end{Usage}
+\HeaderA{.sop\_make\_propCov\_PD}{Try to make a symmetric matrix positive definite}{.sop.Rul.make.Rul.propCov.Rul.PD}
+\keyword{internal}{.sop\_make\_propCov\_PD}
+%
+\begin{Description}
+Attempts to repair a symmetric matrix by:
+\begin{enumerate}
+
+\item{} applying \code{Matrix::nearPD()} if available;
+\item{} shrinking towards the diagonal with a grid of weights;
+\item{} adding diagonal jitter.
+
+\end{enumerate}
+
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.sop_make_propCov_PD(
+  S,
+  jitter_seq = c(0, 1e-10, 1e-08, 1e-06, 1e-04, 0.01),
+  shrink_grid = c(0, 0.05, 0.1, 0.2, 0.4)
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{S}] Symmetric numeric matrix.
+
+\item[\code{jitter\_seq}] Numeric vector of diagonal jitter values.
+
+\item[\code{shrink\_grid}] Numeric vector of shrinkage weights toward the diagonal.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A positive definite numeric matrix, or \code{NULL} on failure.
+\end{Value}
+\HeaderA{.sop\_sanitize\_roots}{Sanitize monitor roots (drop numerics and control tokens)}{.sop.Rul.sanitize.Rul.roots}
+\keyword{internal}{.sop\_sanitize\_roots}
+%
+\begin{Description}
+Removes numeric-only tokens and simple control tokens such as \code{"thin"},
+\code{"="}, \code{":"}, and \code{","}.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.sop_sanitize_roots(x)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{x}] Character vector.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+Cleaned character vector.
+\end{Value}
+\HeaderA{.sop\_split\_into\_blocks}{Correlation-based clustering into compact blocks}{.sop.Rul.split.Rul.into.Rul.blocks}
+\keyword{internal}{.sop\_split\_into\_blocks}
+%
+\begin{Description}
+Partitions variables into blocks using hierarchical clustering on a
+correlation-based distance. Intended to build compact blocks for samplers.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.sop_split_into_blocks(M, max_block = 40L, min_corr = 0.2)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{M}] Numeric matrix with variables in columns.
+
+\item[\code{max\_block}] Integer; maximum block size.
+
+\item[\code{min\_corr}] Reserved numeric argument for a minimal correlation target
+(currently not enforced).
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A list of character vectors (column names per block).
+\end{Value}
+\HeaderA{.sop\_strip\_chain\_prefix}{Strip "chainK." prefix from column names}{.sop.Rul.strip.Rul.chain.Rul.prefix}
+\keyword{internal}{.sop\_strip\_chain\_prefix}
+%
+\begin{Description}
+Strip "chainK." prefix from column names
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.sop_strip_chain_prefix(nms)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{nms}] Character vector of column names.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+Character vector with chain prefixes removed.
+\end{Value}
+\HeaderA{.sop\_supports\_derivs}{Check if derivatives/HMC are supported for a nimble model}{.sop.Rul.supports.Rul.derivs}
+\keyword{internal}{.sop\_supports\_derivs}
+%
+\begin{Description}
+Uses model flags if available, otherwise tries a small \code{configureMCMC}
+\begin{itemize}
+
+\item{} \code{nimbleHMC::configureHMC()} call to detect derivative support.
+
+\end{itemize}
+
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.sop_supports_derivs(model)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{model}] Nimble model.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+Logical.
+\end{Value}
+\HeaderA{.us\_expand\_compact\_node}{Expand a compact node specification into explicit indices (numeric only)}{.us.Rul.expand.Rul.compact.Rul.node}
+\keyword{internal}{.us\_expand\_compact\_node}
+%
+\begin{Description}
+For example, \code{"p[1, 1:3]"} is expanded to
+\code{c("p[1,1]", "p[1,2]", "p[1,3]")}, provided all indices are numeric.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.us_expand_compact_node(node)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{node}] Single node string.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+Character vector of expanded nodes, or \code{node} if not expandable.
+\end{Value}
+\HeaderA{.us\_expand\_vars\_to\_nodes}{Expand variable roots to explicit node names using model metadata}{.us.Rul.expand.Rul.vars.Rul.to.Rul.nodes}
+\keyword{internal}{.us\_expand\_vars\_to\_nodes}
+%
+\begin{Description}
+Uses \code{getVarInfo()} and model node names to expand roots such as
+\code{"beta"} into all corresponding node names present in the model.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.us_expand_vars_to_nodes(model, vars)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{model}] Nimble model (R-level or compiled).
+
+\item[\code{vars}] Character vector of variable roots.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+Character vector of node names present in the model.
+\end{Value}
+\HeaderA{.us\_sanitize\_monitors}{Drop numeric junk and control tokens from monitors}{.us.Rul.sanitize.Rul.monitors}
+\keyword{internal}{.us\_sanitize\_monitors}
+%
+\begin{Description}
+Drop numeric junk and control tokens from monitors
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.us_sanitize_monitors(x)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{x}] Character vector.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+Cleaned character vector.
+\end{Value}
+\HeaderA{.us\_tokenize\_monitors}{Tokenize a monitors specification into clean symbols}{.us.Rul.tokenize.Rul.monitors}
+\keyword{internal}{.us\_tokenize\_monitors}
+%
+\begin{Description}
+Tokenize a monitors specification into clean symbols
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+.us_tokenize_monitors(x)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{x}] Character vector or scalar.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+Character vector of tokens, no empty strings.
+\end{Value}
+\HeaderA{assess\_performance}{Assess MCMC performance metrics (ESS, R-hat, AE, CE)}{assess.Rul.performance}
+%
+\begin{Description}
+Compute per-parameter and global diagnostics from an MCMC sample set.
+Metrics include Effective Sample Size (ESS), Gelman-Rubin R-hat,
+Algorithmic Efficiency (AE = ESS / total draws), and Computational
+Efficiency (CE = ESS / runtime in seconds).
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+assess_performance(samples, runtime_s, rhat_thresh = 1.01)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{samples}] A list of MCMC samples or any object that can be converted
+by \code{as\_mcmc\_list()}.
+
+\item[\code{runtime\_s}] Numeric scalar. Total runtime of the MCMC run (seconds).
+
+\item[\code{rhat\_thresh}] Numeric scalar. Threshold used to flag R-hat values
+indicating lack of convergence. Default is 1.01.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+The function first coerces the input to an \code{mcmc.list} object and then
+computes the following:
+\begin{itemize}
+
+\item{} \strong{ESS}: Effective Sample Size for each parameter.
+\item{} \strong{Rhat}: Gelman-Rubin diagnostic (computed only when two
+or more chains are available).
+\item{} \strong{AE}: Algorithmic efficiency, defined as ESS divided by
+the total number of retained post-burnin draws.
+\item{} \strong{CE}: Computational efficiency, defined as ESS divided by
+the total runtime in seconds.
+
+\end{itemize}
+
+
+When the \pkg{posterior} package is installed, its implementation of
+\code{rhat()} is used; otherwise, diagnostics from \pkg{coda} are applied.
+\end{Details}
+%
+\begin{Value}
+A named list containing:
+\begin{description}
+
+\item[\code{summary}] A one-row tibble summarizing global diagnostics.
+\item[\code{per\_param}] A tibble containing ESS, Rhat, AE, and CE
+for each parameter.
+
+\end{description}
+
+\end{Value}
+%
+\begin{SeeAlso}
+coda::effectiveSize, coda::gelman.diag, posterior::rhat
+\end{SeeAlso}
+%
+\begin{Examples}
+\begin{ExampleCode}
+## Not run: 
+res <- run_baseline_config(build_M, niter = 2000, nburnin = 500, thin = 2)
+perf <- assess_performance(res$samples, runtime_s = res$runtime_s)
+perf$summary
+
+## End(Not run)
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{as\_mcmc\_list}{Convert an object to mcmc.list}{as.Rul.mcmc.Rul.list}
+\keyword{internal}{as\_mcmc\_list}
+%
+\begin{Description}
+Converts an input object (\code{mcmc.list}, \code{mcmc}, \code{data.frame},
+or \code{matrix}) into a \code{coda}-compatible \code{mcmc.list}.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+as_mcmc_list(x)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{x}] An object of class \code{mcmc.list}, \code{mcmc}, \code{data.frame},
+or \code{matrix}.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+An object of class \code{mcmc.list}.
+\end{Value}
+\HeaderA{as\_mcmc\_list\_sop}{Convert various sample formats to \code{coda::mcmc.list}}{as.Rul.mcmc.Rul.list.Rul.sop}
+\keyword{internal}{as\_mcmc\_list\_sop}
+%
+\begin{Description}
+Optionally merges \code{samples2} into \code{samples}, aligning by row count
+when needed and stripping log-likelihood columns if requested.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+as_mcmc_list_sop(samples, samples2 = NULL, drop_loglik = FALSE, thin = 1L)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{samples}] An object containing MCMC draws (list, matrix, \code{mcmc},
+or \code{mcmc.list}).
+
+\item[\code{samples2}] Optional object of the same structure to be merged.
+
+\item[\code{drop\_loglik}] Logical; drop log-likelihood columns.
+
+\item[\code{thin}] Integer; thinning factor for returned \code{mcmc} objects.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A \code{coda::mcmc.list} object.
+\end{Value}
+\HeaderA{build\_conf\_with\_monitors}{Build a fresh MCMC configuration with automatic monitors if missing}{build.Rul.conf.Rul.with.Rul.monitors}
+\keyword{internal}{build\_conf\_with\_monitors}
+%
+\begin{Description}
+Build a fresh MCMC configuration with automatic monitors if missing
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+build_conf_with_monitors(model, monitors = NULL, opts = samOptiPro_options())
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{model}] nimbleModel (ou compile; on accepte les deux)
+
+\item[\code{monitors}] optional character vector; if NULL, auto-discover
+
+\item[\code{opts}] samOptiPro\_options()
+\end{ldescription}
+\end{Arguments}
+\HeaderA{checkInits}{Robustly check initial values against a compiled NIMBLE model}{checkInits}
+\keyword{internal}{checkInits}
+%
+\begin{Description}
+Robustly check initial values against a compiled NIMBLE model
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+checkInits(model, inits, silent = FALSE)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{model}] a NIMBLE model object (or function that builds one)
+
+\item[\code{inits}] list of initial values
+
+\item[\code{silent}] logical
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+logical TRUE if valid; otherwise throws informative error
+\end{Value}
+\HeaderA{checkInitsAndRun}{Check inits then run MCMC}{checkInitsAndRun}
+\keyword{internal}{checkInitsAndRun}
+%
+\begin{Description}
+Check inits then run MCMC
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+checkInitsAndRun(run_fn, inits, ...)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{run\_fn}] function with signature function(inits) -> list(samples=samples, runtime\_s=seconds)
+
+\item[\code{inits}] list (or list of lists for chains)
+
+\item[\code{...}] forwarded to run\_fn
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+list(samples, runtime\_s)
+\end{Value}
+\HeaderA{compute\_diag\_from\_mcmc}{Build a standard diagnostics table from MCMC samples}{compute.Rul.diag.Rul.from.Rul.mcmc}
+%
+\begin{Description}
+Constructs a basic diagnostics table from an \code{mcmc.list}, including:
+\begin{itemize}
+
+\item{} \code{target}: parameter name,
+\item{} \code{ESS}: minimum effective sample size across chains,
+\item{} \code{AE\_ESS\_per\_it}: algorithmic efficiency (ESS / iterations),
+\item{} \code{ESS\_per\_sec}: computational efficiency (ESS / runtime),
+\item{} \code{time\_s\_per\_ESS}: seconds per effective sample,
+\item{} \code{Rhat}: Gelman-Rubin convergence diagnostic,
+\item{} \code{Family}: top-level family (prefix before the first \code{[}).
+
+\end{itemize}
+
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+compute_diag_from_mcmc(samples, runtime_s)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{samples}] An \code{mcmc.list} (or a single \code{mcmc} / \code{matrix}).
+
+\item[\code{runtime\_s}] Numeric scalar; wall-clock runtime in seconds.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A \code{data.frame} named \code{diag\_tbl}.
+\end{Value}
+\HeaderA{compute\_diag\_from\_mcmc\_vect}{Scalable diagnostics from MCMC samples (block-wise)}{compute.Rul.diag.Rul.from.Rul.mcmc.Rul.vect}
+%
+\begin{Description}
+Efficiently computes convergence and efficiency diagnostics (ESS, R-hat,
+algorithmic efficiency, and computational efficiency) from large
+\code{mcmc.list} objects, designed for very high-dimensional hierarchical models
+(for example, more than 90,000 parameters). The function operates in column
+blocks to control memory usage and can optionally leverage the \pkg{posterior}
+package for faster and rank-normalized diagnostics.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+compute_diag_from_mcmc_vect(
+  samples,
+  runtime_s,
+  compute_rhat = c("none", "classic", "split", "both"),
+  ess_for = c("both", "worst", "total"),
+  ignore_patterns = c("^lifted_", "^logProb_"),
+  cols_by = 5000L,
+  warn_mem_gb = 10,
+  step_timeout_s = Inf,
+  runtime_is_total = TRUE,
+  use_posterior = c("never", "if_available"),
+  target_block_ram_gb = NA_real_,
+  verbose = TRUE
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{samples}] An \code{mcmc.list}, \code{mcmc}, or numeric matrix of MCMC samples.
+
+\item[\code{runtime\_s}] Numeric scalar; runtime in seconds (total or per chain).
+
+\item[\code{compute\_rhat}] Character, one of \code{"none"}, \code{"classic"},
+\code{"split"}, or \code{"both"} (default \code{"none"}).
+
+\item[\code{ess\_for}] Character, one of \code{"both"}, \code{"worst"}, or \code{"total"}.
+
+\item[\code{ignore\_patterns}] Character vector of regular expressions used to drop
+parameters by name (for example \code{"\textasciicircum{}lifted\_"}, \code{"\textasciicircum{}logProb\_"}).
+
+\item[\code{cols\_by}] Integer; number of columns per processing block
+(typically \eqn{\ge 1000}{}). Can be tuned automatically via
+\code{target\_block\_ram\_gb}.
+
+\item[\code{warn\_mem\_gb}] Numeric; memory threshold (GiB) above which a warning
+is issued.
+
+\item[\code{step\_timeout\_s}] Numeric; per-block time limit in seconds.
+
+\item[\code{runtime\_is\_total}] Logical; if \code{FALSE}, \code{runtime\_s} is assumed
+to be per chain and is multiplied by the number of chains.
+
+\item[\code{use\_posterior}] Character; \code{"never"} or \code{"if\_available"} to use
+the \pkg{posterior} package for ESS and R-hat.
+
+\item[\code{target\_block\_ram\_gb}] Numeric; if non-NA, automatically computes
+\code{cols\_by} to target this RAM usage (GiB) per block.
+
+\item[\code{verbose}] Logical; if \code{TRUE}, display progress messages.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+This implementation is optimized for large Bayesian stock assessment or
+life-cycle models (for example, WGNAS, GEREM, Scorff LCM) where standard
+\pkg{coda} routines become memory bound. It avoids unnecessary matrix copies,
+truncates all chains to the shortest length, and computes diagnostics in
+column blocks to maintain stability under limited RAM.
+
+\strong{Formulas:}
+\deqn{ESS_{worst} = \min_c ESS_c(\theta_i)}{}
+\deqn{ESS_{total} = ESS(\text{pooled chains})}{}
+Algorithmic efficiency: \eqn{AE = ESS / n_{iter}}{}.\bsl{}
+Computational efficiency: \eqn{CE = ESS / t_{run}}{}.
+\end{Details}
+%
+\begin{Value}
+A \code{data.frame} with one row per parameter and the following columns:
+\begin{description}
+
+\item[target] Parameter name.
+\item[ESS\_worst] Minimum ESS across chains.
+\item[ESS\_total] Combined ESS across all chains.
+\item[AE\_worst, AE\_total] Algorithmic efficiencies.
+\item[ESS\_per\_sec\_worst, ESS\_per\_sec\_total] Computational efficiencies.
+\item[time\_s\_per\_ESS\_worst, time\_s\_per\_ESS\_total] Seconds per effective sample.
+\item[Rhat\_classic, Rhat\_split] Gelman-Rubin diagnostics (classic / split).
+\item[Family] Top-level node family (extracted from \code{target}).
+
+\end{description}
+
+\end{Value}
+%
+\begin{Note}
+Stability empirically validated for models with at least
+\eqn{90,000}{} parameters and at most \eqn{10}{} chains.
+\end{Note}
+%
+\begin{SeeAlso}
+\code{\LinkA{effectiveSize}{effectiveSize}}, \code{\LinkA{ess\_bulk}{ess.Rul.bulk}},
+\code{\LinkA{rhat}{rhat}}, Vehtari et al. (2021),
+\emph{Bayesian Analysis} 16(2):667--718.
+\end{SeeAlso}
+%
+\begin{Examples}
+\begin{ExampleCode}
+## Not run: 
+res_diag <- compute_diag_from_mcmc_vect(
+  samples   = my_mcmc,
+  runtime_s = 5400,
+  compute_rhat         = "both",
+  ess_for              = "both",
+  target_block_ram_gb  = 2
+)
+head(res_diag)
+
+## End(Not run)
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{compute\_WAIC}{Compute WAIC from coda samples that include logLik[] columns}{compute.Rul.WAIC}
+\keyword{internal}{compute\_WAIC}
+%
+\begin{Description}
+Compute WAIC from coda samples that include logLik[] columns
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+compute_WAIC(samples)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{samples}] coda::mcmc.list
+\end{ldescription}
+\end{Arguments}
+\HeaderA{configure\_hmc\_safely}{Configure and run HMC/NUTS safely}{configure.Rul.hmc.Rul.safely}
+\keyword{internal}{configure\_hmc\_safely}
+%
+\begin{Description}
+Sets up an HMC/NUTS configuration via \pkg{nimbleHMC}, compiles the MCMC,
+runs it, and returns basic diagnostics.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+configure_hmc_safely(
+  build_fn,
+  niter,
+  nburnin,
+  thin,
+  monitors,
+  nchains,
+  out_dir = NULL
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{build\_fn}] A function that builds the model and returns at least
+a list with components \code{model} and \code{conf}.
+
+\item[\code{niter}, \code{nburnin}, \code{thin}] Integers; MCMC iterations, burn-in, and thinning.
+
+\item[\code{monitors}] Character vector of node names to monitor.
+
+\item[\code{nchains}] Integer; number of chains to run.
+
+\item[\code{out\_dir}] Character or \code{NULL}; if not \code{NULL}, figures are saved there.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A list with elements:
+\begin{description}
+
+\item[conf] The configured MCMC configuration.
+\item[res] Raw run output (samples, runtime, …).
+\item[diag\_tbl] A data frame of diagnostics (e.g., R-hat, ESS/s).
+
+\end{description}
+
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+## Not run: 
+  out <- configure_hmc_safely(
+    build_fn = my_build_fn, niter = 2000, nburnin = 1000, thin = 1,
+    monitors = c("beta[1]", "sigma"), nchains = 4, out_dir = "outputs"
+  )
+  out$diag_tbl
+
+## End(Not run)
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{configure\_hmc\_safely\_bis}{Configure and run HMC/NUTS safely (global / subset / auto)}{configure.Rul.hmc.Rul.safely.Rul.bis}
+%
+\begin{Description}
+Minimal, strict wrapper around NIMBLE + nimbleHMC that:
+\begin{enumerate}
+
+\item{} builds the model,
+\item{} configures NUTS either globally (model signature),
+on a subset of nodes (conf + model + nodes signature),
+or in auto mode,
+\item{} compiles the MCMC,
+\item{} runs MCMC.
+
+\end{enumerate}
+
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+configure_hmc_safely_bis(
+  build_fn,
+  niter,
+  nburnin,
+  thin,
+  nchains,
+  monitors = NULL,
+  nuts_mode = c("all", "subset", "auto", "none"),
+  nuts_nodes = NULL,
+  enable_WAIC = FALSE,
+  buildDerivs = TRUE,
+  compiler_cores = max(1L, parallel::detectCores(TRUE)%/%2L),
+  show_compiler_output = TRUE,
+  project_name = NULL,
+  out_dir = NULL,
+  inits = NULL,
+  save_samples = TRUE
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{build\_fn}] Function; model builder (e.g. \code{build\_M}) used to
+create the NIMBLE model before configuring HMC/NUTS.
+If \code{.fresh\_build()} exists, it will be called as
+\code{.fresh\_build(build\_fn, monitors, thin)}.
+Otherwise, \code{build\_fn()} must return a list with at least
+\code{model} and \code{conf} (NIMBLE objects).
+
+\item[\code{niter}] Integer. Total number of iterations.
+
+\item[\code{nburnin}] Integer (>= 0). Number of burn-in iterations (0 allowed).
+
+\item[\code{thin}] Integer (>= 1). Thinning interval.
+
+\item[\code{nchains}] Integer (>= 1). Number of chains.
+
+\item[\code{monitors}] Character vector or \code{NULL}. Passed through to
+building and/or global HMC configuration.
+
+\item[\code{nuts\_mode}] Character. One of \code{c("all","subset","auto","none")}:
+\begin{description}
+
+\item["all"] Global NUTS via \code{nimbleHMC::configureHMC(model, monitors = ..., enableWAIC = ..., buildDerivs = ...)}.
+\item["subset"] NUTS only on \code{nuts\_nodes} via
+\code{nimbleHMC::configureHMC(conf, model, nodes = ..., ...)}.
+\item["auto"] Let \code{nimbleHMC::configureHMC(conf, model, ...)} choose targets automatically.
+\item["none"] Do not modify the existing configuration.
+
+\end{description}
+
+
+\item[\code{nuts\_nodes}] Character vector of node names (can include indexed forms
+such as \code{"beta[]"}) when \code{nuts\_mode = "subset"}.
+
+\item[\code{enable\_WAIC}] Logical. Only relevant for \code{"all"} (model-signature path).
+
+\item[\code{buildDerivs}] Logical. Passed to \code{nimbleHMC::configureHMC()}.
+
+\item[\code{compiler\_cores}] Integer. Passed to
+\code{nimbleOptions(numCompilerCores = ...)}.
+
+\item[\code{show\_compiler\_output}] Logical. Passed to
+\code{nimbleOptions(showCompilerOutput = ...)}.
+
+\item[\code{project\_name}] Character or \code{NULL}. If non-\code{NULL}, sets
+\code{options(nimbleProjectName = ...)} to sanitize the C++ cache.
+
+\item[\code{out\_dir}] Character or \code{NULL}. If non-\code{NULL}, saves a
+\code{sessionInfo()} log and, optionally, samples as \code{.rds}.
+
+\item[\code{inits}] \code{NULL} or a list of per-chain initial values to pass to
+\code{nimble::runMCMC()} (length must match \code{nchains} if provided).
+
+\item[\code{save\_samples}] Logical. If \code{TRUE} (default) and \code{out\_dir} is
+non-\code{NULL}, save \code{samples} as \code{.rds}. If \code{FALSE},
+skip saving samples.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+No per-node fallback such as \code{addSampler("NUTS")} is attempted:
+on error, the function stops.
+\end{Details}
+%
+\begin{Value}
+A list with elements:
+\begin{itemize}
+
+\item{} \code{conf}: final MCMC configuration (with HMC/NUTS if configured),
+\item{} \code{cmcmc}: compiled MCMC object,
+\item{} \code{samples}: \code{coda::mcmc.list} of posterior samples,
+\item{} \code{runtime\_s}: wall time in seconds,
+\item{} \code{build}: the build object returned by \code{build\_fn} or
+\code{.fresh\_build()}.
+
+\end{itemize}
+
+\end{Value}
+\HeaderA{diagnose\_model\_structure}{Diagnose model structure, dependencies, and sampler time (parameter and family levels)}{diagnose.Rul.model.Rul.structure}
+%
+\begin{Description}
+Inspect a NIMBLE model to extract the universe of nodes, classify stochastic
+vs deterministic nodes, compute downstream dependencies per node, map
+configured samplers to their target nodes, and (optionally) profile
+per-sampler run time. Produces tidy tables and publication-quality figures
+at both the \emph{parameter} level and the \emph{family} level (where
+"family" = base variable name before any indices, replacing indices by
+square brackets, for example \code{"beta[]"}).
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+diagnose_model_structure(
+  model,
+  include_data = FALSE,
+  removed_nodes = NULL,
+  ignore_patterns = c("^lifted_", "^logProb_"),
+  make_plots = TRUE,
+  output_dir = NULL,
+  save_csv = FALSE,
+  node_of_interest = NULL,
+  sampler_times = NULL,
+  sampler_times_unit = "seconds",
+  auto_profile = TRUE,
+  profile_niter = 1000L,
+  profile_burnin = 100L,
+  profile_thin = 1L,
+  profile_seed = NULL,
+  np = 0.1,
+  by_family = TRUE,
+  family_stat = c("median", "mean", "sum"),
+  time_normalize = c("none", "per_node"),
+  only_family_plots = FALSE,
+  ...
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{model}] A compiled or uncompiled \code{nimbleModel} (required).
+
+\item[\code{include\_data}] Logical; include data nodes when enumerating nodes
+(default \code{FALSE}).
+
+\item[\code{removed\_nodes}] Character vector of nodes to exclude explicitly
+(default \code{NULL}).
+
+\item[\code{ignore\_patterns}] Character vector of regular expressions used to
+exclude nodes (for example \code{"\textasciicircum{}lifted\_"}, \code{"\textasciicircum{}logProb\_"}).
+
+\item[\code{make\_plots}] Logical; if \code{TRUE}, generate ggplot objects and
+optionally save them (default \code{TRUE}).
+
+\item[\code{output\_dir}] Directory where figures/CSVs will be saved; if \code{NULL},
+nothing is written to disk (default \code{NULL}).
+
+\item[\code{save\_csv}] Logical; if \code{TRUE}, write CSV exports (dependencies per
+node, family tables) (default \code{FALSE}).
+
+\item[\code{node\_of\_interest}] Optional character scalar naming a node to highlight
+or subset (reserved for user logic) (default \code{NULL}).
+
+\item[\code{sampler\_times}] Optional numeric vector of per-sampler times aligned
+with \code{nimble::configureMCMC(model)\$getSamplers()}.
+
+\item[\code{sampler\_times\_unit}] Character label for time axis
+(for example \code{"seconds"}, \code{"ms"}) (default \code{"seconds"}).
+
+\item[\code{auto\_profile}] Logical; if \code{TRUE} and \code{sampler\_times} is
+\code{NULL}, profile sampler times automatically via a short MCMC run
+(default \code{TRUE}).
+
+\item[\code{profile\_niter}] Integer; iterations used by the auto-profiler
+(default \code{1000L}).
+
+\item[\code{profile\_burnin}] Integer; burn-in iterations for auto-profiler
+(kept for API compatibility; not used internally) (default \code{100L}).
+
+\item[\code{profile\_thin}] Integer; thinning for auto-profiler (kept for API
+compatibility; not used internally) (default \code{1L}).
+
+\item[\code{profile\_seed}] Optional integer seed for reproducibility
+(default \code{NULL}).
+
+\item[\code{np}] Proportion in \code{(0, 1]} used elsewhere for "worst sampler"
+selection (kept for API compatibility) (default \code{0.10}).
+
+\item[\code{by\_family}] Logical; if \code{TRUE}, compute and plot family-level
+summaries in addition to parameter-level summaries (default \code{TRUE}).
+
+\item[\code{family\_stat}] One of \code{c("median", "mean", "sum")}; summary
+statistic for family-level aggregation (default \code{"median"}).
+
+\item[\code{time\_normalize}] One of \code{c("none", "per\_node")}; if
+\code{"per\_node"}, divide family time by the number of distinct nodes
+in the family (default \code{"none"}).
+
+\item[\code{only\_family\_plots}] Logical; if \code{TRUE}, only family-level figures
+are exported (parameter-level plots are not written) (default \code{FALSE}).
+
+\item[\code{...}] Additional arguments forwarded to \code{nimble::configureMCMC()}.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+Key features:
+\begin{itemize}
+
+\item{} Robust filtering of nodes (ignored patterns, removal list).
+\item{} Downstream dependency counts per node and per family.
+\item{} Per-sampler times aggregated to parameters and families.
+\item{} Optional auto-profiling of samplers via a short MCMC run.
+\item{} Non-regressive: original per-parameter plots are preserved by default.
+
+\end{itemize}
+
+\end{Details}
+%
+\begin{Value}
+A named list containing:
+\begin{itemize}
+
+\item{} \code{dependencies\_df}: data.frame of (node, dependency) pairs.
+\item{} \code{dep\_counts}: data.frame with per-parameter downstream
+dependency counts.
+\item{} \code{samplers\_df}: data.frame listing samplers and their target
+nodes (list-column).
+\item{} \code{per\_param\_times}: data.frame with per-parameter aggregated
+sampler time.
+\item{} \code{deps\_df}: tidy data.frame used for parameter-level dependency
+plotting.
+\item{} \code{sampler\_df}: tidy data.frame used for parameter-level time
+plotting.
+\item{} \code{fam\_deps\_df}: family-level dependency summary
+(one statistic per family).
+\item{} \code{fam\_time\_df}: family-level time summary (optionally normalized).
+\item{} \code{plots}: list of ggplot objects (some may be \code{NULL}):
+\code{plot\_dependencies}, \code{plot\_sampler\_time},
+\code{plot\_combined}, \code{plot\_dependencies\_family},
+\code{plot\_sampler\_time\_family}, \code{plot\_combined\_family}.
+
+\end{itemize}
+
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+## Not run: 
+res <- diagnose_model_structure(
+  model            = my_nimble_model,
+  make_plots       = TRUE,
+  output_dir       = "outputs/diagnostics",
+  save_csv         = TRUE,
+  by_family        = TRUE,
+  family_stat      = "median",
+  time_normalize   = "per_node",
+  only_family_plots = FALSE
+)
+
+## End(Not run)
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{diagnostics\_by\_target}{Target-level diagnostics (time + optional step-size proxy)}{diagnostics.Rul.by.Rul.target}
+\keyword{internal}{diagnostics\_by\_target}
+%
+\begin{Description}
+Builds a robust MCMC configuration, profiles per-sampler time with
+\code{\LinkA{profile\_sampler\_times}{profile.Rul.sampler.Rul.times}}, maps samplers to their targets, and
+optionally computes a step-size proxy per target via \code{\LinkA{proxy\_step\_sd}{proxy.Rul.step.Rul.sd}}
+if \code{samples} are provided.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+diagnostics_by_target(
+  build_fn,
+  opts = samOptiPro_options(),
+  niter = opts$time_profile_n,
+  samples = NULL
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{build\_fn}] A model builder function returning at least a list with
+components \code{model} (nimbleModel) and \code{cmodel} (compiled model).
+It may also return additional elements (e.g. \code{monitors}) which are
+ignored here.
+
+\item[\code{opts}] A list of options (for example from \code{samOptiPro\_options()}).
+
+\item[\code{niter}] Integer; iterations for time profiling (defaults to
+\code{opts\$time\_profile\_n}).
+
+\item[\code{samples}] Optional \code{coda::mcmc.list} used to compute the step-size
+proxy via \code{proxy\_step\_sd()}.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+Note: uses a tolerant default monitor set followed by a robust configuration
+(no \code{monitors = } passed directly to \code{configureMCMC}).
+\end{Details}
+%
+\begin{Value}
+A \code{data.frame} with columns \code{target}, \code{type},
+\code{time\_s}, \code{step\_sd}.
+\end{Value}
+\HeaderA{ensure\_monitors\_exist}{Ensure monitors exist on the model (variable-aware)}{ensure.Rul.monitors.Rul.exist}
+\keyword{internal}{ensure\_monitors\_exist}
+%
+\begin{Description}
+Valide une liste de monitors donnee au NIVEAU VARIABLE (sans indices).
+Ne "coupe" plus selon les noeuds indexes ; on verifie juste que la VARIABLE existe.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+ensure_monitors_exist(model, monitors)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{model}] nimbleModel
+
+\item[\code{monitors}] character() de noms de variables (ex: "z","p","sd\_proc","logLik")
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+sous-ensemble valide de \code{monitors}, avec warning soft si certains manquent
+\end{Value}
+\HeaderA{ggh}{Internal ggplot2 histogram helper}{ggh}
+\keyword{internal}{ggh}
+%
+\begin{Description}
+Convenience wrapper to build a 1D histogram with an optional vertical line
+and optional log10 transformation on the x-axis.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+ggh(df, xvar, title, vline = NULL, log_x = FALSE)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{df}] Data frame containing the variable to plot.
+
+\item[\code{xvar}] Character scalar; name of the column in \code{df} to use on x.
+
+\item[\code{title}] Plot title.
+
+\item[\code{vline}] Optional numeric; if non-NULL, draws a vertical reference line.
+
+\item[\code{log\_x}] Logical; if TRUE, apply a \code{log10} transform to the x-axis.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+Note: this function relies on a global object \code{bins} (number of bins),
+which is typically set in the plotting context and declared via
+\code{utils::globalVariables()}.
+\end{Details}
+%
+\begin{Value}
+A \code{ggplot} object.
+\end{Value}
+\HeaderA{identify\_bottlenecks}{Identify per-parameter bottlenecks (low ESS/s, low ESS per draw, long time-to-target)}{identify.Rul.bottlenecks}
+\keyword{internal}{identify\_bottlenecks}
+%
+\begin{Description}
+This function ranks parameters according to three metrics:
+\begin{itemize}
+
+\item{} Computational efficiency (CE), defined as ESS per second (low values indicate bottlenecks).
+\item{} Algorithmic efficiency (AE), defined as ESS per post-burnin draw (low values indicate bottlenecks).
+\item{} Time-to-target, defined as the time required to reach a given ESS threshold at the current CE
+(high values indicate bottlenecks).
+
+\end{itemize}
+
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+identify_bottlenecks(
+  samples,
+  runtime_s,
+  ess_threshold = 1000,
+  sampler_params = NULL,
+  model = NULL,
+  mcmc_conf = NULL,
+  ignore_patterns = c("^lifted_", "^logProb_"),
+  strict_sampler_only = TRUE,
+  auto_configure = TRUE,
+  rhat_threshold = 1.01,
+  ess_per_s_min = 0
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{samples}] An object of class \code{mcmc.list}, \code{mcmc}, \code{matrix},
+or \code{data.frame}.
+
+\item[\code{runtime\_s}] Numeric scalar. Total wall-clock time of the MCMC run (in seconds).
+
+\item[\code{ess\_threshold}] Numeric scalar. Target ESS per parameter used to compute
+time-to-target. Default is 1000.
+
+\item[\code{sampler\_params}] Optional character vector of parameter names to retain.
+If provided, other parameters are ignored.
+
+\item[\code{rhat\_threshold}] Numeric scalar. Provided for API symmetry but not used
+in ranking. Default is NULL.
+
+\item[\code{ess\_per\_s\_min}] Numeric scalar. Optional threshold for computational
+efficiency. Parameters with CE below this value are flagged. Set to 0
+(default) to disable.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+Parameters with non-finite or non-positive ESS, AE, or CE are collected in the
+\code{degenerate} field of the output and excluded from the rankings.
+
+When \code{sampler\_params} is provided, rankings are restricted to the specified
+parameter names. This is typically used to exclude deterministic monitors and
+retain only stochastic nodes that have associated samplers.
+\end{Details}
+%
+\begin{Value}
+A list with the following elements:
+\begin{description}
+
+\item[\code{type}] Character string. Either "ok" or "degenerate\_only".
+\item[\code{details}] List containing CE, AE, time-to-target, and degenerate sets.
+\item[\code{per\_param}] Data frame with metrics for each parameter.
+\item[\code{summary}] Data frame summarizing the worst parameters.
+\item[\code{top3}] Data frame containing the three worst parameters according to CE.
+
+\end{description}
+
+\end{Value}
+\HeaderA{identify\_bottlenecks\_family}{Identify bottlenecks at the parameter-family level}{identify.Rul.bottlenecks.Rul.family}
+%
+\begin{Description}
+Parameters are grouped into families defined by the prefix before the first
+\code{"["} in their name (for example, \code{"beta[1]"} and \code{"beta[2]"}
+belong to the family \code{"beta"}). For each family, the function computes
+median efficiency metrics and derived quantities that help identify
+bottlenecks.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+identify_bottlenecks_family(
+  samples,
+  runtime_s,
+  ess_threshold = 1000,
+  sampler_params = NULL,
+  model = NULL,
+  mcmc_conf = NULL,
+  ignore_patterns = c("^lifted_", "^logProb_"),
+  strict_sampler_only = TRUE,
+  auto_configure = TRUE,
+  rhat_threshold = 1.01,
+  ess_per_s_min = 0
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{samples}] An object containing MCMC samples; typically an object of
+class \code{mcmc.list}, \code{mcmc}, \code{matrix}, or \code{data.frame}.
+
+\item[\code{runtime\_s}] Numeric scalar. Wall-clock runtime of the MCMC run in seconds.
+
+\item[\code{ess\_threshold}] Numeric scalar. Target ESS per family (default is 1000).
+
+\item[\code{sampler\_params}] Optional character vector of parameter names to keep
+when defining families. Parameters not in this vector are ignored.
+
+\item[\code{rhat\_threshold}] Numeric scalar kept for API symmetry (not used
+in the ranking).
+
+\item[\code{ess\_per\_s\_min}] Numeric scalar. Optional CE threshold (ESS per second)
+used to flag families below this value. Use 0 to deactivate.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+Group parameters into families and rank them by median efficiency metrics.
+
+For each family, the following median metrics are computed:
+\begin{itemize}
+
+\item{} \code{AE\_med}  = median(AE)            (low values are worse),
+\item{} \code{CE\_med}  = median(CE)            (low values are worse, CE is ESS per second),
+\item{} \code{ESS\_med} = median(ESS),
+\item{} \code{Rhat\_med} = median(Rhat, with \code{na.rm = TRUE}).
+
+\end{itemize}
+
+
+From these, the following diagnostics are derived:
+\begin{itemize}
+
+\item{} \code{slow\_node\_time} = \code{ess\_threshold / CE\_med}
+(seconds needed to reach the target ESS; higher is worse),
+\item{} \code{meet\_target} = logical flag, \code{TRUE} when
+\code{slow\_node\_time <= runtime\_s}.
+
+\end{itemize}
+
+
+Families with degenerate metrics (non-finite or non-positive ESS, AE,
+or CE) are reported in the \code{degenerate} component and excluded from
+the ranking.
+
+When \code{sampler\_params} is provided, only parameters whose names are
+included in \code{sampler\_params} are used to form families (typically
+stochastic nodes that are actually sampled).
+\end{Details}
+%
+\begin{Value}
+A list with components:
+\begin{description}
+
+\item[\code{type}] Character string, either \code{"ok"} or
+\code{"degenerate\_only"}.
+\item[\code{details}] List with components \code{ce}, \code{ae},
+\code{time}, and \code{degenerate} summarising the diagnostics.
+\item[\code{per\_family}] Data frame (or tibble) of metrics by family.
+\item[\code{summary}] Single-row data frame (or tibble) with global
+summaries across families.
+\item[\code{top3}] Data frame containing the three worst families
+according to the main ranking criterion.
+
+\end{description}
+
+\end{Value}
+\HeaderA{merge\_mcmc\_samples}{Merge two MCMC sample objects into a single mcmc.list}{merge.Rul.mcmc.Rul.samples}
+\keyword{internal}{merge\_mcmc\_samples}
+%
+\begin{Description}
+Combine \code{res\$samples} and \code{res\$samples2} (or any two objects
+coercible to \code{mcmc} objects) into a single \code{mcmc.list}. Each
+input is converted using \code{coda::as.mcmc} before being combined.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+merge_mcmc_samples(res)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Details}
+This helper is intended for internal use in cases where a model produces
+two separate sample objects (for example, when running a baseline sampler
+and an additional HMC sampler). Both inputs are converted to MCMC objects
+and returned as a single list of chains.
+\end{Details}
+%
+\begin{Value}
+An object of class \code{mcmc.list} containing all chains from both
+inputs.
+\end{Value}
+\HeaderA{mk\_top3}{Build a compact "top-3" summary table}{mk.Rul.top3}
+\keyword{internal}{mk\_top3}
+%
+\begin{Description}
+Extracts the top 3 rows of a data frame and keeps only a subset of
+columns relevant for bottleneck summaries.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+mk_top3(df, axis_label)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{df}] Data frame with at least columns \code{parameter}, \code{ESS},
+\code{CE}, \code{AE}, \code{slow\_node\_time}, \code{CE\_rank},
+\code{AE\_rank}, \code{TIME\_rank} (only the intersection is kept).
+
+\item[\code{axis\_label}] Character scalar added as a new \code{axis} column.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A data frame with up to 3 rows, or \code{NULL} if \code{df} is empty.
+\end{Value}
+\HeaderA{normalize\_constants\_generic}{Normalize constants in a model-agnostic way}{normalize.Rul.constants.Rul.generic}
+\keyword{internal}{normalize\_constants\_generic}
+%
+\begin{Description}
+Normalize constants in a model-agnostic way
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+normalize_constants_generic(
+  Const,
+  n_rule = "min",
+  pad_rule = "repeat_last",
+  trim_rule = TRUE
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{Const}] list of constants
+
+\item[\code{n\_rule}] "min"|"nyear"|"max"
+
+\item[\code{pad\_rule}] "repeat\_last"|"zero"|"NA"
+
+\item[\code{trim\_rule}] logical (garder TRUE)
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+constants list normalized (with integer 'n')
+\end{Value}
+\HeaderA{plot\_bottlenecks}{Plot MCMC Bottlenecks by Node or Family}{plot.Rul.bottlenecks}
+%
+\begin{Description}
+Generates a comprehensive diagnostic panel of MCMC bottlenecks using
+efficiency and convergence metrics computed per node or node family.
+The function can optionally restrict analyses to nodes that are
+effectively sampled (i.e. have associated samplers in the NIMBLE
+configuration), identified automatically via \code{conf.mcmc\$getSamplers()}.
+
+It produces publication-ready figures of:
+\begin{itemize}
+
+\item{} Median \emph{Algorithmic Efficiency} (AE = ESS/iter) by node family;
+\item{} Median \emph{Computational Efficiency} (CE = ESS/s) by node family;
+\item{} Worst targets by CE (lowest ESS/s);
+\item{} Median or worst \eqn{\hat{R}}{} (Gelman-Rubin) by node or family.
+
+\end{itemize}
+
+
+The function saves each plot both as PDF and PNG in the specified output directory.
+Bar widths and spacing are optimized for compact presentation.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+plot_bottlenecks(
+  diag_tbl,
+  out_dir = "outputs/diagnostics",
+  top_k = 20L,
+  rhat_ref = 1.05,
+  sampled_only = FALSE,
+  conf.mcmc = NULL,
+  samples_ml = NULL,
+  make_esss_targets = TRUE,
+  make_esss_families = TRUE,
+  make_time_families = TRUE,
+  make_rhat_hist_targets = TRUE,
+  make_rhat_worst_targets = TRUE,
+  make_rhat_median_families = TRUE,
+  make_hist_ae_families = FALSE,
+  make_hist_ce_families = FALSE
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{diag\_tbl}] \code{data.frame} or \code{tibble} containing diagnostics per target node.
+Must include columns such as \code{target}, \code{Family}, \code{ESS}, \code{ESS\_per\_sec}, and optionally \code{Rhat}.
+
+\item[\code{out\_dir}] Character string; path to output directory for saving figures
+(default: \code{"outputs/diagnostics"}). Will be created recursively if missing.
+
+\item[\code{top\_k}] Integer; number of worst or best nodes to display (default: \code{20L}).
+
+\item[\code{rhat\_ref}] Numeric; reference threshold for Gelman-Rubin \eqn{\hat{R}}{}
+(default: \code{1.05}).
+
+\item[\code{sampled\_only}] Logical; if \code{TRUE}, restricts plots to nodes that have an
+explicit sampler in \code{conf.mcmc} and are present in \code{samples\_ml}. Default: \code{FALSE}.
+
+\item[\code{conf.mcmc}] NIMBLE MCMC configuration object, typically produced by
+\code{configureMCMC(model, ...)} or stored as \code{build\_fn()\$conf}. Used to extract
+sampler-attached target nodes when \code{sampled\_only = TRUE}.
+
+\item[\code{samples\_ml}] Optional MCMC list (as returned by \code{runMCMC(..., nchains > 1)}),
+used to match sampler targets with actual sample column names.
+
+\item[\code{make\_esss\_targets}] Logical; if \code{TRUE}, produces barplot of worst targets
+by computational efficiency (default: \code{TRUE}).
+
+\item[\code{make\_esss\_families}] Logical; if \code{TRUE}, produces barplot of median
+algorithmic efficiency (AE) by node family (default: \code{TRUE}).
+
+\item[\code{make\_time\_families}] Logical; if \code{TRUE}, produces barplot of median
+computational efficiency (CE) by node family (default: \code{TRUE}).
+
+\item[\code{make\_rhat\_hist\_targets}] Logical; if \code{TRUE}, produces barplot of median
+Rhat per family (default: \code{TRUE}).
+
+\item[\code{make\_rhat\_worst\_targets}] Logical; if \code{TRUE}, produces barplot of the
+worst Rhat targets (default: \code{TRUE}).
+
+\item[\code{make\_rhat\_median\_families}] Logical; if \code{TRUE}, produces an alias
+of the median Rhat-by-family plot (default: \code{TRUE}).
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+This function is a core visualization tool for diagnosing performance
+bottlenecks in large hierarchical Bayesian models (e.g., SAM-like or
+GEREM-type stock assessment models). It integrates runtime, efficiency,
+and convergence metrics in a standardized panel of plots, suitable for
+benchmarking, model comparison, or publication figures.
+
+When \code{sampled\_only = TRUE}, it automatically extracts the list of stochastic
+nodes (targets) from \code{conf.mcmc\$getSamplers()} and intersects them with the
+variable names present in \code{samples\_ml}. This ensures only stochastically
+sampled nodes are visualized, excluding lifted or deterministic intermediates.
+\end{Details}
+%
+\begin{Value}
+Invisibly returns a named \code{list} of ggplot objects:
+\begin{itemize}
+
+\item{} \code{bar\_family\_algorithmic\_eff} — Median AE by family;
+\item{} \code{bar\_family\_computational\_eff} — Median CE by family;
+\item{} \code{bar\_target\_CE} — Worst targets by CE;
+\item{} \code{rhat\_family\_template} — Median Rhat by family;
+\item{} \code{rhat\_worst\_targets} — Worst targets by Rhat.
+
+\end{itemize}
+
+Each plot is also saved in \code{out\_dir} as both \code{.pdf} and \code{.png}.
+\end{Value}
+%
+\begin{SeeAlso}
+\code{\LinkA{identify\_bottlenecks\_family}{identify.Rul.bottlenecks.Rul.family}},
+\code{\LinkA{profile\_sampler\_times}{profile.Rul.sampler.Rul.times}},
+\code{\LinkA{run\_structure\_and\_hmc\_test}{run.Rul.structure.Rul.and.Rul.hmc.Rul.test}}
+\end{SeeAlso}
+%
+\begin{Examples}
+\begin{ExampleCode}
+## Not run: 
+# Example assuming an existing NIMBLE configuration and MCMC results:
+res <- plot_bottlenecks(
+  diag_tbl     = diag_tbl,
+  conf.mcmc    = conf.mcmc,
+  samples_ml   = samples_ml,
+  sampled_only = TRUE,
+  out_dir      = "outputs/diagnostics"
+)
+
+## End(Not run)
+
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{plot\_bottlenecks\_fast}{Fast bottleneck plots (samplers-only) for large models}{plot.Rul.bottlenecks.Rul.fast}
+%
+\begin{Description}
+Produces \strong{colored bar charts} for median \strong{AE (ESS/N)} and \strong{CE (ESS/s)}
+by node family, \strong{restricted to nodes that are actually sampled} by the MCMC
+configuration (strict "samplers only"). Designed for large models where
+memory/time constraints require fast post-processing on a reduced subset.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+plot_bottlenecks_fast(
+  diag_tbl,
+  sampled_only = TRUE,
+  conf.mcmc = NULL,
+  samples_ml = NULL,
+  out_dir = NULL
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{diag\_tbl}] A \code{data.frame} with at least column \code{target}. If present and finite,
+metrics are taken from \code{AE\_worst} (fallback to \code{AE\_total}) and
+\code{ESS\_per\_sec\_worst} (fallback to \code{ESS\_per\_sec\_total}).
+
+\item[\code{sampled\_only}] Logical (default \code{TRUE}). When \code{TRUE}, keep \strong{only} nodes
+that are targets of configured samplers and also present in \code{samples\_ml} columns.
+If no node remains, the function raises an error (no permissive fallback).
+
+\item[\code{conf.mcmc}] A Nimble MCMC configuration (result of \code{nimble::configureMCMC()}),
+required when \code{sampled\_only=TRUE}.
+
+\item[\code{samples\_ml}] A \code{coda::mcmc.list} (or compatible) holding posterior draws,
+required when \code{sampled\_only=TRUE}.
+
+\item[\code{out\_dir}] Optional output directory. When provided, saves:
+\code{AE\_median\_by\_family\_\_samplers\_only.png} and
+\code{CE\_median\_by\_family\_\_samplers\_only.png}.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+(invisible) A list with ggplot objects and summary tables:
+\code{list(p\_ae, p\_ce, table\_ae, table\_ce)}.
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+## Not run: 
+conf <- nimble::configureMCMC(m)
+res <- plot_bottlenecks_fast(
+  diag_tbl   = diag_tbl,
+  sampled_only = TRUE,
+  conf.mcmc  = conf,
+  samples_ml = samples_mla,
+  out_dir    = "outputs/diagnostics_fast"
+)
+
+## End(Not run)
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{plot\_bottlenecks\_index}{Plot diagnostics for stochastic sampler targets (strict) + all-nodes panels}{plot.Rul.bottlenecks.Rul.index}
+%
+\begin{Description}
+\begin{itemize}
+
+\item{} \strong{Sampler-only core}: strictly restrict AE/CE (and related "sampled" panels)
+to targets having an MCMC sampler, discovered \emph{inside} via
+\code{conf.mcmc\$getSamplers()} (or \code{attr(diag\_tbl,"mcmc\_conf")}, or explicit
+\code{attr(diag\_tbl,"sampled\_targets")}). No "Family" logic anywhere.
+\item{} \strong{All-nodes replacements (this change)}: replace the former sampled-only
+panels you listed with \strong{all-nodes} counterparts for the \strong{same metrics}:
+\begin{itemize}
+
+\item{} AE median by Target — \strong{all nodes} (steelblue)
+\item{} CE median by Target — \strong{all nodes} (green)
+\item{} Worst CE — \strong{all nodes} (grey60 + labels)
+\item{} Top Time — \strong{all nodes} (grey40 + labels)
+
+\end{itemize}
+
+
+\end{itemize}
+
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+plot_bottlenecks_index(
+  diag_tbl,
+  out_dir = "outputs/diagnostics",
+  top_k = 20L,
+  n_worst = 20L,
+  bins = 30L,
+  rhat_ref = 1.05,
+  make_bar_ae_median_all = TRUE,
+  make_bar_ce_median_all = TRUE,
+  make_bar_ce_worst_all = TRUE,
+  make_bar_rhat_worst = TRUE,
+  make_bar_ess_q5 = TRUE,
+  make_hist_ce = TRUE,
+  make_hist_ae = TRUE
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{diag\_tbl}] data.frame with per-target diagnostics; must contain \code{target} or rownames.
+Expected: AE (\code{AE\_ESS\_per\_it} or \code{AE}), CE (\code{ESS\_per\_sec} or \code{ess\_per\_s} or \code{CE});
+optional \code{ESS}/\code{ess}, \code{time\_s}, \code{Rhat}.
+
+\item[\code{out\_dir}] Output directory for figures (PDF + PNG). Default: "outputs/diagnostics".
+
+\item[\code{top\_k}] Bars shown in the “worst/top” all-nodes panels. Default: 20L.
+
+\item[\code{n\_worst}] Rows returned in worst tables. Default: 20L.
+
+\item[\code{bins}] Kept for API compatibility (AE/CE “hist” are barplots). Default: 30L.
+
+\item[\code{rhat\_ref}] Rhat reference (Rhat-1 axis). Default: 1.05.
+
+\item[\code{make\_bar\_ae\_median\_all}] make\_bar\_ce\_median\_all,
+make\_bar\_ce\_worst\_all, make\_bar\_time\_top\_all
+Toggles for the \strong{all-nodes} panels (default TRUE).
+
+\item[\code{make\_bar\_rhat\_worst}] make\_bar\_ess\_q5,
+make\_hist\_ce, make\_hist\_ae Toggles for the existing \strong{sampled-only} panels (default TRUE).
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+Invisibly, a list with ggplot objects and worst-node tables.
+\end{Value}
+\HeaderA{plot\_convergence\_checks}{Plot convergence diagnostics (R-hat \& traces) with family-level R-hat bars}{plot.Rul.convergence.Rul.checks}
+%
+\begin{Description}
+ECDF plots are removed. Only requested items are produced and saved.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+plot_convergence_checks(
+  samples,
+  out_dir = "outputs/diagnostics",
+  top_k_rhat = 12L,
+  top_k_aelow = 12L,
+  runtime_s = NULL,
+  rhat_ref = 1.05,
+  make_rhat_hist = TRUE,
+  make_traces_rhat = TRUE,
+  make_traces_ae = TRUE,
+  make_rhat_family_bars = TRUE
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{samples}] \code{coda::mcmc.list}.
+
+\item[\code{out\_dir}] Output directory (PDF \& PNG).
+
+\item[\code{top\_k\_rhat}] Number of targets for "worst R-hat" traces.
+
+\item[\code{top\_k\_aelow}] Number of targets for "worst AE (low ESS/s)" traces.
+
+\item[\code{runtime\_s}] Total runtime in seconds (optional; used to compute CE if needed).
+
+\item[\code{rhat\_ref}] Reference R-hat threshold (default 1.01).
+
+\item[\code{make\_rhat\_hist}] Logical -- global R-hat histogram.
+
+\item[\code{make\_traces\_rhat}] Logical -- traces/densities for worst R-hat.
+
+\item[\code{make\_traces\_ae}] Logical -- traces/densities for worst AE (low ESS/s).
+
+\item[\code{make\_rhat\_family\_bars}] Logical -- bars of median R-hat by family.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+(Invisibly) a list with created ggplots/tables.
+\end{Value}
+\HeaderA{plot\_convergence\_rhat\_sampled\_fast}{Fast convergence plots for R-hat (samplers-only), thresholded}{plot.Rul.convergence.Rul.rhat.Rul.sampled.Rul.fast}
+%
+\begin{Description}
+Builds \strong{samplers-only} convergence diagnostics based on \eqn{\hat{R}}{} with:
+\begin{enumerate}
+
+\item{} median \eqn{\hat{R}}{} by family (bar chart with threshold line), and
+\item{} top-k worst nodes by \eqn{\hat{R}}{} (bar chart with threshold line).
+configurable threshold (default 1.01). Prefers \code{Rhat\_split} if available,
+falls back to \code{Rhat\_classic} otherwise. Produces:
+\item{} median R̂ by family (bar chart with threshold line), and
+\item{} top-k worst nodes by R̂ (bar chart with threshold line).
+
+\end{enumerate}
+
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+plot_convergence_rhat_sampled_fast(
+  diag_tbl,
+  threshold = 1.01,
+  sampled_only = TRUE,
+  conf.mcmc = NULL,
+  samples_ml = NULL,
+  out_dir = NULL,
+  top_k = 20L,
+  prefer_split = TRUE
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{diag\_tbl}] A \code{data.frame} with at least column \code{target} and one of
+\code{Rhat\_split} or \code{Rhat\_classic} having finite values.
+
+\item[\code{threshold}] Numeric; R̂ reference line (default \code{1.01}).
+
+\item[\code{sampled\_only}] Logical (default \code{TRUE}). When \code{TRUE}, keep \strong{only} nodes
+that are targets of configured samplers and also present in \code{samples\_ml}.
+Raises an error if none remain (strict behavior).
+
+\item[\code{conf.mcmc}] Nimble MCMC configuration (required when \code{sampled\_only=TRUE}).
+
+\item[\code{samples\_ml}] A \code{coda::mcmc.list} providing column names to intersect with sampler targets.
+
+\item[\code{out\_dir}] Optional output directory. Saves:
+\code{Rhat\_median\_by\_family\_\_samplers\_only\_thr\_*.png},
+\code{TopK\_worst\_Rhat\_\_samplers\_only\_thr\_*.png},
+and two CSV summaries.
+
+\item[\code{top\_k}] Integer; number of worst nodes by R̂ to display (default \code{20L}).
+
+\item[\code{prefer\_split}] Logical; if \code{TRUE} (default), use \code{Rhat\_split} when available/finite,
+otherwise fallback to \code{Rhat\_classic}.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+(invisible) A list with ggplot objects and tables:
+\code{list(p\_family, p\_top, table\_family, table\_top, threshold)}.
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+## Not run: 
+conf <- nimble::configureMCMC(m)
+rhat_res <- plot_convergence_rhat_sampled_fast(
+  diag_tbl     = diag_tbl,
+  threshold    = 1.01,
+  sampled_only = TRUE,
+  conf.mcmc    = conf,
+  samples_ml   = samples_mla,
+  out_dir      = "outputs/diagnostics_fast_rhat",
+  top_k        = 20L,
+  prefer_split = TRUE
+)
+
+## End(Not run)
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{plot\_family\_ess\_bar}{Family-level ESS bar plot (harmonised style)}{plot.Rul.family.Rul.ess.Rul.bar}
+%
+\begin{Description}
+Produce a bar plot showing the median Effective Sample Size (ESS)
+for each parameter family. A horizontal dashed line indicates the
+5 percent quantile of ESS across all families.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+plot_family_ess_bar(
+  samples,
+  runtime_s,
+  sampler_params = NULL,
+  model = NULL,
+  mcmc_conf = NULL,
+  samplers_df = NULL,
+  ignore_patterns = c("^lifted_", "^logProb_"),
+  strict_sampler_only = TRUE
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{samples}] An object that can be converted to an \code{mcmc.list}
+(e.g., \code{mcmc.list}, \code{mcmc}, \code{data.frame}, or
+\code{matrix}).
+
+\item[\code{runtime\_s}] Numeric scalar giving the total runtime in seconds.
+This value is not used directly inside the plot, but is kept for
+API consistency.
+
+\item[\code{sampler\_params}] Optional character vector; if supplied, only
+parameters listed here are used when computing family-level ESS.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+Families are defined by the substring before the first "[" in
+each parameter name. If \code{sampler\_params} is provided, only
+parameters included in that vector are used when forming families.
+\end{Details}
+%
+\begin{Value}
+A \code{ggplot} object representing median ESS per family.
+\end{Value}
+\HeaderA{plot\_family\_rhat\_bar}{Family-level R-hat bar plot (harmonised style)}{plot.Rul.family.Rul.rhat.Rul.bar}
+%
+\begin{Description}
+Builds a bar plot of median R-hat by family, using the transformation
+\code{median\_Rhat - 1} on the y-axis. With this transformation, the usual
+convergence threshold \code{rhat\_threshold = 1.05} appears at \code{0.05}
+on the vertical axis.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+plot_family_rhat_bar(
+  samples,
+  runtime_s,
+  sampler_params = NULL,
+  rhat_threshold = 1.05
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{samples}] An object containing MCMC draws (for example an
+\code{mcmc.list}, \code{mcmc}, \code{data.frame}, or \code{matrix}).
+It must be compatible with \code{assess\_performance()} via
+\code{as\_mcmc\_list()}.
+
+\item[\code{runtime\_s}] Numeric scalar; total runtime in seconds for the MCMC
+run. It is passed to \code{assess\_performance()} for consistency.
+
+\item[\code{sampler\_params}] Optional character vector of parameter names to keep.
+If provided, only those parameters are used to compute family-level
+median R-hat. If \code{NULL} (default), all parameters in
+\code{assess\_performance(samples, runtime\_s)\$per\_param} are used.
+
+\item[\code{rhat\_threshold}] Numeric convergence threshold for R-hat (default
+\code{1.05}). A dashed horizontal line is drawn at
+\code{rhat\_threshold - 1} on the transformed scale.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+Families are defined by the prefix before the first \code{"["} in the
+parameter name (for example \code{"beta[1]"} and \code{"beta[2]"} both
+map to the family \code{"beta"}).
+\end{Details}
+%
+\begin{Value}
+A \pkg{ggplot2} object representing the bar plot, or \code{NULL} if no
+finite R-hat values are available.
+\end{Value}
+\HeaderA{plot\_mcmc\_histograms}{Histograms for ESS, CE, AE, and Rhat}{plot.Rul.mcmc.Rul.histograms}
+%
+\begin{Description}
+Produce histogram plots (via \code{ggplot2}) for a single metric such as
+Effective Sample Size (ESS), Computational Efficiency (CE = ESS/s),
+Algorithmic Efficiency (AE = ESS per draw), or the Gelman-Rubin statistic
+Rhat (often shifted as \code{Rhat - 1} for visual clarity).
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+plot_mcmc_histograms(
+  samples,
+  runtime_s,
+  rhat_thresh = 1.01,
+  bins = 30,
+  log_x = TRUE
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{bins}] Integer number of histogram bins (default typically 30).
+
+\item[\code{df}] A data frame containing at least one numeric column representing
+a diagnostic metric.
+
+\item[\code{metric}] Character scalar giving the column name in \code{df} to be
+plotted.
+
+\item[\code{vline}] Optional numeric value at which to draw a vertical reference
+line; set to \code{NULL} (default) to omit the line.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+The function expects a data frame containing at least one numeric column
+whose name is supplied via \code{metric}. A histogram is then generated
+using a harmonised style consistent with other diagnostic plots in the
+package.
+\end{Details}
+%
+\begin{Value}
+A \code{ggplot} histogram object.
+\end{Value}
+\HeaderA{plot\_strategies\_from\_test\_result\_fast}{Plot strategy comparisons from test\_strategy\_family\_fast results (fast path)}{plot.Rul.strategies.Rul.from.Rul.test.Rul.result.Rul.fast}
+%
+\begin{Description}
+Fast plotting utility to compare sampler strategies (scalar and block plans,
+including optional full-model HMC) using median efficiency metrics computed
+per target or per family. Designed to work with objects returned by
+\code{\LinkA{test\_strategy\_family\_fast()}{test.Rul.strategy.Rul.family.Rul.fast}} and \code{\LinkA{configure\_hmc\_safely()}{configure.Rul.hmc.Rul.safely}}.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+plot_strategies_from_test_result_fast(
+  res,
+  out_dir = "outputs/strategies_plots",
+  per = c("target", "family"),
+  top_k = 40L,
+  top_by = c("CE", "AE"),
+  export_rds = TRUE,
+  width = 12,
+  height = 7,
+  dpi = 300
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{res}] A result object from \code{\LinkA{test\_strategy\_family\_fast()}{test.Rul.strategy.Rul.family.Rul.fast}} or
+\code{\LinkA{configure\_hmc\_safely()}{configure.Rul.hmc.Rul.safely}} containing baseline/steps/HMC diagnostics.
+
+\item[\code{out\_dir}] Output directory for plots (created if missing).
+
+\item[\code{per}] Aggregation level: \code{"target"} or \code{"family"}.
+
+\item[\code{top\_k}] Integer; number of keys (targets or families) to keep for plotting
+based on \code{top\_by}. Use a large number to keep all.
+
+\item[\code{top\_by}] Selection metric for top-k: \code{"CE"} or \code{"AE"}.
+
+\item[\code{width}, \code{height}, \code{dpi}] Plot export parameters passed to \code{ggsave()}.
+
+\item[\code{export\_csv}] Logical; if \code{TRUE}, writes a CSV summary at \code{out\_dir}.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+The function consumes \code{res} objects that contain:
+\begin{itemize}
+
+\item{} \code{baseline\$diag\_tbl} \strong{or} (\code{baseline\$samples}, \code{baseline\$runtime\_s})
+\item{} a list of \code{steps} with per-step diagnostics under \code{steps[[i]]\$res\$dg}
+\item{} optionally, \code{mode == "HMC\_full"} with \code{hmc\$diag\_tbl}.
+
+\end{itemize}
+
+
+When diagnostics are missing but samples/runtime are provided, the function
+prefers \code{compute\_diag\_from\_mcmc\_vect()} (vectorized) and falls back to
+\code{compute\_diag\_from\_mcmc()} if needed (both assumed available in your package).
+
+Filtering removes likelihood-like targets (\code{logLik}, \code{log\_lik}, \code{logdens},
+\code{lpdf}) and internal/generated nodes (\code{lifted\_}, \code{logProb\_}). If the \code{Family}
+column is absent, it is derived as the root prefix of \code{target}.
+
+Plots include:
+\begin{itemize}
+
+\item{} Global bar charts across steps for AE (ESS/iteration), CE (ESS/second),
+and \eqn{\hat{R}}{} (max per key);
+\item{} Per-step bar charts for the same metrics.
+
+\end{itemize}
+
+\end{Details}
+%
+\begin{Value}
+(Invisibly) a list with:
+\begin{description}
+
+\item[data] \code{data.table} of aggregated metrics used for plotting.
+\item[out\_dir] Output directory path.
+\item[plots\_all] A list of ggplot objects for AE/CE/Rhat global charts.
+
+\end{description}
+
+\end{Value}
+%
+\begin{Section}{Metrics}
+
+\begin{itemize}
+
+\item{} AE = median(ESS per iteration) over the aggregation key;
+\item{} CE = median(ESS per second) over the aggregation key;
+\item{} Rhat = max(\eqn{\hat{R}}{}) over the aggregation key.
+
+\end{itemize}
+
+\end{Section}
+%
+\begin{SeeAlso}
+\code{\LinkA{test\_strategy\_family\_fast()}{test.Rul.strategy.Rul.family.Rul.fast}}, \code{\LinkA{configure\_hmc\_safely()}{configure.Rul.hmc.Rul.safely}}
+\end{SeeAlso}
+%
+\begin{Examples}
+\begin{ExampleCode}
+## Not run: 
+res <- test_strategy_family_fast(build_fn = build_M, nbot = 2, try_hmc = TRUE)
+plot_strategies_from_test_result_fast(res, per = "family", top_k = 30, top_by = "CE")
+
+## End(Not run)
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{plot\_strategies\_from\_test\_result\_hmc\_fast}{@export}{plot.Rul.strategies.Rul.from.Rul.test.Rul.result.Rul.hmc.Rul.fast}
+%
+\begin{Description}
+@export
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+plot_strategies_from_test_result_hmc_fast(
+  res,
+  out_dir = NULL,
+  per = c("target", "family"),
+  top_k = 40,
+  top_by = c("CE", "AE", "Rhat"),
+  show_rhat_label = TRUE
+)
+\end{verbatim}
+\end{Usage}
+\HeaderA{profile\_sampler\_times}{Profile sampler times per MCMC sampler}{profile.Rul.sampler.Rul.times}
+%
+\begin{Description}
+Compile (once) and run a NIMBLE MCMC configured in \code{conf}, with
+per-sampler timing enabled, then return the vector of times (seconds) for
+each sampler defined in \code{conf}. A small in-session cache can be added
+by the caller if desired, but this function itself performs no caching.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+profile_sampler_times(conf, cmodel, niter = 50000)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{conf}] A NIMBLE MCMC configuration object (for example returned by
+\code{nimble::configureMCMC(model)}).
+
+\item[\code{cmodel}] A compiled \code{nimbleModel} used as \code{project = } for
+\code{nimble::compileNimble()}.
+
+\item[\code{niter}] Integer scalar; number of MCMC iterations to run for profiling.
+Default \code{5e4}.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A numeric vector of length equal to the number of samplers in
+\code{conf}, giving the per-sampler elapsed time (in seconds). If NIMBLE
+reports fewer or more entries than samplers, the vector is padded or
+truncated accordingly with \code{NA}s.
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+## Not run: 
+  model  <- nimbleModel(code, constants = Const, data = Data, inits = Inits)
+  cmodel <- compileNimble(model)
+  conf   <- configureMCMC(model)
+  ts <- profile_sampler_times(conf, cmodel, niter = 1e4)
+  print(ts)
+
+## End(Not run)
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{proxy\_step\_sd}{Step-size proxy: sd(diff(chain)) on columns matching a pattern}{proxy.Rul.step.Rul.sd}
+\keyword{internal}{proxy\_step\_sd}
+%
+\begin{Description}
+Computes, for each parameter whose name matches \code{pattern}, the standard
+deviation of successive differences \code{sd(diff(.))}, as a simple
+step-size proxy.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+proxy_step_sd(samples, pattern)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{samples}] A \code{coda::mcmc.list}.
+
+\item[\code{pattern}] A string; pattern to match against column names (fixed match).
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A named numeric vector giving \code{sd(diff(.))} per parameter.
+\end{Value}
+\HeaderA{run\_baseline\_coda}{Run baseline et retourne un mcmc.list fusionne (samples + samples2)}{run.Rul.baseline.Rul.coda}
+\keyword{internal}{run\_baseline\_coda}
+%
+\begin{Description}
+Run baseline et retourne un mcmc.list fusionne (samples + samples2)
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+run_baseline_coda(
+  build_fn,
+  niter,
+  nburnin = floor(0.25 * niter),
+  thin = 1L,
+  monitors = NULL,
+  nchains = 1L,
+  drop_loglik = FALSE,
+  opts = samOptiPro_options()
+)
+\end{verbatim}
+\end{Usage}
+\HeaderA{run\_baseline\_config}{Run baseline RW/Slice with robust compile/run Complete, robust version with safe opts resolution and fixed parallel loading Run a baseline MCMC configuration safely (sequential or parallel)}{run.Rul.baseline.Rul.config}
+%
+\begin{Description}
+Run baseline RW/Slice with robust compile/run
+Complete, robust version with safe opts resolution and fixed parallel loading
+Run a baseline MCMC configuration safely (sequential or parallel)
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+run_baseline_config(
+  build_fn,
+  niter,
+  nburnin = floor(0.25 * niter),
+  thin = 1L,
+  monitors = NULL,
+  nchains = 1L,
+  opts = samOptiPro_options()
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{build\_fn}] Function with no args that, when called via .fresh\_build(build\_fn, ...),
+returns list(conf = , cmodel = ).
+
+\item[\code{niter}, \code{nburnin}, \code{thin}] MCMC schedule.
+
+\item[\code{monitors}] Character vector or NULL (passed to .fresh\_build()).
+
+\item[\code{nchains}] Integer number of chains.
+
+\item[\code{opts}] Optional list of options (resolved like samOptiPro\_options()).
+
+\item[\code{parallel}] Logical; if TRUE and nchains > 1, run 1 chain per worker.
+
+\item[\code{parallel\_type}] "psock" or "fork".
+
+\item[\code{quiet}] Silence outputs/messages (also prevents progress bars).
+
+\item[\code{return\_samples}] If FALSE, stream to CSV on disk (huge RAM savings).
+
+\item[\code{out\_dir}] Where to write streamed CSVs when return\_samples = FALSE.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+list(samples, samples2, runtime\_s, conf, csv\_files)
+\begin{itemize}
+
+\item{} If return\_samples = FALSE, samples/samples2 are NULL and csv\_files lists per-chain paths.
+
+\end{itemize}
+
+\end{Value}
+\HeaderA{run\_hmc\_all\_nodes}{Run HMC/NUTS where possible; fallback samplers for uncovered nodes}{run.Rul.hmc.Rul.all.Rul.nodes}
+%
+\begin{Description}
+Run HMC/NUTS where possible; fallback samplers for uncovered nodes
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+run_hmc_all_nodes(
+  build_fn,
+  niter,
+  nburnin = floor(0.25 * niter),
+  thin = 1L,
+  monitors = NULL,
+  nchains = 1L,
+  opts = samOptiPro_options()
+)
+\end{verbatim}
+\end{Usage}
+\HeaderA{run\_structure\_and\_hmc\_test}{Run structural diagnostics and (optional) HMC/NUTS smoke test}{run.Rul.structure.Rul.and.Rul.hmc.Rul.test}
+%
+\begin{Description}
+Inspects a NIMBLE model produced by \code{build\_fn()} to:
+\begin{itemize}
+
+\item{} count stochastic vs. deterministic nodes (optionally including data),
+\item{} parse the model code to detect non-differentiable functions and BUGS-style truncation,
+\item{} rebuild a per-node table with distribution, support, and bounds,
+\item{} tag \strong{HMC showstoppers} (for example discrete latents, simplex constraints,
+truncation, non-differentiable deterministic operations feeding latents),
+\item{} optionally attempt a short HMC/NUTS run (via \pkg{nimbleHMC}) to check practical feasibility.
+
+\end{itemize}
+
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+run_structure_and_hmc_test(
+  build_fn,
+  include_data = FALSE,
+  try_hmc = TRUE,
+  niter = 50L,
+  nburnin = 10L,
+  seed = 1L
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{build\_fn}] A zero-arg function returning a list with at least
+\code{model} (\code{nimbleModel}); optional elements: \code{cmodel},
+\code{monitors}, \code{code\_text} (or \code{code}) used to strengthen
+non-differentiability detection.
+
+\item[\code{include\_data}] Logical; include data nodes in counts and scans.
+Default \code{FALSE}.
+
+\item[\code{try\_hmc}] Logical; if \code{TRUE}, attempt a brief HMC/NUTS run.
+Default \code{TRUE}.
+
+\item[\code{niter}] Integer; total iterations for the HMC test. Default \code{50L}.
+
+\item[\code{nburnin}] Integer; burn-in for the HMC test. Default \code{10L}.
+
+\item[\code{seed}] Integer; RNG seed for the HMC run. Default \code{1L}.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+Compared to \code{diagnose\_model\_structure()}, this function does not filter nodes by
+ignore patterns or explicit removals and does not compute dependency fan-out.
+Its emphasis is \emph{HMC suitability} rather than structural load.
+\end{Details}
+%
+\begin{Value}
+An invisible list with components:
+\begin{itemize}
+
+\item{} \code{diag}: list with \code{nodes} (data.frame of node metadata and HMC showstopper tags),
+\code{nondiff\_signals}, \code{code\_scan}, \code{hmc\_globally\_ok}.
+\item{} \code{hmc}: list describing the HMC trial (\code{ok}, \code{error}, \code{details}).
+
+\end{itemize}
+
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+## Not run: 
+out <- run_structure_and_hmc_test(my_builder, include_data = FALSE, try_hmc = TRUE)
+if (!out$hmc$ok) message("HMC not feasible: ", out$hmc$error)
+
+## End(Not run)
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{sampler\_df\_from\_conf}{Convenience: directly return sampler\_df from an existing conf.}{sampler.Rul.df.Rul.from.Rul.conf}
+\keyword{internal}{sampler\_df\_from\_conf}
+%
+\begin{Description}
+Convenience: directly return sampler\_df from an existing conf.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+sampler_df_from_conf(conf)
+\end{verbatim}
+\end{Usage}
+\HeaderA{sampler\_env\_dump}{Long data.frame of sampler env numeric fields}{sampler.Rul.env.Rul.dump}
+\keyword{internal}{sampler\_env\_dump}
+%
+\begin{Description}
+Long data.frame of sampler env numeric fields
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+sampler_env_dump(cm)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{cm}] compiled MCMC
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+data.frame(sampler\_index, field, value)
+\end{Value}
+\HeaderA{sampler\_env\_numeric\_fields}{Numeric scalar fields in the environment of each compiled sampler function}{sampler.Rul.env.Rul.numeric.Rul.fields}
+\keyword{internal}{sampler\_env\_numeric\_fields}
+%
+\begin{Description}
+Numeric scalar fields in the environment of each compiled sampler function
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+sampler_env_numeric_fields(cm)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{cm}] compiled MCMC (from compileNimble(buildMCMC(...)))
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+list of named lists (one per sampler)
+\end{Value}
+\HeaderA{sampler\_functions\_from\_conf}{Build and compile an MCMC from a conf to access samplerFunctions.}{sampler.Rul.functions.Rul.from.Rul.conf}
+\keyword{internal}{sampler\_functions\_from\_conf}
+%
+\begin{Description}
+Build and compile an MCMC from a conf to access samplerFunctions.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+sampler_functions_from_conf(conf, cmodel)
+\end{verbatim}
+\end{Usage}
+\HeaderA{sampler\_scale}{Extract a numeric scale proxy from a sampler object. For RW: control\$scale ; For slice: control\$width (returned as 'scale'). Fallbacks: \$scale (numeric or function) or environment(s)\$scale.}{sampler.Rul.scale}
+\keyword{internal}{sampler\_scale}
+%
+\begin{Description}
+Extract a numeric scale proxy from a sampler object.
+For RW: control\$scale ; For slice: control\$width (returned as 'scale').
+Fallbacks: \$scale (numeric or function) or environment(s)\$scale.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+sampler_scale(s)
+\end{verbatim}
+\end{Usage}
+\HeaderA{sampler\_scales\_after\_run}{Extract sampler scales after a short adaptive run. Runs a short MCMC to let samplers adapt, then inspects samplerFunctions envs.}{sampler.Rul.scales.Rul.after.Rul.run}
+\keyword{internal}{sampler\_scales\_after\_run}
+%
+\begin{Description}
+Extract sampler scales after a short adaptive run.
+Runs a short MCMC to let samplers adapt, then inspects samplerFunctions envs.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+sampler_scales_after_run(build_fn, niter = 2000, nburnin = 500, thin = 1)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{build\_fn}] function returning list(model, cmodel, monitors)
+
+\item[\code{niter}] total iterations (default 2000)
+
+\item[\code{nburnin}] burn-in (default 500)
+
+\item[\code{thin}] thinning (kept for API symmetry; not used here)
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+data.frame(name, type, target, scale)
+\end{Value}
+\HeaderA{sampler\_scales\_from\_run}{Preferred: read scales from a fresh samplerConf list (pre-run).}{sampler.Rul.scales.Rul.from.Rul.run}
+\keyword{internal}{sampler\_scales\_from\_run}
+%
+\begin{Description}
+Preferred: read scales from a fresh samplerConf list (pre-run).
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+sampler_scales_from_run(run_result, build_fn)
+\end{verbatim}
+\end{Usage}
+\HeaderA{sampler\_targets}{Targets (node names) for each sampler in a MCMC configuration}{sampler.Rul.targets}
+\keyword{internal}{sampler\_targets}
+%
+\begin{Description}
+Targets (node names) for each sampler in a MCMC configuration
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+sampler_targets(conf)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{conf}] a nimble MCMC configuration (from configureMCMC)
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+character vector (length = length(conf\$getSamplers()))
+\end{Value}
+\HeaderA{take}{Select top-k rows given an ordering index}{take}
+\keyword{internal}{take}
+%
+\begin{Description}
+Utility used in bottleneck summaries to pick the top-k rows from
+a "valid" data frame according to a precomputed order.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+take(ord, k)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{ord}] Integer vector of row indices (order).
+
+\item[\code{k}] Integer scalar; desired number of rows.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+Note: this helper relies on the existence of global objects
+\code{valid}, \code{CE\_rank}, \code{AE\_rank}, and \code{TIME\_rank}
+(typically created in the surrounding analysis function and declared
+via \code{utils::globalVariables()}).
+\end{Details}
+%
+\begin{Value}
+Subset of \code{valid} with rank columns attached.
+\end{Value}
+\HeaderA{test\_strategy}{Test and compare MCMC strategies on selected bottleneck nodes}{test.Rul.strategy}
+\keyword{internal}{test\_strategy}
+%
+\begin{Description}
+Runs a small, reproducible workflow to:
+\begin{enumerate}
+
+\item{} build and run a baseline MCMC configuration,
+\item{} optionally try full-model HMC/NUTS (if \code{nimbleHMC} is available
+and the model supports derivatives),
+\item{} then apply alternative samplers in a \emph{strict}, user-defined order
+on one or two bottleneck targets (singleton and then optional block
+on the union).
+
+\end{enumerate}
+
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+test_strategy(
+  build_fn,
+  monitors = NULL,
+  try_hmc = TRUE,
+  nchains = 3L,
+  pilot_niter = 20000,
+  pilot_burnin = 5000,
+  thin = 1L,
+  out_dir = "outputs/diagnostics",
+  nbot = 1L,
+  strict_scalar_seq = c("NUTS", "slice", "RW"),
+  strict_block_seq = c("NUTS_block", "AF_slice", "RW_block"),
+  force_singletons = NULL,
+  force_union_nodes = NULL,
+  force_union = NULL,
+  ask = TRUE,
+  ask_before_hmc = TRUE,
+  block_max = 20L,
+  slice_control = list(),
+  rw_control = list(),
+  rwblock_control = list(adaptScaleOnly = TRUE),
+  af_slice_control = list(),
+  slice_max_contractions = 5000L
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{build\_fn}] Function (or prebuilt list with \code{\$model}, \code{\$conf})
+that returns a fresh build object used by samplers in this package.
+
+\item[\code{monitors}] Optional character vector of monitors passed to the build.
+
+\item[\code{try\_hmc}] Logical. If \code{TRUE}, try a full-model HMC/NUTS run first
+(ignored by the “surgical” singleton/block steps).
+
+\item[\code{nchains}] Integer number of MCMC chains for each run.
+
+\item[\code{pilot\_niter}] Integer total iterations used in baseline and tests.
+
+\item[\code{pilot\_burnin}] Integer burn-in iterations.
+
+\item[\code{thin}] Integer thinning interval.
+
+\item[\code{out\_dir}] Directory where outputs (plots, etc.) will be written.
+
+\item[\code{nbot}] Integer. Number of bottleneck targets to operate on (1 or 2
+typical; if \code{>= 2}, a block step on the union is attempted).
+
+\item[\code{strict\_scalar\_seq}] Character vector of scalar samplers to try in order.
+Supported values include \code{"NUTS"}, \code{"slice"}, \code{"RW"}.
+
+\item[\code{strict\_block\_seq}] Character vector of block samplers to try in order.
+Supported values include \code{"NUTS\_block"}, \code{"AF\_slice"},
+\code{"RW\_block"}.
+
+\item[\code{force\_singletons}] Optional character vector of node names to force as
+singleton targets (first \code{nbot} valid nodes are used).
+
+\item[\code{force\_union\_nodes}] Optional character vector of node names to define
+the union for the block phase (must contain \code{>= 2} valid nodes).
+
+\item[\code{force\_union}] Deprecated alias of \code{force\_union\_nodes}.
+
+\item[\code{ask}] Logical. If \code{TRUE}, ask before moving to the next step.
+
+\item[\code{ask\_before\_hmc}] Logical. If \code{TRUE}, ask before running full HMC.
+
+\item[\code{block\_max}] Integer cap on the size of the block union.
+
+\item[\code{slice\_control}] List of controls passed to \code{"slice"} samplers.
+
+\item[\code{rw\_control}] List of controls passed to \code{"RW"} samplers.
+
+\item[\code{rwblock\_control}] List of controls passed to \code{"RW\_block"} samplers.
+
+\item[\code{af\_slice\_control}] List of controls passed to \code{"AF\_slice"} samplers.
+
+\item[\code{slice\_max\_contractions}] Integer safety cap for slice contractions.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+Results and diagnostic plots (R-hat bars and trace/density) are written under
+\code{out\_dir}. When \code{ask = TRUE}, interactive yes/no prompts allow you
+to stop early at each step.
+
+The procedure:
+\begin{enumerate}
+
+\item{} Build and run a baseline MCMC using \code{run\_baseline\_config()}.
+\item{} Optionally run full-model HMC/NUTS via \code{configure\_hmc\_safely()}.
+\item{} Select \code{nbot} bottleneck node(s) from diagnostics (or from
+\code{force\_singletons}), then:
+\begin{itemize}
+
+\item{} apply \code{strict\_scalar\_seq} in order on the first node;
+\item{} if \code{nbot >= 2}, build the union \code{\{node1, node2\}}
+(or \code{force\_union\_nodes}) and apply \code{strict\_block\_seq}.
+
+\end{itemize}
+
+\item{} For each step, compile, run, compute diagnostics, and save plots.
+
+\end{enumerate}
+
+\end{Details}
+%
+\begin{Value}
+A list with elements such as:
+\begin{description}
+
+\item[status] Character status string.
+\item[mode] Character mode (e.g. \code{"HMC\_full"}, \code{"surgical\_*"}).
+\item[baseline] Baseline run info (runtime, samples, diagnostics).
+\item[targets] Chosen target node names.
+\item[steps] List of steps; each contains nodes, sampler, results, and directory.
+
+\end{description}
+
+\end{Value}
+%
+\begin{Section}{Side effects}
+
+Creates subfolders and PNG files (R-hat bars, traces/densities) under
+\code{out\_dir}. May load/unload compiled DLLs while switching samplers.
+\end{Section}
+%
+\begin{SeeAlso}
+\code{\LinkA{configure\_hmc\_safely}{configure.Rul.hmc.Rul.safely}},
+\code{\LinkA{plot\_convergence\_checks}{plot.Rul.convergence.Rul.checks}}, \code{\LinkA{plot\_bottlenecks}{plot.Rul.bottlenecks}}
+\end{SeeAlso}
+%
+\begin{Examples}
+\begin{ExampleCode}
+## Not run: 
+res <- test_strategy(
+  build_fn = my_build_fn,
+  monitors = c("theta","beta"),
+  try_hmc  = TRUE,
+  nbot     = 2,
+  out_dir  = "outputs/diagnostics"
+)
+
+## End(Not run)
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{test\_strategy\_family}{Fast strategy testing for sampler plans (family-level, with optional full-model HMC/NUTS)}{test.Rul.strategy.Rul.family}
+%
+\begin{Description}
+Runs a fast, reproducible workflow to (i) obtain a \strong{baseline} MCMC,
+(ii) optionally attempt \strong{full-model HMC/NUTS} when feasible, and/or
+(iii) evaluate \strong{surgical family-level strategies} (scalar and block plans)
+on one or two bottleneck families. The function is designed to minimize
+rebuild/compile overhead, auto-patch unsampled nodes, and produce
+diagnostics robustly for large hierarchical models.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+test_strategy_family(
+  build_fn,
+  monitors = NULL,
+  try_hmc = TRUE,
+  nchains = 3L,
+  pilot_niter = 4000L,
+  pilot_burnin = 1000L,
+  thin = 2L,
+  out_dir = "outputs/diagnostics_family",
+  nbot = 1L,
+  strict_scalar_seq = c("NUTS", "slice", "RW"),
+  strict_block_seq = c("NUTS_block", "AF_slice", "RW_block"),
+  force_families = NULL,
+  force_nodes = NULL,
+  force_union = NULL,
+  ask = TRUE,
+  ask_before_hmc = TRUE,
+  block_max = 20L,
+  slice_control = list(),
+  rw_control = list(),
+  rwblock_control = list(adaptScaleOnly = TRUE),
+  af_slice_control = list(),
+  slice_max_contractions = 5000L
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{build\_fn}] A model builder (function) or a pre-built list with at least
+\code{\$model} and \code{\$conf}. If a list is provided, it is wrapped to behave
+like a builder.
+
+\item[\code{monitors}] Character vector of monitors passed to runs (optional; forwarded).
+
+\item[\code{try\_hmc}] Logical; if \code{TRUE}, attempt full-model NUTS via
+\code{configure\_hmc\_safely()} when derivatives and \pkg{nimbleHMC} are available.
+
+\item[\code{nchains}] Integer (default 3L); number of chains for baseline and strategy runs.
+
+\item[\code{pilot\_niter}] Integer; number of iterations for baseline and strategy pilots.
+
+\item[\code{pilot\_burnin}] Integer; burn-in for pilots (also used as NUTS warmup).
+
+\item[\code{thin}] Integer; thinning applied to all runs.
+
+\item[\code{out\_dir}] Output directory for diagnostics and plots (created if missing).
+
+\item[\code{nbot}] Integer; number of bottleneck families to consider (1 or 2 recommended).
+
+\item[\code{strict\_scalar\_seq}] Character vector of scalar sampler types to try in order,
+e.g. \code{c("NUTS","slice","RW")}.
+
+\item[\code{strict\_block\_seq}] Character vector of block sampler types to try in order,
+e.g. \code{c("NUTS\_block","AF\_slice","RW\_block")}.
+
+\item[\code{force\_families}] Optional character vector of family names to force selection
+(overrides automatic picking by CE).
+
+\item[\code{force\_nodes}] Optional named list mapping family -> explicit node vector
+(e.g., \code{list(logit\_theta = c("logit\_theta[1]", ...))}).
+
+\item[\code{force\_union}] Optional character vector of families to union for block steps.
+
+\item[\code{ask}] Logical; if \code{TRUE} and \code{interactive()}, prompts between steps.
+
+\item[\code{ask\_before\_hmc}] Logical; if \code{TRUE}, asks before attempting full-model HMC/NUTS.
+
+\item[\code{block\_max}] Integer; maximum number of nodes in a block union (hard cap).
+
+\item[\code{slice\_control}, \code{rw\_control}, \code{rwblock\_control}, \code{af\_slice\_control}] Named lists forwarded
+to the respective sampler control arguments.
+
+\item[\code{slice\_max\_contractions}] Integer; passed to slice samplers when relevant.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+\strong{Pipeline}
+\begin{enumerate}
+
+\item{} Fresh build via internal helpers (e.g., \code{.fresh\_build()}), then a short \strong{baseline}
+run with \code{run\_baseline\_config()} to compute diagnostics (AE, CE, Rhat)
+using \code{compute\_diag\_from\_mcmc\_vect()} when available (falls back to
+\code{compute\_diag\_from\_mcmc()}).
+\item{} If \code{try\_hmc = TRUE} and the model supports differentiability (no blocking
+features such as hard truncations/simplex/non-diff ops) and \pkg{nimbleHMC}
+is installed, the function can \strong{attempt full-model NUTS} via
+\code{configure\_hmc\_safely()} (with optional interactive confirmation).
+\item{} Otherwise (or if HMC is declined/fails), it follows a \strong{surgical plan}:
+\begin{itemize}
+
+\item{} Selects \code{nbot} bottleneck families by median CE (ESS/s) from the baseline
+(or uses \code{force\_families}/\code{force\_nodes}/\code{force\_union}).
+\item{} Applies \strong{strict scalar sequences} (\code{strict\_scalar\_seq}) on family 1
+(e.g., \code{c("NUTS","slice","RW")}).
+\item{} If \code{nbot >= 2}, applies \strong{strict block sequences} (\code{strict\_block\_seq})
+on the union of families 1 and 2 (optionally with a PD \code{propCov} built
+from the baseline samples; capped by \code{block\_max}).
+
+\end{itemize}
+
+
+\end{enumerate}
+
+
+\strong{Sampler assignment}
+\begin{itemize}
+
+\item{} Scalar: \code{"NUTS"}, \code{"slice"}, \code{"RW"} (with respective control lists).
+\item{} Block:  \code{"NUTS\_block"}, \code{"AF\_slice"}, \code{"RW\_block"} (with control).
+\item{} If \pkg{nimbleHMC} is missing, \code{"NUTS"} fallbacks to \code{"slice"} and
+\code{"NUTS\_block"} fallbacks to \code{"AF\_slice"}.
+
+\end{itemize}
+
+
+\strong{Robustness}
+\begin{itemize}
+
+\item{} Auto-adds safe samplers to \strong{unsampled non-likelihood nodes} (slice) before compile.
+\item{} Retries compile/run up to 3 times with clean unloads (\code{nimble::clearCompiled()}).
+\item{} Ignores likelihood-like targets when scoring families (\code{logLik}, \code{log\_lik},
+\code{logdens}, \code{lpdf}) and internal nodes (\code{lifted\_}, \code{logProb\_}).
+\item{} Handles \code{NA} in diagnostics gracefully.
+
+\end{itemize}
+
+\end{Details}
+%
+\begin{Value}
+A list with elements:
+\begin{description}
+
+\item[status] Character; \code{"completed"} on success.
+\item[mode] One of \code{"HMC\_full"}, \code{"surgical\_nbot1"}, \code{"surgical\_nbot2"}.
+\item[baseline] List with \code{runtime\_s}, \code{samples}/\code{samples2}, and
+\code{diag\_tbl} (if computed).
+\item[families] Character vector of selected bottleneck families.
+\item[steps] List of per-step results; each contains \code{res\$out}, \code{res\$ml},
+\code{res\$dg} (diagnostics), and an output directory for plots.
+\item[hmc] When \code{mode == "HMC\_full"}, the object returned by
+\code{configure\_hmc\_safely()} with \code{\$diag\_tbl} and \code{\$res\$runtime\_s}.
+
+\end{description}
+
+\end{Value}
+%
+\begin{Section}{Diagnostics}
+
+Diagnostics are computed per target and summarized per family using
+\begin{itemize}
+
+\item{} AE = median ESS per iteration (AE\bsl{}\_ESS\bsl{}\_per\bsl{}\_it),
+\item{} CE = median ESS per second (ESS\bsl{}\_per\bsl{}\_sec),
+\item{} \eqn{\hat{R}}{} = max Rhat per group.
+
+\end{itemize}
+
+\end{Section}
+%
+\begin{SeeAlso}
+\code{\LinkA{configure\_hmc\_safely}{configure.Rul.hmc.Rul.safely}},
+\code{\LinkA{plot\_strategies\_from\_test\_result\_fast}{plot.Rul.strategies.Rul.from.Rul.test.Rul.result.Rul.fast}},
+\code{\LinkA{run\_baseline\_config}{run.Rul.baseline.Rul.config}},
+\code{\LinkA{compute\_diag\_from\_mcmc\_vect}{compute.Rul.diag.Rul.from.Rul.mcmc.Rul.vect}},
+\code{\LinkA{compute\_diag\_from\_mcmc}{compute.Rul.diag.Rul.from.Rul.mcmc}}
+\end{SeeAlso}
+\HeaderA{test\_strategy\_family\_fast}{Fast strategy testing for sampler plans (family-level, with optional full-model HMC/NUTS)}{test.Rul.strategy.Rul.family.Rul.fast}
+%
+\begin{Description}
+Runs a fast, reproducible workflow to (i) obtain a \strong{baseline} MCMC,
+(ii) optionally attempt \strong{full-model HMC/NUTS} when feasible, and/or
+(iii) evaluate \strong{surgical family-level strategies} (scalar and block plans)
+on one or two bottleneck families. The function is designed to minimize
+rebuild/compile overhead, auto-patch unsampled nodes, and produce
+diagnostics robustly for large hierarchical models.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+test_strategy_family_fast(
+  build_fn,
+  monitors = NULL,
+  try_hmc = TRUE,
+  nchains = 3L,
+  pilot_niter = 4000L,
+  pilot_burnin = 1000L,
+  thin = 2L,
+  out_dir = "outputs/diagnostics_family",
+  nbot = 1L,
+  strict_scalar_seq = c("NUTS", "slice", "RW"),
+  strict_block_seq = c("NUTS_block", "AF_slice", "RW_block"),
+  force_families = NULL,
+  force_nodes = NULL,
+  force_union = NULL,
+  ask = TRUE,
+  ask_before_hmc = TRUE,
+  block_max = 20L,
+  slice_control = list(),
+  rw_control = list(),
+  rwblock_control = list(adaptScaleOnly = TRUE),
+  af_slice_control = list(),
+  slice_max_contractions = 5000L
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{build\_fn}] A model builder (function) or a pre-built list with at least
+\code{\$model} and \code{\$conf}. If a list is provided, it is wrapped to behave
+like a builder.
+
+\item[\code{monitors}] Character vector of monitors passed to runs (optional; forwarded).
+
+\item[\code{try\_hmc}] Logical; if \code{TRUE}, attempt full-model NUTS via
+\code{configure\_hmc\_safely()} when derivatives and \pkg{nimbleHMC} are available.
+
+\item[\code{nchains}] Integer (default 3L); number of chains for baseline and strategy runs.
+
+\item[\code{pilot\_niter}] Integer; number of iterations for baseline and strategy pilots.
+
+\item[\code{pilot\_burnin}] Integer; burn-in for pilots (also used as NUTS warmup).
+
+\item[\code{thin}] Integer; thinning applied to all runs.
+
+\item[\code{out\_dir}] Output directory for diagnostics and plots (created if missing).
+
+\item[\code{nbot}] Integer; number of bottleneck families to consider (1 or 2 recommended).
+
+\item[\code{strict\_scalar\_seq}] Character vector of scalar sampler types to try in order,
+e.g. \code{c("NUTS","slice","RW")}.
+
+\item[\code{strict\_block\_seq}] Character vector of block sampler types to try in order,
+e.g. \code{c("NUTS\_block","AF\_slice","RW\_block")}.
+
+\item[\code{force\_families}] Optional character vector of family names to force selection
+(overrides automatic picking by CE).
+
+\item[\code{force\_nodes}] Optional named list mapping family -> explicit node vector
+(e.g., \code{list(logit\_theta = c("logit\_theta[1]", ...))}).
+
+\item[\code{force\_union}] Optional character vector of families to union for block steps.
+
+\item[\code{ask}] Logical; if \code{TRUE} and \code{interactive()}, prompts between steps.
+
+\item[\code{ask\_before\_hmc}] Logical; if \code{TRUE}, asks before attempting full-model HMC/NUTS.
+
+\item[\code{block\_max}] Integer; maximum number of nodes in a block union (hard cap).
+
+\item[\code{slice\_control}, \code{rw\_control}, \code{rwblock\_control}, \code{af\_slice\_control}] Named lists forwarded
+to the respective sampler control arguments.
+
+\item[\code{slice\_max\_contractions}] Integer; passed to slice samplers when relevant.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+\strong{Pipeline}
+\begin{enumerate}
+
+\item{} Fresh build via internal helpers (e.g., \code{.fresh\_build()}), then a short \strong{baseline}
+run with \code{run\_baseline\_config()} to compute diagnostics (AE, CE, Rhat)
+using \code{compute\_diag\_from\_mcmc\_vect()}.
+\item{} If \code{try\_hmc = TRUE} and the model supports differentiability (no blocking
+features such as hard truncations/simplex/non-diff ops) and \pkg{nimbleHMC}
+is installed, the function can \strong{attempt full-model NUTS} via
+\code{configure\_hmc\_safely()} (with optional interactive confirmation).
+\item{} Otherwise (or if HMC is declined/fails), it follows a \strong{surgical plan}:
+\begin{itemize}
+
+\item{} Selects \code{nbot} bottleneck families by median CE (ESS/s) from the baseline
+(or uses \code{force\_families}/\code{force\_nodes}/\code{force\_union}).
+\item{} Applies \strong{strict scalar sequences} (\code{strict\_scalar\_seq}) on family 1
+(e.g., \code{c("NUTS","slice","RW")}).
+\item{} If \code{nbot >= 2}, applies \strong{strict block sequences} (\code{strict\_block\_seq})
+on the union of families 1 and 2 (optionally with a PD \code{propCov} built
+from the baseline samples; capped by \code{block\_max}).
+
+\end{itemize}
+
+
+\end{enumerate}
+
+
+\strong{Sampler assignment}
+\begin{itemize}
+
+\item{} Scalar: \code{"NUTS"}, \code{"slice"}, \code{"RW"} (with respective control lists).
+\item{} Block:  \code{"NUTS\_block"}, \code{"AF\_slice"}, \code{"RW\_block"} (with control).
+\item{} If \pkg{nimbleHMC} is missing, \code{"NUTS"} fallbacks to \code{"slice"} and
+\code{"NUTS\_block"} fallbacks to \code{"AF\_slice"}.
+
+\end{itemize}
+
+
+\strong{Robustness}
+\begin{itemize}
+
+\item{} Auto-adds safe samplers to \strong{unsampled non-likelihood nodes} (slice) before compile.
+\item{} Retries compile/run up to 3 times with clean unloads (\code{nimble::clearCompiled()}).
+\item{} Ignores likelihood-like targets when scoring families (\code{logLik}, \code{log\_lik},
+\code{logdens}, \code{lpdf}) and internal nodes (\code{lifted\_}, \code{logProb\_}).
+\item{} Handles \code{NA} in diagnostics gracefully.
+
+\end{itemize}
+
+\end{Details}
+%
+\begin{Value}
+A list with elements:
+\begin{description}
+
+\item[status] Character; \code{"completed"} on success.
+\item[mode] One of \code{"HMC\_full"}, \code{"surgical\_nbot1"}, \code{"surgical\_nbot2"}.
+\item[baseline] List with \code{runtime\_s}, \code{samples}/\code{samples2}, and
+\code{diag\_tbl} (if computed).
+\item[families] Character vector of selected bottleneck families.
+\item[steps] List of per-step results; each contains \code{res\$out}, \code{res\$ml},
+\code{res\$dg} (diagnostics), and an output directory for plots.
+\item[hmc] When \code{mode == "HMC\_full"}, the object returned by
+\code{configure\_hmc\_safely()} with \code{\$diag\_tbl} and \code{\$res\$runtime\_s}.
+
+\end{description}
+
+\end{Value}
+%
+\begin{Section}{Diagnostics}
+
+Diagnostics are computed per target and summarized per family using
+\begin{itemize}
+
+\item{} AE = median ESS per iteration (AE\bsl{}\_ESS\bsl{}\_per\bsl{}\_it),
+\item{} CE = median ESS per second (ESS\bsl{}\_per\bsl{}\_sec),
+\item{} \eqn{\hat{R}}{} = max Rhat per group.
+
+\end{itemize}
+
+\end{Section}
+%
+\begin{SeeAlso}
+\code{\LinkA{configure\_hmc\_safely}{configure.Rul.hmc.Rul.safely}},
+\code{\LinkA{plot\_strategies\_from\_test\_result\_fast}{plot.Rul.strategies.Rul.from.Rul.test.Rul.result.Rul.fast}},
+\code{\LinkA{run\_baseline\_config}{run.Rul.baseline.Rul.config}},
+\code{\LinkA{compute\_diag\_from\_mcmc\_vect}{compute.Rul.diag.Rul.from.Rul.mcmc.Rul.vect}},
+\code{\LinkA{compute\_diag\_from\_mcmc}{compute.Rul.diag.Rul.from.Rul.mcmc}}
+\end{SeeAlso}
+\HeaderA{test\_strategy\_family\_legacy}{Family-based sampler strategy: full HMC if allowed, else surgical on bottlenecks}{test.Rul.strategy.Rul.family.Rul.legacy}
+%
+\begin{Description}
+If the model is differentiable and \code{try\_hmc = TRUE}, this runs a full
+HMC/NUTS configuration (via \code{configure\_hmc\_safely()}), executes the baseline,
+prints/plots diagnostics, and returns. Otherwise it switches to a
+\strong{surgical strategy}: it ranks families by median efficiency, extracts
+stochastic bottleneck nodes, and iteratively applies samplers on 1 or more nodes
+(\code{nbot}) in the order:
+\begin{itemize}
+
+\item{} scalar: \code{NUTS} -> \code{slice} -> \code{RW}
+\item{} block (when \code{nbot >= 2}): \code{NUTS\_block} -> \code{AF\_slice} -> \code{RW\_block}
+
+\end{itemize}
+
+After each assignment, a short MCMC is run, a side-by-side comparison versus the
+baseline is printed (runtime, AE = ESS/iter, CE = ESS/s, Rhat), clean plots are saved
+(Rhat bars + trace plots for the touched nodes), and the user is prompted to continue
+unless \code{ask = FALSE}.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+test_strategy_family_legacy(
+  build_fn,
+  monitors = NULL,
+  try_hmc = TRUE,
+  nchains = 3L,
+  pilot_niter = 4000L,
+  pilot_burnin = 1000L,
+  thin = 2L,
+  out_dir = "outputs/diagnostics_family",
+  nbot = 1L,
+  strict_scalar_seq = c("NUTS", "slice", "RW"),
+  strict_block_seq = c("NUTS_block", "AF_slice", "RW_block"),
+  force_families = NULL,
+  force_nodes = NULL,
+  force_union = NULL,
+  ask = TRUE,
+  ask_before_hmc = TRUE,
+  block_max = 20L,
+  slice_control = list(),
+  rw_control = list(),
+  rwblock_control = list(adaptScaleOnly = TRUE),
+  af_slice_control = list(),
+  slice_max_contractions = 5000L
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{build\_fn}] Function; returns \code{list(model, cmodel?, monitors?)} used by the runners.
+
+\item[\code{monitors}] Character or \code{NULL}; root names to monitor (\code{NULL} = auto).
+
+\item[\code{try\_hmc}] Logical; if \code{TRUE} and structure allows, run full HMC path.
+
+\item[\code{nchains}] Integer; number of chains.
+
+\item[\code{pilot\_niter}] Integer; iterations for pilot runs.
+
+\item[\code{pilot\_burnin}] Integer; burn-in for pilot runs.
+
+\item[\code{thin}] Integer; thinning factor.
+
+\item[\code{out\_dir}] Character; output directory for diagnostics/plots.
+
+\item[\code{nbot}] Integer (\eqn{\ge}{} 1); number of bottleneck nodes to act on simultaneously.
+
+\item[\code{strict\_scalar\_seq}] Character; sampler order for scalar mode.
+
+\item[\code{strict\_block\_seq}] Character; sampler order for block mode (\code{nbot >= 2}).
+
+\item[\code{force\_families}] Character or \code{NULL}; families to force.
+
+\item[\code{force\_nodes}] List or \code{NULL}; per-family forced node vectors.
+
+\item[\code{force\_union}] Character or \code{NULL}; families to union for block stage.
+
+\item[\code{ask}] Logical; interactive confirmation after each step.
+
+\item[\code{ask\_before\_hmc}] Logical; ask before attempting full-model HMC.
+
+\item[\code{block\_max}] Integer; maximum block size.
+
+\item[\code{slice\_control}, \code{rw\_control}, \code{rwblock\_control}, \code{af\_slice\_control}] Lists; sampler controls.
+
+\item[\code{slice\_max\_contractions}] Integer; informational safety for AF\_slice.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A list describing baseline, steps, configurations, diagnostics, and plot paths.
+\end{Value}
+\HeaderA{to\_mlist}{Coerce objects to \code{coda::mcmc.list}}{to.Rul.mlist}
+\keyword{internal}{to\_mlist}
+%
+\begin{Description}
+Lightweight helper to normalise various sample formats to a single
+\code{mcmc.list} representation.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+to_mlist(x)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{x}] An object of class \code{mcmc.list}, \code{mcmc}, or something
+coercible to a data frame.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+An \code{mcmc.list} object, or \code{NULL} if \code{x} is \code{NULL}.
+\end{Value}
+\printindex{}
+\end{document}

@@ -1,34 +1,62 @@
 
-## ---- Exported functions (2) ----
-
 #' Robustly check initial values against a compiled NIMBLE model
 #'
-#' @param model a NIMBLE model object (or function that builds one)
-#' @param inits list of initial values
-#' @param silent logical
-#' @return logical TRUE if valid; otherwise throws informative error
+#' This helper tries to apply a list of initial values to a NIMBLE model and
+#' fails early with an informative error if something is incompatible.
+#'
+#' @param model A NIMBLE model object, or a function that returns either
+#'   a NIMBLE model or a list containing a `$model` component.
+#' @param inits List of initial values, typically matching node/variable names
+#'   used in the model.
+#' @param silent Logical; if FALSE (default), a short diagnostic message is
+#'   emitted before the error is thrown.
+#'
+#' @return Invisibly returns `TRUE` if the initial values are valid; otherwise
+#'   throws an error describing the offending field(s).
 #' @export
 #' @keywords internal
 checkInits <- function(model, inits, silent = FALSE) {
   if (!requireNamespace("nimble", quietly = TRUE)) {
     stop("Package 'nimble' is required for checkInits().")
   }
+
+  ## Normalize 'model' input:
+  ##  - if it's a builder, call it;
+  ##  - if it returns a list with $model, use that;
+  ##  - otherwise assume it is already a NIMBLE model.
   mod <- model
-  if (is.function(model)) mod <- model()
-  ok <- TRUE
+  if (is.function(model)) {
+    mod <- model()
+  }
+  if (is.list(mod) && !is.null(mod$model)) {
+    mod <- mod$model
+  }
+
+  ## Safety check: we expect an object with a setInits() method
+  if (!("setInits" %in% names(mod))) {
+    stop("checkInits(): provided object does not expose a setInits() method; ",
+         "did you pass a valid nimbleModel (or its builder)?")
+  }
+
+  ok  <- TRUE
   err <- NULL
+
   tryCatch({
-# TODO(samOptiPro): remplacer nimble::setInits(...) par <modele>$setInits(...) (appel méthode d'objet)
-    nimble::setInits(mod, inits)
+    ## IMPORTANT: use the model method, not nimble::setInits()
+    mod$setInits(inits)
   }, error = function(e) {
-    ok <<- FALSE; err <<- e
+    ok  <<- FALSE
+    err <<- e
   })
+
   if (!ok) {
-    if (!silent) {
+    if (!silent && exists("msg", mode = "function")) {
+      ## msg() est ton helper interne; on ne l'appelle que s'il existe
       msg("Invalid inits: ", conditionMessage(err))
     }
     stop(err)
   }
+
   invisible(TRUE)
 }
 

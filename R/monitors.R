@@ -1,20 +1,15 @@
 # monitors.R -- automatic monitor selection
 
-## ---- Exported functions (2) ----
+#' @importFrom utils capture.output sessionInfo
+NULL
+#' @importFrom data.table :=
+NULL
 
-#' Discover default monitors from a nimble model (variable-level)
+#' Internal helper to sanitize monitor root names
 #'
-#' Retourne des NOMS DE VARIABLES (sans indices) pour laisser le runner
-#' poser ensuite les monitors correctement via conf$setMonitors / setMonitors2.
+#' @param x Character vector of candidate monitor roots.
 #'
-#' @param model nimbleModel
-#' @param opts list from samOptiPro_options(); champs supportes :
-#'   - include_data      : logical, inclure les data nodes dans l'exploration (rarement utile)
-#'   - include_logLik    : logical, inclure "logLik" dans la selection par defaut
-#'   - extra_monitors    : character(), variables supplementaires a monitorer (samples)
-#'   - extra_monitors2   : character(), variables supplementaires a monitorer en monitors2 (samples2)
-#' @return character() de noms de variables sans indices (ex: "sd_proc","z","p","logLik")
-#' @export
+#' @return A character vector of cleaned, unique roots.
 #' @keywords internal
 .default_sanitize_roots <- function(x) {
   x <- as.character(x)
@@ -27,9 +22,6 @@
 
 
 #' Ensure monitors exist on the model (variable-aware)
-#'
-#' Valide une liste de monitors donnee au NIVEAU VARIABLE (sans indices).
-#' Ne "coupe" plus selon les noeuds indexes ; on verifie juste que la VARIABLE existe.
 #'
 #' @param model nimbleModel
 #' @param monitors character() de noms de variables (ex: "z","p","sd_proc","logLik")
@@ -51,8 +43,6 @@ ensure_monitors_exist <- function(model, monitors) {
   unique(monitors[keep])
 }
 
-
-## ---- Internal functions (1) ----
 
 default_monitors <- function(model, opts = samOptiPro_options()) {
   include_data   <- isTRUE(opts$include_data)

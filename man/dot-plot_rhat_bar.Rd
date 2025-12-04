@@ -2,11 +2,23 @@
 % Please edit documentation in R/zzz_monitors_helpers.R
 \name{.plot_rhat_bar}
 \alias{.plot_rhat_bar}
-\title{Save a bar chart of R-hat for selected nodes}
+\title{Internal helper: Rhat barplot for a subset of nodes.}
 \usage{
-.plot_rhat_bar(diag_tbl, nodes, out_file)
+.plot_rhat_bar(diag_tbl, nodes, out_file = NULL)
+}
+\arguments{
+\item{diag_tbl}{data.frame produced by samOptiPro diagnostics
+(compute_diag_from_mcmc() / compute_diag_from_mcmc_vect()).
+Must contain at least a 'target' column. Ideally also 'Rhat'.}
+
+\item{nodes}{character vector of node names to keep.}
+
+\item{out_file}{optional path to a PNG file; if non-NULL, the plot is
+written to disk. Otherwise it is drawn on the current device.}
 }
 \description{
-Save a bar chart of R-hat for selected nodes
+Creates a simple barplot of Rhat by target, restricted to a given set
+of nodes. If the required columns are missing in \code{diag_tbl}, the
+function returns invisibly without error.
 }
 \keyword{internal}

@@ -1,15 +1,13 @@
-
-## ---- Exported functions (6) ----
-
-#' @export
+# plots.R --
 #' @keywords internal
+#' @noRd
 enrich_hmc_diag_tbl_for_plots <- function(res) {
   if (is.null(res$diag_tbl)) {
     stop("L'objet 'res' ne contient pas de diag_tbl.")
   }
   diag_tbl <- res$diag_tbl
 
-  # 1) AE_ESS_per_it : on le mappe sur AE_worst (ou AE_total)
+  # 1) AE_ESS_per_it: mapped to AE_worst (or AE_total)
   if (!"AE_ESS_per_it" %in% names(diag_tbl)) {
     if ("AE_worst" %in% names(diag_tbl)) {
       diag_tbl$AE_ESS_per_it <- diag_tbl$AE_worst
@@ -20,7 +18,7 @@ enrich_hmc_diag_tbl_for_plots <- function(res) {
     }
   }
 
-  # 2) CE_ESS_per_s : on le mappe sur ESS_per_sec_worst / total / ESS_per_sec / ESS_per_s
+  # 2) CE_ESS_per_s: mapped to ESS_per_sec_worst / total / ESS_per_sec / ESS_per_s
   if (!"CE_ESS_per_s" %in% names(diag_tbl)) {
     if ("ESS_per_sec_worst" %in% names(diag_tbl)) {
       diag_tbl$CE_ESS_per_s <- diag_tbl$ESS_per_sec_worst
@@ -35,7 +33,7 @@ enrich_hmc_diag_tbl_for_plots <- function(res) {
     }
   }
 
-  # 3) Rhat générique (à partir de classic / split si dispo)
+  # 3) Generic Rhat (from classic/split if available)
   if (!"Rhat" %in% names(diag_tbl)) {
     rhat <- rep(NA_real_, nrow(diag_tbl))
 
@@ -69,7 +67,7 @@ enrich_hmc_diag_tbl_for_plots <- function(res) {
 #'   \item Median *Algorithmic Efficiency* (AE = ESS/iter) by node family;
 #'   \item Median *Computational Efficiency* (CE = ESS/s) by node family;
 #'   \item Worst targets by CE (lowest ESS/s);
-#'   \item Median or worst \eqn{\hat{R}} (Gelman–Rubin) by node or family.
+#'   \item Median or worst \eqn{\hat{R}} (Gelman-Rubin) by node or family.
 #' }
 #'
 #' The function saves each plot both as PDF and PNG in the specified output directory.
@@ -80,7 +78,8 @@ enrich_hmc_diag_tbl_for_plots <- function(res) {
 #' @param out_dir Character string; path to output directory for saving figures
 #'   (default: `"outputs/diagnostics"`). Will be created recursively if missing.
 #' @param top_k Integer; number of worst or best nodes to display (default: `20L`).
-#' @param rhat_ref Numeric; reference threshold for Gelman–Rubin \eqn{\hat{R}} (default: `1.05`).
+#' @param rhat_ref Numeric; reference threshold for Gelman-Rubin \eqn{\hat{R}}
+#'   (default: `1.05`).
 #' @param sampled_only Logical; if `TRUE`, restricts plots to nodes that have an
 #'   explicit sampler in `conf.mcmc` and are present in `samples_ml`. Default: `FALSE`.
 #' @param conf.mcmc NIMBLE MCMC configuration object, typically produced by
@@ -101,6 +100,10 @@ enrich_hmc_diag_tbl_for_plots <- function(res) {
 #'   worst Rhat targets (default: `TRUE`).
 #' @param make_rhat_median_families Logical; if `TRUE`, produces an alias
 #'   of the median Rhat-by-family plot (default: `TRUE`).
+#' @param make_hist_ae_families Logical; if \code{TRUE}, draw AE histograms
+#'   by family.
+#' @param make_hist_ce_families Logical; if \code{TRUE}, draw CE histograms
+#'   by family.
 #'
 #' @details
 #' This function is a core visualization tool for diagnosing performance
@@ -117,11 +120,11 @@ enrich_hmc_diag_tbl_for_plots <- function(res) {
 #' @return
 #' Invisibly returns a named `list` of ggplot objects:
 #' \itemize{
-#'   \item `bar_family_algorithmic_eff` — Median AE by family;
-#'   \item `bar_family_computational_eff` — Median CE by family;
-#'   \item `bar_target_CE` — Worst targets by CE;
-#'   \item `rhat_family_template` — Median Rhat by family;
-#'   \item `rhat_worst_targets` — Worst targets by Rhat.
+#'   \item `bar_family_algorithmic_eff` - Median AE by family;
+#'   \item `bar_family_computational_eff` - Median CE by family;
+#'   \item `bar_target_CE` - Worst targets by CE;
+#'   \item `rhat_family_template` - Median Rhat by family;
+#'   \item `rhat_worst_targets` - Worst targets by Rhat.
 #' }
 #' Each plot is also saved in `out_dir` as both `.pdf` and `.png`.
 #'
@@ -177,7 +180,7 @@ plot_bottlenecks <- function(diag_tbl,
   }
   headn <- function(x, n) utils::head(x, n)
 
-  # ---------- normalisation colonnes ----------
+  # ---------- column normalization ----------
   d <- as.data.frame(diag_tbl, stringsAsFactors = FALSE)
   if (!("target" %in% names(d))) {
     rn <- rownames(d); if (is.null(rn)) stop("plot_bottlenecks: missing 'target' column.")
@@ -185,7 +188,7 @@ plot_bottlenecks <- function(diag_tbl,
   }
   if (!("Family" %in% names(d))) d$Family <- sub("\\[.*", "", d$target)
 
-  # ---------- filtre samplers only ----------
+  # ---------- filter samplers only ----------
   if (isTRUE(sampled_only)) {
     sampler_targets <- character(0)
     if (!is.null(conf.mcmc) && is.function(conf.mcmc$getSamplers)) {
@@ -204,11 +207,11 @@ plot_bottlenecks <- function(diag_tbl,
     if (length(sampler_targets)) {
       d <- d[d$target %in% sampler_targets, , drop = FALSE]
     } else {
-      warning("sampled_only=TRUE mais aucune cible échantillonnée trouvée.")
+      warning("sampled_only=TRUE but no sampled target found.")
     }
   }
 
-  # ---------- métriques ----------
+  # ---------- metrics ----------
   d$AE <- if ("AE_ESS_per_it" %in% names(d)) as_num(d$AE_ESS_per_it) else if ("AE" %in% names(d)) as_num(d$AE) else NA_real_
   d$CE <- if ("ESS_per_sec" %in% names(d)) as_num(d$ESS_per_sec) else if ("ess_per_s" %in% names(d)) as_num(d$ess_per_s) else if ("CE" %in% names(d)) as_num(d$CE) else NA_real_
   d$ESS_abs <- if ("ESS" %in% names(d)) as_num(d$ESS) else if ("ess" %in% names(d)) as_num(d$ess) else NA_real_
@@ -217,7 +220,7 @@ plot_bottlenecks <- function(diag_tbl,
   d$time_s[infer_ok] <- d$ESS_abs[infer_ok] / d$CE[infer_ok]
   d$Rhat <- if ("Rhat" %in% names(d)) as_num(d$Rhat) else NA_real_
 
-  # ---------- agrégations par famille ----------
+  # ---------- aggregations by family ----------
   fam_ce   <- agg_safe(CE ~ Family,     d[is.finite(d$CE), ], median, na.rm = TRUE); names(fam_ce)[2]   <- "CE_median"
   fam_ae   <- agg_safe(AE ~ Family,     d[is.finite(d$AE), ], median, na.rm = TRUE); names(fam_ae)[2]   <- "AE_median"
   fam_time <- agg_safe(time_s ~ Family, d[is.finite(d$time_s), ], sum,    na.rm = TRUE); names(fam_time)[2] <- "time_sum"
@@ -227,12 +230,12 @@ plot_bottlenecks <- function(diag_tbl,
   names(grouped_data)[names(grouped_data) == "AE_median"] <- "MedianAlgorithmicEfficiency"
   names(grouped_data)[names(grouped_data) == "CE_median"] <- "MedianComputationalEfficiency_tot"
 
-  # ---------- AE et CE par famille (espacement réduit) ----------
+  # ---------- AE and CE by family ----------
   if (isTRUE(make_esss_families) && NROW(grouped_data)) {
     p1 <- ggplot2::ggplot(grouped_data,
                           ggplot2::aes(x = stats::reorder(Family, MedianAlgorithmicEfficiency),
                                        y = MedianAlgorithmicEfficiency)) +
-      ggplot2::geom_bar(stat = "identity", fill = "steelblue", width = 0.8) +  # width réduit
+      ggplot2::geom_bar(stat = "identity", fill = "steelblue", width = 0.8) +
       ggplot2::labs(title = "Median Algorithmic Efficiency by Node Family",
                     x = "Node Family", y = "Median Algorithmic Efficiency") +
       ggplot2::theme_minimal(base_size = 12) +
@@ -254,7 +257,7 @@ plot_bottlenecks <- function(diag_tbl,
     res$bar_family_computational_eff <- p2
   }
 
-  # ---------- CE par target (espacement réduit) ----------
+  # ---------- CE by target ----------
   d_ce <- d[is.finite(d$CE), , drop = FALSE]
   if (isTRUE(make_esss_targets) && NROW(d_ce)) {
     d_worst <- headn(d_ce[order(d_ce$CE, -d_ce$time_s), ], min(top_k, NROW(d_ce)))
@@ -426,24 +429,32 @@ plot_bottlenecks_fast <- function(
 #'   `attr(diag_tbl,"sampled_targets")`). No "Family" logic anywhere.
 #' - **All-nodes replacements (this change)**: replace the former sampled-only
 #'   panels you listed with **all-nodes** counterparts for the **same metrics**:
-#'     * AE median by Target — **all nodes** (steelblue)
-#'     * CE median by Target — **all nodes** (green)
-#'     * Worst CE — **all nodes** (grey60 + labels)
-#'     * Top Time — **all nodes** (grey40 + labels)
+#'     * AE median by Target - **all nodes** (steelblue)
+#'     * CE median by Target - **all nodes** (green)
+#'     * Worst CE - **all nodes** (grey60 + labels)
+#'     * Top Time - **all nodes** (grey40 + labels)
 #'
 #' @param diag_tbl data.frame with per-target diagnostics; must contain `target` or rownames.
 #'        Expected: AE (`AE_ESS_per_it` or `AE`), CE (`ESS_per_sec` or `ess_per_s` or `CE`);
 #'        optional `ESS`/`ess`, `time_s`, `Rhat`.
 #' @param out_dir Output directory for figures (PDF + PNG). Default: "outputs/diagnostics".
-#' @param top_k   Bars shown in the “worst/top” all-nodes panels. Default: 20L.
+#' @param top_k   Bars shown in the "worst/top" all-nodes panels. Default: 20L.
 #' @param n_worst Rows returned in worst tables. Default: 20L.
-#' @param bins    Kept for API compatibility (AE/CE “hist” are barplots). Default: 30L.
+#' @param bins    Kept for API compatibility (AE/CE "hist" are barplots). Default: 30L.
 #' @param rhat_ref Rhat reference (Rhat-1 axis). Default: 1.05.
 #' @param make_bar_ae_median_all, make_bar_ce_median_all,
 #'        make_bar_ce_worst_all, make_bar_time_top_all
 #'        Toggles for the **all-nodes** panels (default TRUE).
 #' @param make_bar_rhat_worst, make_bar_ess_q5,
 #'        make_hist_ce, make_hist_ae Toggles for the existing **sampled-only** panels (default TRUE).
+#' @param make_bar_ce_median_all Logical; if \code{TRUE}, draw CE median
+#'   bars over all nodes.
+#' @param make_bar_ce_worst_all Logical; if \code{TRUE}, draw bars for
+#'   worst CE nodes.
+#' @param make_bar_ess_q5 Logical; if \code{TRUE}, draw bars for 5\% ESS
+#'   quantiles.
+#' @param make_hist_ce Logical; if \code{TRUE}, include CE histograms.
+#' @param make_hist_ae Logical; if \code{TRUE}, include AE histograms.
 #'
 #' @return Invisibly, a list with ggplot objects and worst-node tables.
 #' @export
@@ -483,7 +494,7 @@ plot_bottlenecks_index <- function(
     d$target <- rn
   }
 
-  # Raw metrics (will be used for both “all-nodes” and “sampled-only”)
+  # Raw metrics (will be used for both "all-nodes" and "sampled-only")
   d$AE      <- if ("AE_ESS_per_it" %in% names(d)) as_num(d$AE_ESS_per_it)
   else if ("AE" %in% names(d))       as_num(d$AE) else NA_real_
   d$CE      <- if ("ESS_per_sec" %in% names(d))   as_num(d$ESS_per_sec)
@@ -574,13 +585,13 @@ plot_bottlenecks_index <- function(
   # NEW / REPLACEMENT PANELS
   # =========================
 
-  # (ALL NODES) AE  bar — full set (steelblue)
+  # (ALL NODES) AE  bar - full set (steelblue)
   if (make_bar_ae_median_all && nrow(ae_all_ord)) {
     p <- ggplot2::ggplot(ae_all_ord,
                          ggplot2::aes(x = stats::reorder(target, AE), y = AE)) +
       ggplot2::geom_bar(stat = "identity", fill = "steelblue") +
       ggplot2::labs(
-        title = "ESS/N by Target — All Nodes",
+        title = "ESS/N by Target - All Nodes",
         subtitle = paste0("All nodes with finite AE (n = ", nrow(ae_all_ord), ")"),
         x = "Targets", y = "ESS/N"
       ) +
@@ -590,13 +601,13 @@ plot_bottlenecks_index <- function(
     res$AE_median_by_target__all_nodes <- p
   }
 
-  # (ALL NODES) CE bar — full set (green)
+  # (ALL NODES) CE bar - full set (green)
   if (make_bar_ce_median_all && nrow(ce_all_ord)) {
     p <- ggplot2::ggplot(ce_all_ord,
                          ggplot2::aes(x = stats::reorder(target, CE), y = CE)) +
       ggplot2::geom_bar(stat = "identity", fill = "green") +
       ggplot2::labs(
-        title = "CE ESS/s by Target — All Nodes",
+        title = "CE ESS/s by Target - All Nodes",
         subtitle = paste0("All nodes with finite CE (n = ", nrow(ce_all_ord), ")"),
         x = "Targets", y = "ESS/s"
       ) +
@@ -606,14 +617,14 @@ plot_bottlenecks_index <- function(
     res$CE_median_by_target__all_nodes <- p
   }
 
-  # (ALL NODES) Worst CE — top_k (grey60 + labels)
+  # (ALL NODES) Worst CE - top_k (grey60 + labels)
   if (make_bar_ce_worst_all && nrow(ce_all_worst)) {
     p <- ggplot2::ggplot(ce_all_worst,
                          ggplot2::aes(x = stats::reorder(target, CE), y = CE)) +
       ggplot2::geom_bar(stat = "identity", fill = "orange") +
       ggplot2::geom_text(ggplot2::aes(label = round(CE, 3)), vjust = -0.5, size = 3) +
       ggplot2::labs(
-        title = "Targets by CE ESS/s) — All Nodes",
+        title = "Targets by CE ESS/s) - All Nodes",
         subtitle = paste0("Showing up to ", nrow(ce_all_worst), " worst targets"),
         x = "Targets", y = "ESS/s"
       ) +
@@ -627,7 +638,7 @@ plot_bottlenecks_index <- function(
   # SAMPLED-ONLY PANELS (unchanged, still strict)
   # =================
 
-  # Worst Rhat (Rhat-1) — sampled only (orange/black + dashed ref)
+  # Worst Rhat (Rhat-1) - sampled only (orange/black + dashed ref)
   if (make_bar_rhat_worst && nrow(rh_s_ord)) {
     ymax <- max(rh_s_ord$Rhat - 1, na.rm = TRUE)
     p <- ggplot2::ggplot(rh_s_ord,
@@ -635,9 +646,9 @@ plot_bottlenecks_index <- function(
       ggplot2::geom_bar(stat = "identity", fill = "orange", color = "black") +
       ggplot2::geom_hline(yintercept = (rhat_ref - 1), linetype = "dashed", color = "red", size = 1) +
       ggplot2::labs(
-        title = "Rhat (Rhat − 1) — Sampled Only",
+        title = "R-hat (R-hat - 1) - Sampled Only",
         subtitle = paste0("Dashed line at Rhat = ", rhat_ref),
-        x = "Targets", y = "Rhat − 1"
+        x = "Targets", y = "Rhat - 1"
       ) +
       ggplot2::theme_bw() +
       ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5)) +
@@ -647,7 +658,7 @@ plot_bottlenecks_index <- function(
     res$Rhat_worst_targets__sampled_only <- p
   }
 
-  # ESS bar with 5% quantile — sampled only (skyblue/black + labels)
+  # ESS bar with 5% quantile - sampled only (skyblue/black + labels)
   if (make_bar_ess_q5 && nrow(ess_s_ord)) {
     ess_q5 <- tryCatch(stats::quantile(agg_s$ESS, probs = 0.05, na.rm = TRUE), error = function(e) NA_real_)
     p <- ggplot2::ggplot(utils::head(ess_s_ord, min(top_k, nrow(ess_s_ord))),
@@ -666,13 +677,13 @@ plot_bottlenecks_index <- function(
     res$ESS_worst_targets_q5_line__sampled_only <- p
   }
 
-  # “Hist” toggles (sampled-only, full set) = AE/CE barplots for the sampled set
+  # "Hist" toggles (sampled-only, full set) = AE/CE barplots for the sampled set
   if (make_hist_ce && nrow(ce_s_ord)) {
     p <- ggplot2::ggplot(ce_s_ord,
                          ggplot2::aes(x = stats::reorder(target, CE), y = CE)) +
       ggplot2::geom_bar(stat = "identity", fill = "green") +
       ggplot2::labs(
-        title = "ESS/s by Target — Sampled Only",
+        title = "ESS/s by Target - Sampled Only",
         subtitle = paste0("All sampled targets (n = ", nrow(ce_s_ord), ")"),
         x = "Targets", y = "ESS/s"
       ) +
@@ -686,7 +697,7 @@ plot_bottlenecks_index <- function(
                          ggplot2::aes(x = stats::reorder(target, AE), y = AE)) +
       ggplot2::geom_bar(stat = "identity", fill = "steelblue") +
       ggplot2::labs(
-        title = "ESS/N by Target — Sampled Only ",
+        title = "ESS/N by Target - Sampled Only ",
         subtitle = paste0("All sampled targets (n = ", nrow(ae_s_ord), ")"),
         x = "Targets", y = "ESS/N"
       ) +
@@ -725,8 +736,8 @@ plot_convergence_checks <- function(samples,
                                     top_k_rhat = 12L,
                                     top_k_aelow = 12L,
                                     runtime_s = NULL,
-                                    rhat_ref = 1.05,  # coherent avec ton trait 0.05
-                                    make_rhat_hist   = TRUE,   # -> utilisera le BAR "template"
+                                    rhat_ref = 1.05,
+                                    make_rhat_hist   = TRUE,
                                     make_traces_rhat = TRUE,
                                     make_traces_ae   = TRUE,
                                     make_rhat_family_bars = TRUE) {
@@ -888,15 +899,17 @@ plot_convergence_checks <- function(samples,
 
 #' Fast convergence plots for R-hat (samplers-only), thresholded
 #'
-#' Builds **samplers-only** convergence diagnostics based on **R̂** with a
+#' Builds **samplers-only** convergence diagnostics based on \eqn{\hat{R}} with:
+#'   1) median \eqn{\hat{R}} by family (bar chart with threshold line), and
+#'   2) top-k worst nodes by \eqn{\hat{R}} (bar chart with threshold line).
 #' configurable threshold (default 1.01). Prefers `Rhat_split` if available,
 #' falls back to `Rhat_classic` otherwise. Produces:
-#' 1) median R̂ by family (bar chart with threshold line), and
-#' 2) top-k worst nodes by R̂ (bar chart with threshold line).
+#' 1) median R-hat by family (bar chart with threshold line), and
+#' 2) top-k worst nodes by R-hat (bar chart with threshold line).
 #'
 #' @param diag_tbl A `data.frame` with at least column `target` and one of
 #'   `Rhat_split` or `Rhat_classic` having finite values.
-#' @param threshold Numeric; R̂ reference line (default `1.01`).
+#' @param threshold Numeric; R-hat reference line (default `1.01`).
 #' @param sampled_only Logical (default `TRUE`). When `TRUE`, keep **only** nodes
 #'   that are targets of configured samplers and also present in `samples_ml`.
 #'   Raises an error if none remain (strict behavior).
@@ -906,7 +919,7 @@ plot_convergence_checks <- function(samples,
 #'   `Rhat_median_by_family__samplers_only_thr_*.png`,
 #'   `TopK_worst_Rhat__samplers_only_thr_*.png`,
 #'   and two CSV summaries.
-#' @param top_k Integer; number of worst nodes by R̂ to display (default `20L`).
+#' @param top_k Integer; number of worst nodes by R-hat to display (default `20L`).
 #' @param prefer_split Logical; if `TRUE` (default), use `Rhat_split` when available/finite,
 #'   otherwise fallback to `Rhat_classic`.
 #'
@@ -987,7 +1000,7 @@ plot_convergence_rhat_sampled_fast <- function(
   p_fam <- ggplot2::ggplot(fam_rhat, ggplot2::aes(x = reorder(Family, Rhat_median), y = Rhat_median, fill = Family)) +
     ggplot2::geom_bar(stat = "identity") +
     ggplot2::geom_hline(yintercept = threshold, linetype = "dashed", color = "red") +
-    ggplot2::labs(title = sprintf("Median R\u0302 by Family (samplers only) — threshold %.3f", threshold),
+    ggplot2::labs(title = sprintf("Median R-hat by Family (samplers only) - threshold %.3f", threshold),
                   x = "Family", y = "Median R\u0302") +
     ggplot2::theme_minimal() +
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1), legend.position = "none")
@@ -1023,10 +1036,6 @@ plot_convergence_rhat_sampled_fast <- function(
   ))
 }
 
-
-## ---- Internal functions (20) ----
-
-
 #' @keywords internal
 .derive_sampler_targets_fast <- function(conf.mcmc, samples_ml) {
   stopifnot(!is.null(conf.mcmc), !is.null(samples_ml))
@@ -1049,7 +1058,7 @@ plot_convergence_rhat_sampled_fast <- function(
       ggplot2::facet_wrap(~ `.__step__`, scales = "free_y") +
       ggplot2::labs(
         x = NULL, y = ylab, fill = "Sampler",
-        title = sprintf("%s – strategy comparison (per = %s, top_by = %s, k = %d)",
+        title = sprintf("%s - strategy comparison (per = %s, top_by = %s, k = %d)",
                         metric, per, top_by, as.integer(top_k))
       ) +
       ggplot2::theme_minimal(base_size = 11) +
@@ -1069,7 +1078,7 @@ plot_convergence_rhat_sampled_fast <- function(
           ggplot2::geom_col() +
           ggplot2::coord_flip() +
           ggplot2::labs(x = NULL, y = ylab, fill = "Sampler",
-                        title = sprintf("%s – %s", metric, st)) +
+                        title = sprintf("%s - %s", metric, st)) +
           ggplot2::theme_minimal(base_size = 11) +
           ggplot2::theme(panel.grid.minor = ggplot2::element_blank(),
                          plot.title = ggplot2::element_text(face = "bold"),
@@ -1127,68 +1136,96 @@ plot_convergence_rhat_sampled_fast <- function(
   }
 
 
-#' Plot strategy comparisons from test_strategy_family_fast results (fast path)
-#'
-#' @description
-#' Fast plotting utility to compare sampler strategies (scalar and block plans,
-#' including optional full-model HMC) using median efficiency metrics computed
-#' per target or per family. Designed to work with objects returned by
-#' [test_strategy_family_fast()] and [configure_hmc_safely()].
-#'
-#' @details
-#' The function consumes `res` objects that contain:
-#' - `baseline$diag_tbl` **or** (`baseline$samples`, `baseline$runtime_s`)
-#' - a list of `steps` with per-step diagnostics under `steps[[i]]$res$dg`
-#' - optionally, `mode == "HMC_full"` with `hmc$diag_tbl`.
-#'
-#' When diagnostics are missing but samples/runtime are provided, the function
-#' prefers `compute_diag_from_mcmc_vect()` (vectorized) and falls back to
-#' `compute_diag_from_mcmc()` if needed (both assumed available in your package).
-#'
-#' Filtering removes likelihood-like targets (`logLik`, `log_lik`, `logdens`,
-#' `lpdf`) and internal/generated nodes (`lifted_`, `logProb_`). If the `Family`
-#' column is absent, it is derived as the root prefix of `target`.
-#'
-#' Plots include:
-#' - Global bar charts across steps for AE (ESS/iteration), CE (ESS/second),
-#'   and \eqn{\hat{R}} (max per key);
-#' - Per-step bar charts for the same metrics.
-#'
-#' @param res A result object from [test_strategy_family_fast()] or
-#'   [configure_hmc_safely()] containing baseline/steps/HMC diagnostics.
-#' @param out_dir Output directory for plots (created if missing).
-#' @param per Aggregation level: `"target"` or `"family"`.
-#' @param top_k Integer; number of keys (targets or families) to keep for plotting
-#'   based on `top_by`. Use a large number to keep all.
-#' @param top_by Selection metric for top-k: `"CE"` or `"AE"`.
-#' @param export_csv Logical; if `TRUE`, writes a CSV summary at `out_dir`.
-#' @param width,height,dpi Plot export parameters passed to `ggsave()`.
-#'
-#' @return (Invisibly) a list with:
-#' \describe{
-#'   \item{data}{`data.table` of aggregated metrics used for plotting.}
-#'   \item{out_dir}{Output directory path.}
-#'   \item{plots_all}{A list of ggplot objects for AE/CE/Rhat global charts.}
-#' }
-#'
-#' @section Metrics:
-#' - AE = median(ESS per iteration) over the aggregation key;
-#' - CE = median(ESS per second) over the aggregation key;
-#' - Rhat = max(\eqn{\hat{R}}) over the aggregation key.
-#'
-#' @seealso [test_strategy_family_fast()], [configure_hmc_safely()]
-#'
-#' @importFrom data.table as.data.table rbindlist setnames setorder fwrite
-#' @importFrom ggplot2 ggplot aes geom_col coord_flip facet_wrap labs theme_minimal
-#'   theme element_blank element_text ggsave
-#'
-#'
-#' @examples
-#' \dontrun{
-#' res <- test_strategy_family_fast(build_fn = build_M, nbot = 2, try_hmc = TRUE)
-#' plot_strategies_from_test_result_fast(res, per = "family", top_k = 30, top_by = "CE")
-#' }
-#'  @export
+  #' Plot strategy comparisons from test_strategy_family_fast results (fast path)
+  #'
+  #' Fast plotting utility to compare sampler strategies (scalar and block plans,
+  #' including optional full-model HMC) using median efficiency metrics computed
+  #' per target or per family. Designed to work with objects returned by
+  #' \code{test_strategy_family_fast()} and \code{configure_hmc_safely()}.
+  #'
+  #' @details
+  #' The function consumes \code{res} objects that typically contain:
+  #' \itemize{
+  #'   \item \code{baseline$diag_tbl} \emph{or} (\code{baseline$samples},
+  #'         \code{baseline$runtime_s});
+  #'   \item a list of \code{steps} with per-step diagnostics stored in
+  #'         \code{steps[[i]]$res$dg};
+  #'   \item optionally, a full-model HMC mode (for instance
+  #'         \code{mode == "HMC_full"}) with \code{hmc$diag_tbl}.
+  #' }
+  #'
+  #' When diagnostics are missing but samples and runtime are available, the
+  #' function first tries \code{compute_diag_from_mcmc_vect()} (vectorised
+  #' diagnostics) and falls back to \code{compute_diag_from_mcmc()} if needed.
+  #'
+  #' Filtering removes likelihood-like targets (\code{logLik}, \code{log_lik},
+  #' \code{logdens}, \code{lpdf}) and internal/generated nodes
+  #' (\code{lifted_}, \code{logProb_}). If the \code{Family} column is absent,
+  #' it is derived as the root prefix of \code{target}.
+  #'
+  #' Plots include:
+  #' \itemize{
+  #'   \item global bar charts across steps for AE (ESS per iteration),
+  #'         CE (ESS per second), and max Rhat per key;
+  #'   \item per-step bar charts for the same metrics.
+  #' }
+  #'
+  #' @param res Result object from \code{test_strategy_family_fast()} or
+  #'   \code{configure_hmc_safely()} containing baseline/steps/HMC diagnostics.
+  #' @param out_dir Output directory for plots; created if it does not exist.
+  #' @param per Aggregation level: \code{"target"} or \code{"family"}.
+  #' @param top_k Integer; number of keys (targets or families) kept for
+  #'   plotting based on \code{top_by}. Use a large number to keep all.
+  #' @param top_by Selection metric for top-k: \code{"CE"} or \code{"AE"}.
+  #' @param export_rds Logical; if \code{TRUE}, writes a rds summary in
+  #'   \code{out_dir}.
+  #' @param width,height,dpi Plot export parameters passed to \code{ggsave()}.
+  #'
+  #' @return Invisibly, a list with components:
+  #' \describe{
+  #'   \item{data}{\code{data.table} of aggregated metrics used for plotting.}
+  #'   \item{out_dir}{Output directory path.}
+  #'   \item{plots_all}{List of \code{ggplot} objects for the global AE/CE/Rhat
+  #'         charts.}
+  #' }
+  #'
+  #' @section Metrics:
+  #' \itemize{
+  #'   \item AE = median(ESS per iteration) over the aggregation key;
+  #'   \item CE = median(ESS per second) over the aggregation key;
+  #'   \item Rhat = max(Rhat) over the aggregation key.
+  #' }
+  #'
+  #' @seealso \code{\link{test_strategy_family_fast}},
+  #'   \code{\link{configure_hmc_safely}}
+  #'
+  #' @importFrom data.table as.data.table rbindlist setnames setorder fwrite
+  #' @importFrom ggplot2 ggplot aes geom_col coord_flip facet_wrap labs
+  #'   theme_minimal theme element_blank element_text ggsave
+  #'
+  #' @examples
+  #' \dontrun{
+  #'   ## Minimal sketch (requires a valid build_fn defined in your session)
+  #'   ## build_M <- function() {
+  #'   ##   # return a list(model = <nimbleModel>, cmodel = <compiled model>,
+  #'   ##   #              monitors = c("theta", "N", "logit_theta"))
+  #'   ## }
+  #'   ##
+  #'   ## res <- test_strategy_family_fast(
+  #'   ##   build_fn = build_M,
+  #'   ##   nbot     = 2,
+  #'   ##   try_hmc  = TRUE
+  #'   ## )
+  #'   ##
+  #'   ## plot_strategies_from_test_result_fast(
+  #'   ##   res    = res,
+  #'   ##   per    = "family",
+  #'   ##   top_k  = 30,
+  #'   ##   top_by = "CE"
+  #'   ## )
+  #' }
+  #'
+  #' @export
 plot_strategies_from_test_result_fast <- function(
     res,
     out_dir = "outputs/strategies_plots",
@@ -1199,7 +1236,7 @@ plot_strategies_from_test_result_fast <- function(
     width = 12, height = 7, dpi = 300
 ) {
   ## ------------------------------------------------------------
-  ## 0) Préliminaires & vérifs
+  ## 0) Preliminaries & checks
   ## ------------------------------------------------------------
   per    <- match.arg(per)
   top_by <- match.arg(top_by)
@@ -1217,11 +1254,11 @@ plot_strategies_from_test_result_fast <- function(
   .mk_dir(out_dir)
 
   ## ------------------------------------------------------------
-  ## 1) Extraction / harmonisation des diagnostics
+  ## 1) Extraction/harmonization of diagnoses
   ## ------------------------------------------------------------
   pieces <- list()
 
-  # Cas : sortie configure_hmc_safely_bis()
+  # Case: output configure_hmc_safely_bis()
   if (!is.null(res$samples) && !is.null(res$runtime_s)) {
     if (!is.null(res$diag_tbl)) {
       di <- res$diag_tbl
@@ -1240,7 +1277,7 @@ plot_strategies_from_test_result_fast <- function(
     pieces[[length(pieces)+1]] <- di
   }
 
-  # Cas : présence d'autres structures (baseline, steps)
+  # Case: presence of other structures (baseline, steps)
   if (!is.null(res$baseline) && !is.null(res$baseline$diag_tbl)) {
     di <- res$baseline$diag_tbl
     di$.__step__    <- "baseline"
@@ -1263,7 +1300,7 @@ plot_strategies_from_test_result_fast <- function(
     stop("No diagnostic tables (`diag_tbl`) detected in input object `res`.")
 
   ## ------------------------------------------------------------
-  ## 2) Fusion et nettoyage
+  ## 2) Merger and cleanup
   ## ------------------------------------------------------------
   needed_primary <- c("target","AE_ESS_per_it","ESS_per_sec","Rhat",".__step__","Family")
   needed_sampler <- c("__sampler__", ".__sampler__")
@@ -1292,7 +1329,7 @@ plot_strategies_from_test_result_fast <- function(
   if (!"Rhat" %in% names(DT)) DT[, Rhat := NA_real_]
 
   ## ------------------------------------------------------------
-  ## 3) Agrégation (family/target)
+  ## 3) Aggregation (family/target)
   ## ------------------------------------------------------------
   key_col <- if (per == "family") "Family" else "target"
 
@@ -1309,7 +1346,7 @@ plot_strategies_from_test_result_fast <- function(
   data.table::setnames(Agg, key_col, "key")
 
   ## ------------------------------------------------------------
-  ## 4) Sélection top-k
+  ## 4) Top-k selection
   ## ------------------------------------------------------------
   if (!is.finite(top_k) || top_k <= 0L) top_k <- nrow(Agg)
   if (all(is.na(Agg[[top_by]]))) {
@@ -1321,7 +1358,7 @@ plot_strategies_from_test_result_fast <- function(
   Agg_top <- Agg[key %in% keys_keep]
 
   ## ------------------------------------------------------------
-  ## 5) Graphiques globaux
+  ## 5) Overall charts
   ## ------------------------------------------------------------
   mk_plot_all <- function(metric, ylab, file) {
     if (!nrow(Agg_top)) return(invisible(NULL))
@@ -1333,7 +1370,7 @@ plot_strategies_from_test_result_fast <- function(
       ggplot2::facet_wrap(~ `.__step__`, scales = "free_y") +
       ggplot2::labs(
         x = NULL, y = ylab, fill = "Sampler",
-        title = sprintf("%s – strategy comparison (per = %s, top_by = %s, k = %d)",
+        title = sprintf("%s - strategy comparison (per = %s, top_by = %s, k = %d)",
                         metric, per, top_by, as.integer(top_k))
       ) +
       ggplot2::theme_minimal(base_size = 11) +
@@ -1349,7 +1386,7 @@ plot_strategies_from_test_result_fast <- function(
   pRhat <- mk_plot_all("Rhat", "R\u0302 (max)",        "strategy_bar_Rhat.png")
 
   ## ------------------------------------------------------------
-  ## 6) Graphiques par step
+  ## 6) Graphs by step
   ## ------------------------------------------------------------
   if (nrow(Agg_top)) {
     for (st in unique(Agg_top$`.__step__`)) {
@@ -1364,7 +1401,7 @@ plot_strategies_from_test_result_fast <- function(
           ggplot2::geom_col() +
           ggplot2::coord_flip() +
           ggplot2::labs(x = NULL, y = ylab, fill = "Sampler",
-                        title = sprintf("%s – %s", metric, st)) +
+                        title = sprintf("%s - %s", metric, st)) +
           ggplot2::theme_minimal(base_size = 11) +
           ggplot2::theme(panel.grid.minor = ggplot2::element_blank(),
                          plot.title = ggplot2::element_text(face = "bold"),
@@ -1388,7 +1425,7 @@ plot_strategies_from_test_result_fast <- function(
   }
 
   ## ------------------------------------------------------------
-  ## 8) Retour
+  ## 8) Outputs
   ## ------------------------------------------------------------
   invisible(list(
     data      = Agg_top,
@@ -1398,7 +1435,19 @@ plot_strategies_from_test_result_fast <- function(
 }
 
 
-#'  @export
+#' Plot HMC-only strategy comparisons (fast path)
+#'
+#' @param res Result object from \code{test_strategy_family_fast()} or
+#'   \code{configure_hmc_safely()} in HMC-only mode.
+#' @param out_dir Output directory for plots; created if needed.
+#' @param per Aggregation level: \code{"target"} or \code{"family"}.
+#' @param top_k Integer; number of keys kept for plotting.
+#' @param top_by Metric used to rank keys: \code{"CE"} or \code{"AE"}.
+#' @param show_rhat_label Logical; if \code{TRUE}, show Rhat labels on bars.
+#'
+#'
+#' @return Invisibly, a list with aggregated data and ggplot objects.
+#' @export
 plot_strategies_from_test_result_hmc_fast <- function(
     res,
     out_dir        = NULL,
@@ -1415,15 +1464,15 @@ plot_strategies_from_test_result_hmc_fast <- function(
   per    <- match.arg(per)
   top_by <- match.arg(top_by)
 
-  # --- Vérif colonnes essentielles (on suppose enrich_hmc_diag_tbl_for_plots déjà appelé) ---
+
   needed <- c("AE_ESS_per_it", "CE_ESS_per_s", "Rhat")
   missing <- setdiff(needed, names(diag_tbl))
   if (length(missing) > 0L) {
-    stop("Colonnes manquantes dans diag_tbl : ", paste(missing, collapse = ", "),
-         ". As-tu bien appelé enrich_hmc_diag_tbl_for_plots() ?")
+    stop("Missing columns in diag_tbl : ", paste(missing, collapse = ", "),
+         ". Did you call enrich_hmc_diag_tbl_for_plots correctly?() ?")
   }
 
-  # --- choix de la metric de ranking ---
+  # --- choice of ranking metric ---
   metric_col <- switch(
     top_by,
     "CE"   = "CE_ESS_per_s",
@@ -1431,43 +1480,43 @@ plot_strategies_from_test_result_hmc_fast <- function(
     "Rhat" = "Rhat"
   )
 
-  # Nettoyage NA/Inf/NaN
+  # Cleaning NA/Inf/NaN
   metric <- diag_tbl[[metric_col]]
   metric[!is.finite(metric)] <- NA_real_
   diag_tbl[[metric_col]] <- metric
 
-  # --- catégorisation de Rhat pour la couleur ---
+  # --- Rhat's color classification ---
   rhat <- diag_tbl$Rhat
   rhat_cat <- rep(NA_character_, length(rhat))
 
   rhat_cat[is.na(rhat)]                  <- "Rhat NA"
   rhat_cat[!is.na(rhat) & rhat < 1.05]  <- "< 1.05"
-  rhat_cat[!is.na(rhat) & rhat >= 1.05 & rhat < 1.1] <- "1.05–1.10"
+  rhat_cat[!is.na(rhat) & rhat >= 1.05 & rhat < 1.1] <- "1.05-1.10"
   rhat_cat[!is.na(rhat) & rhat >= 1.1]  <- ">= 1.10"
 
   diag_tbl$rhat_cat <- factor(
     rhat_cat,
-    levels = c("< 1.05", "1.05–1.10", ">= 1.10", "Rhat NA")
+    levels = c("< 1.05", "1.05-1.10", ">= 1.10", "Rhat NA")
   )
 
-  # --- Construction du tableau pour le plot ---
+  # --- Construction of the table for the plot ---
   if (per == "target") {
 
     if (!"target" %in% names(diag_tbl)) {
-      stop("diag_tbl ne contient pas de colonne 'target'.")
+      stop("diag_tbl does not contain a 'target' column'.")
     }
 
     plot_tbl <- diag_tbl
 
-    # filtre NA sur la metric choisie
+    # NA filter on the selected metric
     ok <- !is.na(plot_tbl[[metric_col]])
     plot_tbl <- plot_tbl[ok, , drop = FALSE]
 
     if (nrow(plot_tbl) == 0L) {
-      stop("Aucune ligne valide (métrique NA partout) pour per = 'target'.")
+      stop("No valid lines (NA metric everywhere) for per = 'target'.")
     }
 
-    # tri décroissant
+    # descending sort
     o <- order(-plot_tbl[[metric_col]])
     plot_tbl <- plot_tbl[o, , drop = FALSE]
 
@@ -1476,7 +1525,7 @@ plot_strategies_from_test_result_hmc_fast <- function(
       plot_tbl <- plot_tbl[seq_len(top_k), , drop = FALSE]
     }
 
-    # ordre des cibles sur le graphique
+    # order of targets on the chart
     plot_tbl$target <- factor(
       plot_tbl$target,
       levels = rev(plot_tbl$target[order(plot_tbl[[metric_col]])])
@@ -1495,7 +1544,7 @@ plot_strategies_from_test_result_hmc_fast <- function(
         y = metric_col,
         fill = "Rhat",
         title = title_txt,
-        subtitle = "Couleur = classe de Rhat"
+        subtitle = "Color = Rhat class"
       ) +
       ggplot2::theme_bw() +
       ggplot2::theme(
@@ -1519,56 +1568,56 @@ plot_strategies_from_test_result_hmc_fast <- function(
   } else if (per == "family") {
 
     if (!"Family" %in% names(diag_tbl)) {
-      stop("per='family' demandé mais diag_tbl ne contient pas 'Family'.")
+      stop("per='family' requested but diag_tbl does not contain 'Family'.")
     }
 
-    # agrégation par famille avec base R
+    # family aggregation with R base
     ae_by_family <- aggregate(
       diag_tbl$AE_ESS_per_it,
       by = list(Family = diag_tbl$Family),
-      FUN = function(z) mean(z, na.rm = TRUE)
+      FUN = function(z) median(z, na.rm = TRUE)
     )
     names(ae_by_family)[names(ae_by_family) == "x"] <- "AE_ESS_per_it"
 
     ce_by_family <- aggregate(
       diag_tbl$CE_ESS_per_s,
       by = list(Family = diag_tbl$Family),
-      FUN = function(z) mean(z, na.rm = TRUE)
+      FUN = function(z) median(z, na.rm = TRUE)
     )
     names(ce_by_family)[names(ce_by_family) == "x"] <- "CE_ESS_per_s"
 
     rhat_by_family <- aggregate(
       diag_tbl$Rhat,
       by = list(Family = diag_tbl$Family),
-      FUN = function(z) mean(z, na.rm = TRUE)
+      FUN = function(z) median(z, na.rm = TRUE)
     )
     names(rhat_by_family)[names(rhat_by_family) == "x"] <- "Rhat"
 
     plot_tbl <- Reduce(function(x, y) merge(x, y, by = "Family", all = TRUE),
                        list(ae_by_family, ce_by_family, rhat_by_family))
 
-    # recalc rhat_cat par famille
+    # recalc rhat_cat by family
     rhat_f <- plot_tbl$Rhat
     rhat_cat_f <- rep(NA_character_, length(rhat_f))
     rhat_cat_f[is.na(rhat_f)]                        <- "Rhat NA"
     rhat_cat_f[!is.na(rhat_f) & rhat_f < 1.05]       <- "< 1.05"
-    rhat_cat_f[!is.na(rhat_f) & rhat_f >= 1.05 & rhat_f < 1.1] <- "1.05–1.10"
+    rhat_cat_f[!is.na(rhat_f) & rhat_f >= 1.05 & rhat_f < 1.1] <- "1.05-1.10"
     rhat_cat_f[!is.na(rhat_f) & rhat_f >= 1.1]       <- ">= 1.10"
 
     plot_tbl$rhat_cat <- factor(
       rhat_cat_f,
-      levels = c("< 1.05", "1.05–1.10", ">= 1.10", "Rhat NA")
+      levels = c("< 1.05", "1.05-1.10", ">= 1.10", "Rhat NA")
     )
 
-    # filtre NA sur la metric choisie
+    # NA filter on the selected metric
     ok <- !is.na(plot_tbl[[metric_col]])
     plot_tbl <- plot_tbl[ok, , drop = FALSE]
 
     if (nrow(plot_tbl) == 0L) {
-      stop("Aucune famille valide (métrique NA partout) pour per = 'family'.")
+      stop("No valid family (NA metric everywhere) for per = 'family'.")
     }
 
-    # tri décroissant
+    # descending sort
     o <- order(-plot_tbl[[metric_col]])
     plot_tbl <- plot_tbl[o, , drop = FALSE]
 
@@ -1581,7 +1630,7 @@ plot_strategies_from_test_result_hmc_fast <- function(
       levels = rev(plot_tbl$Family[order(plot_tbl[[metric_col]])])
     )
 
-    title_txt <- sprintf("Top %d families par %s (HMC/NUTS)", top_k, metric_col)
+    title_txt <- sprintf("Top %d families by %s (HMC/NUTS)", top_k, metric_col)
 
     p <- ggplot2::ggplot(
       plot_tbl,
@@ -1594,7 +1643,7 @@ plot_strategies_from_test_result_hmc_fast <- function(
         y = metric_col,
         fill = "Rhat",
         title = title_txt,
-        subtitle = "Couleur = classe de Rhat (moyenne par famille)"
+        subtitle = "Color = Rhat class (median by family)"
       ) +
       ggplot2::theme_bw() +
       ggplot2::theme(
@@ -1615,10 +1664,10 @@ plot_strategies_from_test_result_hmc_fast <- function(
         ggplot2::expand_limits(y = max(plot_tbl[[metric_col]], na.rm = TRUE) * 1.1)
     }
   } else {
-    stop("Valeur de 'per' non gérée : ", per)
+    stop("Unsupported value 'per': ", per)
   }
 
-  # --- export éventuel ---
+
   if (!is.null(out_dir)) {
     if (!dir.exists(out_dir)) {
       dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)

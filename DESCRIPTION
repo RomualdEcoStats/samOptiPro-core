@@ -2,9 +2,15 @@ Package: samOptiPro
 Title: Optimization and Diagnostics Tools for Bayesian Stock Assessment Models in NIMBLE
 Version: 0.1.0
 Maintainer: Romuald Hounyeme <romuald.hounyeme@agrocampus-ouest.fr>
-Description: The 'samOptiPro' package provides a unified workflow for the analysis, optimization, and benchmarking of Bayesian Stock Assessment Models (SAMs) implemented in the 'nimble' framework. It includes tools to:   - diagnose model structure and differentiability,   - automatically configure and test samplers (RW, Slice, Block, HMC, NUTS),   - evaluate algorithmic (ESS/s) and computational efficiency (runtime),   - identify bottlenecks and non-differentiable nodes,   - visualize convergence diagnostics and efficiency trade-offs,   - run comparative experiments for adaptive or hybrid sampling strategies. Designed for complex ecological hierarchical models (e.g., salmon, eel recruitment), 'samOptiPro' extends the methodological base of 'samOpti' with advanced diagnostics, family-wise sampler grouping, and integration with 'nimbleHMC' for gradient-based inference.
+Description: The 'samOptiPro' package provides a unified workflow for the analysis, optimization, and benchmarking of Bayesian Stock Assessment Models (SAMs)
+                 implemented in the 'nimble' framework. It includes tools to: - diagnose model structure and differentiability, - automatically configure and
+                 test samplers (RW, Slice, Block, HMC, NUTS), - evaluate algorithmic (ESS/s) and computational efficiency (runtime), - identify bottlenecks and
+                 non-differentiable nodes, - visualize convergence diagnostics and efficiency trade-offs, - run comparative experiments for adaptive or hybrid
+                 sampling strategies. Designed for complex ecological hierarchical models (e.g., salmon, eel recruitment), 'samOptiPro' extends the
+                 methodological base of 'samOpti' with advanced diagnostics, family-wise sampler grouping, and integration with 'nimbleHMC' for gradient-based
+                 inference.
 License: MIT + file LICENSE
-URL: https://github.com/RomualdEcoStats/samOptiPro-core, https://RomualdEcoStats.github.io/samOptiPro-core/
+URL: https://github.com/RomualdEcoStats/samOptiPro-core
 BugReports: https://github.com/RomualdEcoStats/samOptiPro-core/issues
 Encoding: UTF-8
 Type: Package
@@ -12,31 +18,9 @@ LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Depends: R (>= 4.2)
-Authors@R: c(
-    person("Romuald", "Hounyeme", , "romuald.hounyeme@agrocampus-ouest.fr", role = c("aut", "cre")),
-    person("Etienne", "Rivot", role = "aut"),
-    person("Rémi", "Patin", role = "ctb"),
-    person("Hilaire", "Drouineau", role = "ctb")
-  )
-Imports: 
-    coda,
-    dplyr,
-    ggplot2,
-    ggrepel,
-    gridExtra,
-    magrittr,
-    methods,
-    nimble (>= 1.3.0),
-    nimbleHMC (>= 0.1.1),
-    purrr,
-    stats,
-    stringr,
-    tibble,
-    utils
-Suggests: 
-    cowplot,
-    patchwork,
-    reshape2,
-    scales,
-    testthat (>= 3.0.0),
-    tidyr
+Authors@R: c( person("Romuald", "Hounyeme", , "romuald.hounyeme@agrocampus-ouest.fr", role = c("aut", "cre")), person("Etienne", "Rivot", role = "aut"),
+                 person("Rémi", "Patin", role = "ctb"), person("Hilaire", "Drouineau", role = "ctb") )
+Imports: coda, data.table, ggplot2, gridExtra, Matrix, nimble (>= 1.3.0), nimbleHMC (>= 0.1.1), stats, 
+                 tibble, utils
+Suggests: cowplot, patchwork, reshape2, scales, testthat (>= 3.0.0), tidyr, knitr, rmarkdown, posterior
+VignetteBuilder: knitr

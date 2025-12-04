@@ -1,42 +1,18 @@
 
-#' Identify per-parameter bottlenecks (low ESS/s, low ESS/post-draw, long time-to-target)
+#' Convert an object to mcmc.list
 #'
-#' Ranks parameters by:
-#'  - **CE** (ESS/s): low is worse,
-#'  - **AE** (ESS/post-draw): low is worse,
-#'  - **slow_node_time** (seconds to reach `ess_threshold` at current CE): high is worse.
+#' Converts an input object (\code{mcmc.list}, \code{mcmc}, \code{data.frame},
+#' or \code{matrix}) into a \code{coda}-compatible \code{mcmc.list}.
 #'
-#' Degenerate parameters (non-finite or non-positive ESS, AE, or CE) are listed
-#' in `degenerate` and excluded from rankings.
+#' @param x An object of class \code{mcmc.list}, \code{mcmc}, \code{data.frame},
+#'   or \code{matrix}.
 #'
-#' If you pass `sampler_params`, results are restricted to those parameters
-#' (useful to exclude deterministic monitors and keep stochastic nodes with samplers only).
+#' @return An object of class \code{mcmc.list}.
 #'
-#' @param samples `mcmc.list`/`mcmc`/`matrix`/`data.frame`.
-#' @param runtime_s numeric(1) wall time in seconds.
-#' @param ess_threshold numeric(1) target ESS per parameter (default 1000).
-#' @param sampler_params character() optional vector of parameter names to keep (stochastic nodes with samplers).
-#' @param rhat_threshold numeric(1) kept for API symmetry (not used for ranking).
-#' @param ess_per_s_min numeric(1) optional CE threshold; flags params below it (0 = inactive).
-#' @return list(type="ok" or "degenerate_only",
-#'              details=list(ce=..., ae=..., time=..., degenerate=...),
-#'              per_param=..., summary=..., top3=data.frame)
 #' @keywords internal
-#' @keywords internal
-#' @importFrom stats median
-`%||%` <- function(a,b) if (is.null(a)) b else a
-
-## ---- Exported functions (8) ----
-
-#' Convert an object to `mcmc.list`
-#'
-#' Converts an `mcmc.list` / `mcmc` / `data.frame` / `matrix` into a `coda`-compatible `mcmc.list`.
-#'
-#' @param x An object of class `mcmc.list`, `mcmc`, `data.frame`, or `matrix`.
-#' @return An object of class `mcmc.list`.
 #' @export
-#' @keywords internal
 #' @importFrom coda mcmc mcmc.list
+
 as_mcmc_list <- function(x){
   if (inherits(x, 'mcmc.list')) return(x)
   if (inherits(x, 'mcmc'))      return(coda::mcmc.list(x))
@@ -47,44 +23,53 @@ as_mcmc_list <- function(x){
 }
 
 
-#' @title Assess MCMC performance metrics (ESS, R-hat, AE, CE)
-#' @description
-#' Compute per-parameter and global performance diagnostics from an MCMC
-#' sample set, including Effective Sample Size (ESS), Gelman–Rubin R-hat,
-#' Algorithmic Efficiency (AE = ESS / total draws), and Computational Efficiency
-#' (CE = ESS / runtime in seconds).
+#' Assess MCMC performance metrics (ESS, R-hat, AE, CE)
+#'
+#' Compute per-parameter and global diagnostics from an MCMC sample set.
+#' Metrics include Effective Sample Size (ESS), Gelman-Rubin R-hat,
+#' Algorithmic Efficiency (AE = ESS / total draws), and Computational
+#' Efficiency (CE = ESS / runtime in seconds).
 #'
 #' @details
-#' This function combines all chains into a single `mcmc.list` object and computes:
+#' The function first coerces the input to an \code{mcmc.list} object and then
+#' computes the following:
 #' \itemize{
-#'   \item \strong{ESS}: Effective Sample Size, per parameter.
-#'   \item \strong{Rhat}: Gelman–Rubin diagnostic (if ≥ 2 chains).
-#'   \item \strong{AE}: Algorithmic Efficiency = ESS / total retained draws.
-#'   \item \strong{CE}: Computational Efficiency = ESS / runtime (s).
+#'   \item \strong{ESS}: Effective Sample Size for each parameter.
+#'   \item \strong{Rhat}: Gelman-Rubin diagnostic (computed only when two
+#'     or more chains are available).
+#'   \item \strong{AE}: Algorithmic efficiency, defined as ESS divided by
+#'     the total number of retained post-burnin draws.
+#'   \item \strong{CE}: Computational efficiency, defined as ESS divided by
+#'     the total runtime in seconds.
 #' }
-#' If package \pkg{posterior} is available, its more robust implementations
-#' of `rhat()` are used automatically; otherwise, \pkg{coda} diagnostics are applied.
 #'
-#' @param samples A list of MCMC samples or an object coercible via `as_mcmc_list()`.
-#' @param runtime_s Total runtime of the MCMC run, in seconds (numeric scalar).
-#' @param rhat_thresh Numeric threshold for R-hat convergence flag (default = 1.01).
+#' When the \pkg{posterior} package is installed, its implementation of
+#' \code{rhat()} is used; otherwise, diagnostics from \pkg{coda} are applied.
+#'
+#' @param samples A list of MCMC samples or any object that can be converted
+#'   by \code{as_mcmc_list()}.
+#' @param runtime_s Numeric scalar. Total runtime of the MCMC run (seconds).
+#' @param rhat_thresh Numeric scalar. Threshold used to flag R-hat values
+#'   indicating lack of convergence. Default is 1.01.
 #'
 #' @return
-#' A named list with two tibbles:
+#' A named list containing:
 #' \describe{
-#'   \item{summary}{A one-row tibble summarizing global diagnostics.}
-#'   \item{per_param}{A tibble containing ESS, Rhat, AE, and CE per parameter.}
+#'   \item{\code{summary}}{A one-row tibble summarizing global diagnostics.}
+#'   \item{\code{per_param}}{A tibble containing ESS, Rhat, AE, and CE
+#'     for each parameter.}
 #' }
 #'
 #' @examples
 #' \dontrun{
-#' res <- run_baseline_config(build_M, niter=2000, nburnin=500, thin=2)
+#' res <- run_baseline_config(build_M, niter = 2000, nburnin = 500, thin = 2)
 #' perf <- assess_performance(res$samples, runtime_s = res$runtime_s)
 #' perf$summary
 #' }
 #'
-#' @seealso [coda::effectiveSize()], [coda::gelman.diag()], [posterior::rhat()]
+#' @seealso coda::effectiveSize, coda::gelman.diag, posterior::rhat
 #' @export
+
 assess_performance <- function(samples, runtime_s, rhat_thresh = 1.01) {
   stopifnot(is.finite(runtime_s), runtime_s >= 0)
 
@@ -177,9 +162,45 @@ assess_performance <- function(samples, runtime_s, rhat_thresh = 1.01) {
   list(summary = summary, per_param = per_param)
 }
 
-
-#' @export
+#' Identify per-parameter bottlenecks (low ESS/s, low ESS per draw, long time-to-target)
+#'
+#' This function ranks parameters according to three metrics:
+#' * Computational efficiency (CE), defined as ESS per second (low values indicate bottlenecks).
+#' * Algorithmic efficiency (AE), defined as ESS per post-burnin draw (low values indicate bottlenecks).
+#' * Time-to-target, defined as the time required to reach a given ESS threshold at the current CE
+#'   (high values indicate bottlenecks).
+#'
+#' Parameters with non-finite or non-positive ESS, AE, or CE are collected in the
+#' \code{degenerate} field of the output and excluded from the rankings.
+#'
+#' When \code{sampler_params} is provided, rankings are restricted to the specified
+#' parameter names. This is typically used to exclude deterministic monitors and
+#' retain only stochastic nodes that have associated samplers.
+#'
+#' @param samples An object of class \code{mcmc.list}, \code{mcmc}, \code{matrix},
+#'   or \code{data.frame}.
+#' @param runtime_s Numeric scalar. Total wall-clock time of the MCMC run (in seconds).
+#' @param ess_threshold Numeric scalar. Target ESS per parameter used to compute
+#'   time-to-target. Default is 1000.
+#' @param sampler_params Optional character vector of parameter names to retain.
+#'   If provided, other parameters are ignored.
+#' @param rhat_threshold Numeric scalar. Provided for API symmetry but not used
+#'   in ranking. Default is NULL.
+#' @param ess_per_s_min Numeric scalar. Optional threshold for computational
+#'   efficiency. Parameters with CE below this value are flagged. Set to 0
+#'   (default) to disable.
+#'
+#' @return A list with the following elements:
+#' \describe{
+#'   \item{\code{type}}{Character string. Either "ok" or "degenerate_only".}
+#'   \item{\code{details}}{List containing CE, AE, time-to-target, and degenerate sets.}
+#'   \item{\code{per_param}}{Data frame with metrics for each parameter.}
+#'   \item{\code{summary}}{Data frame summarizing the worst parameters.}
+#'   \item{\code{top3}}{Data frame containing the three worst parameters according to CE.}
+#' }
+#'
 #' @keywords internal
+#' @importFrom stats median
 identify_bottlenecks <- function(samples, runtime_s,
                                  ess_threshold = 1000,
                                  sampler_params = NULL,
@@ -357,36 +378,79 @@ identify_bottlenecks <- function(samples, runtime_s,
   )
 }
 
-
-#' Identify bottlenecks by parameter stats::family(medians within families)
+#' Identify bottlenecks at the parameter-family level
 #'
-#' Parameters are grouped by stats::family(prefix before the first `[`), then family-level
-#' **medians** are computed:
-#'   - AE_med  = median(AE)            (low = worse),
-#'   - CE_med  = median(CE)            (low = worse, CE = ESS/s),
-#'   - ESS_med = median(ESS),
-#'   - Rhat_med= median(Rhat, na.rm=TRUE).
+#' Group parameters into families and rank them by median efficiency metrics.
 #'
-#' Derived:
-#'   - slow_node_time = ess_threshold / CE_med  (seconds to target; high = worse),
-#'   - meet_target    = slow_node_time <= runtime_s.
+#' @description
+#' Parameters are grouped into families defined by the prefix before the first
+#' \code{"["} in their name (for example, \code{"beta[1]"} and \code{"beta[2]"}
+#' belong to the family \code{"beta"}). For each family, the function computes
+#' median efficiency metrics and derived quantities that help identify
+#' bottlenecks.
 #'
-#' Families with degenerate metrics (non-finite or non-positive) are listed in `degenerate`
-#' and excluded from rankings.
+#' @details
+#' For each family, the following median metrics are computed:
+#' \itemize{
+#'   \item \code{AE_med}  = median(AE)            (low values are worse),
+#'   \item \code{CE_med}  = median(CE)            (low values are worse, CE is ESS per second),
+#'   \item \code{ESS_med} = median(ESS),
+#'   \item \code{Rhat_med} = median(Rhat, with \code{na.rm = TRUE}).
+#' }
 #'
-#' If you pass `sampler_params`, only parameters belonging to those names are used to form families.
+#' From these, the following diagnostics are derived:
+#' \itemize{
+#'   \item \code{slow_node_time} = \code{ess_threshold / CE_med}
+#'     (seconds needed to reach the target ESS; higher is worse),
+#'   \item \code{meet_target} = logical flag, \code{TRUE} when
+#'     \code{slow_node_time <= runtime_s}.
+#' }
 #'
-#' @param samples mcmc.list/mcmc/matrix/data.frame.
-#' @param runtime_s numeric(1) wall time in seconds.
-#' @param ess_threshold numeric(1) target ESS per stats::family(default 1000).
-#' @param sampler_params character() optional vector of parameter names to keep.
-#' @param rhat_threshold numeric(1) kept for API symmetry (not used in ranks).
-#' @param ess_per_s_min numeric(1) optional CE threshold to flag (0 = inactive).
+#' Families with degenerate metrics (non-finite or non-positive ESS, AE,
+#' or CE) are reported in the \code{degenerate} component and excluded from
+#' the ranking.
 #'
-#' @return list(type="ok" or "degenerate_only",
-#'              details=list(ce=..., ae=..., time=..., degenerate=...),
-#'              per_family=..., summary=..., top3=data.frame)
-#'identify_bottlenecks_family
+#' When \code{sampler_params} is provided, only parameters whose names are
+#' included in \code{sampler_params} are used to form families (typically
+#' stochastic nodes that are actually sampled).
+#'
+#' @param samples An object containing MCMC samples; typically an object of
+#'   class \code{mcmc.list}, \code{mcmc}, \code{matrix}, or \code{data.frame}.
+#' @param runtime_s Numeric scalar. Wall-clock runtime of the MCMC run in seconds.
+#' @param ess_threshold Numeric scalar. Target ESS per family (default is 1000).
+#' @param sampler_params Optional character vector of parameter names to keep
+#'   when defining families. Parameters not in this vector are ignored.
+#' @param rhat_threshold Numeric scalar kept for API symmetry (not used
+#'   in the ranking).
+#' @param ess_per_s_min Numeric scalar. Optional CE threshold (ESS per second)
+#'   used to flag families below this value. Use 0 to deactivate.
+#' @param model A \code{nimbleModel} (compiled or uncompiled).
+#' @param mcmc_conf Optional MCMC configuration (from \code{configureMCMC}).
+#'   If \code{NULL}, a fresh configuration is built internally.
+#' @param ignore_patterns Character vector of regular expressions for node or
+#'   family names to exclude from the bottleneck search.
+#' @param strict_sampler_only Logical; if \code{TRUE}, only nodes actually
+#'   sampled by a user-level sampler are considered.
+#' @param auto_configure Logical; if \code{TRUE}, the function will configure
+#'   a baseline MCMC when \code{mcmc_conf} is missing.
+#'
+#' @return A list or data.frame describing bottleneck families and their
+#'   structural and computational load.
+#'
+#' @return
+#' A list with components:
+#' \describe{
+#'   \item{\code{type}}{Character string, either \code{"ok"} or
+#'     \code{"degenerate_only"}.}
+#'   \item{\code{details}}{List with components \code{ce}, \code{ae},
+#'     \code{time}, and \code{degenerate} summarising the diagnostics.}
+#'   \item{\code{per_family}}{Data frame (or tibble) of metrics by family.}
+#'   \item{\code{summary}}{Single-row data frame (or tibble) with global
+#'     summaries across families.}
+#'   \item{\code{top3}}{Data frame containing the three worst families
+#'     according to the main ranking criterion.}
+#' }
+#'
 #' @export
 #' @importFrom stats median
 identify_bottlenecks_family <- function(samples, runtime_s,
@@ -606,11 +670,25 @@ identify_bottlenecks_family <- function(samples, runtime_s,
 }
 
 
-#' Merge `res$samples` and `res$samples2` into a single `mcmc.list`
+#' Merge two MCMC sample objects into a single mcmc.list
 #'
-#' @export
-#' @importFrom coda as.mcmc mcmc mcmc.list
+#' Combine \code{res$samples} and \code{res$samples2} (or any two objects
+#' coercible to \code{mcmc} objects) into a single \code{mcmc.list}. Each
+#' input is converted using \code{coda::as.mcmc} before being combined.
+#'
+#' @details
+#' This helper is intended for internal use in cases where a model produces
+#' two separate sample objects (for example, when running a baseline sampler
+#' and an additional HMC sampler). Both inputs are converted to MCMC objects
+#' and returned as a single list of chains.
+#'
+#' @return
+#' An object of class \code{mcmc.list} containing all chains from both
+#' inputs.
+#'
 #' @keywords internal
+#' @importFrom coda as.mcmc mcmc mcmc.list
+#' @export
 merge_mcmc_samples <- function(res) {
   to_mlist <- function(x) {
     if (inherits(x, "mcmc.list")) return(x)
@@ -642,13 +720,32 @@ merge_mcmc_samples <- function(res) {
 
 #' Family-level ESS bar plot (harmonised style)
 #'
-#' Builds a bar plot of median ESS by family with a dashed horizontal line at the 5% quantile.
-#' The style mirrors the example you provided (fill, labels, themes, rotations).
+#' Produce a bar plot showing the median Effective Sample Size (ESS)
+#' for each parameter family. A horizontal dashed line indicates the
+#' 5 percent quantile of ESS across all families.
 #'
-#' @param samples mcmc.list/mcmc/data.frame/matrix
-#' @param runtime_s numeric(1) total runtime in seconds (used to compute CE/AE if needed elsewhere)
-#' @param sampler_params optional character() to keep only sampler-attached parameters
-#' @return a `ggplot` object
+#' Families are defined by the substring before the first "[" in
+#' each parameter name. If \code{sampler_params} is provided, only
+#' parameters included in that vector are used when forming families.
+#'
+#' @param samples An object that can be converted to an \code{mcmc.list}
+#'   (e.g., \code{mcmc.list}, \code{mcmc}, \code{data.frame}, or
+#'   \code{matrix}).
+#' @param runtime_s Numeric scalar giving the total runtime in seconds.
+#'   This value is not used directly inside the plot, but is kept for
+#'   API consistency.
+#' @param sampler_params Optional character vector; if supplied, only
+#'   parameters listed here are used when computing family-level ESS.
+#' @param model A \code{nimbleModel}.
+#' @param mcmc_conf Optional MCMC configuration; if \code{NULL}, one is built.
+#' @param samplers_df Optional data.frame describing samplers (type/target).
+#' @param ignore_patterns Optional character vector of patterns to exclude
+#'   some families.
+#' @param strict_sampler_only Logical; if \code{TRUE}, only nodes actually
+#'   sampled are considered.
+#'
+#' @return A \code{ggplot} object representing median ESS per family.
+#'
 #' @export
 #' @importFrom stats quantile median
 plot_family_ess_bar <- function(samples, runtime_s,
@@ -700,67 +797,27 @@ plot_family_ess_bar <- function(samples, runtime_s,
 }
 
 
-#' Family-level Rhat bar plot (harmonised style)
+#' Histograms for ESS, CE, AE, and Rhat
 #'
-#' Plots median(Rhat) by family on the y-axis transformed as median_Rhat - 1,
-#' so that the standard convergence threshold 1.05 appears at 0.05 on the axis.
+#' Produce histogram plots (via \code{ggplot2}) for a single metric such as
+#' Effective Sample Size (ESS), Computational Efficiency (CE = ESS/s),
+#' Algorithmic Efficiency (AE = ESS per draw), or the Gelman-Rubin statistic
+#' Rhat (often shifted as \code{Rhat - 1} for visual clarity).
 #'
-#' @param samples mcmc.list/mcmc/data.frame/matrix
-#' @param runtime_s numeric(1) total runtime in seconds
-#' @param sampler_params optional character() to keep only sampler-attached parameters
-#' @param rhat_threshold numeric(1) convergence threshold (default 1.05)
-#' @return a `ggplot` object (or `NULL` if no finite Rhat values)
-#' @export
-#' @importFrom stats median
-plot_family_rhat_bar <- function(samples, runtime_s,
-                                 sampler_params = NULL,
-                                 model = NULL,
-                                 mcmc_conf = NULL,
-                                 samplers_df = NULL,
-                                 ignore_patterns = c("^lifted_","^logProb_"),
-                                 strict_sampler_only = TRUE,
-                                 rhat_threshold = 1.05) {
-  if (!requireNamespace("ggplot2", quietly = TRUE))
-    stop("plot_family_rhat_bar: requires ggplot2.")
-  ap <- assess_performance(samples, runtime_s)
-  pp <- as.data.frame(ap$per_param)
-
-  if (all(!is.finite(pp$Rhat))) return(NULL)
-
-  if (is.null(sampler_params) || !length(sampler_params)) {
-    sampler_params <- derive_sampler_params(samples, model, mcmc_conf, samplers_df,
-                                            include_data = FALSE,
-                                            ignore_patterns = ignore_patterns)
-  }
-  if (strict_sampler_only) {
-    if (!length(sampler_params)) {
-      stop("plot_family_rhat_bar: strict_sampler_only=TRUE but no sampler-attached parameters could be derived. ",
-           "Pass sampler_params or provide model/mcmc_conf/samplers_df.")
-    }
-    pp <- pp[pp$parameter %in% sampler_params, , drop = FALSE]
-  } else if (length(sampler_params)) {
-    pp <- pp[pp$parameter %in% sampler_params, , drop = FALSE]
-  }
-
-  family_of <- function(x) sub("\\[.*$", "", x)
-  pp$Family <- family_of(pp$parameter)
-
-  rhat_family <- stats::aggregate(list(median_Rhat = pp$Rhat), by = list(Family = pp$Family),
-                           FUN = function(z) stats::median(z, na.rm = TRUE))
-  rhat_family$y <- pmax(0, rhat_family$median_Rhat - 1)
-
-  ggplot2::ggplot(rhat_family, ggplot2::aes(x = stats::reorder(Family, median_Rhat), y = y)) +
-    ggplot2::geom_bar(stat = "identity", fill = "orange", color = "black") +
-    ggplot2::geom_hline(yintercept = rhat_threshold - 1, linetype = "dashed", color = "red", size = 1) +
-    ggplot2::xlab("Nodes (families)") +
-    ggplot2::ylab("Median Gelman-Rubin Rhat") +
-    ggplot2::theme_bw() +
-    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5)) +
-    ggplot2::scale_y_continuous(limits = c(0, rhat_threshold - 1), labels = function(y) y + 1)
-}
-
-
-#' Histograms for ESS / CE / AE / Rhat (ggplot2)
+#' The function expects a data frame containing at least one numeric column
+#' whose name is supplied via \code{metric}. A histogram is then generated
+#' using a harmonised style consistent with other diagnostic plots in the
+#' package.
+#'
+#' @param bins Integer number of histogram bins (default typically 30).
+#' @param samples A \code{coda::mcmc.list} or compatible object.
+#' @param runtime_s Numeric runtime in seconds (used to compute CE metrics).
+#' @param rhat_thresh Numeric threshold used to flag Rhat deviations.
+#' @param log_x Logical; if \code{TRUE}, x-axis is log-transformed.
+#'
+#' @return A list of \code{ggplot} histograms.
+#'
+#' @return A \code{ggplot} histogram object.
 #'
 #' @export
 #' @importFrom ggplot2 ggplot aes_string geom_histogram labs geom_vline scale_x_continuous
@@ -793,9 +850,38 @@ plot_mcmc_histograms <- function(samples, runtime_s, rhat_thresh = 1.01, bins = 
 }
 
 
-## ---- Internal functions (13) ----
-
-#'@importFrom stats median
+#' Derive sampler-attached parameter names (internal)
+#'
+#' Internal helper used to infer the set of parameters that are effectively
+#' attached to samplers, based on the MCMC samples and, optionally, a model
+#' object and its MCMC configuration.
+#'
+#' Parameters whose names match any of the regular expressions in
+#' \code{ignore_patterns} (for example technical nodes such as \code{"^lifted_"}
+#' or \code{"^logProb_"}) are dropped. When \code{auto_configure} is \code{TRUE},
+#' the function may inspect \code{model} and \code{mcmc_conf} to refine the
+#' list of sampler-attached targets.
+#'
+#' @param samples An object containing MCMC samples (for example an
+#'   \code{mcmc.list}, \code{mcmc}, \code{data.frame}, or \code{matrix}).
+#' @param model Optional model object used to refine the mapping between
+#'   samplers and parameter names (for example a nimble model).
+#' @param mcmc_conf Optional MCMC configuration object associated with
+#'   \code{model}.
+#' @param ignore_patterns Character vector of regular expressions; any parameter
+#'   whose name matches at least one pattern is excluded from the result.
+#' @param auto_configure Logical flag; if \code{TRUE}, additional information
+#'   from \code{model} and \code{mcmc_conf} can be used to derive sampler
+#'   parameters automatically.
+#' @param include_data Logical flag; if \code{FALSE} (default), observed/data
+#'   nodes are excluded from the derived parameter set.
+#'
+#' @return A character vector of parameter names considered as
+#'   sampler-attached targets, possibly with attributes used internally.
+#'
+#' @keywords internal
+#' @noRd
+#' @importFrom stats median
 .derive_sampler_params_auto <- function(samples,
                                         model = NULL,
                                         mcmc_conf = NULL,
@@ -874,11 +960,34 @@ plot_mcmc_histograms <- function(samples, runtime_s, rhat_thresh = 1.01, bins = 
 
 .family_of <- function(x) sub("\\[.*$", "", x)
 
-# ---- core metrics (unchanged) -----------------------------------------------
-# assumes you already have as_mcmc_list() and assess_performance() defined as before
-
-# ---- internal: derive sampler-attached parameters ---------------------------
-#'@importFrom stats median
+#' Derive sampler-attached parameter names (internal)
+#'
+#' Internal helper used to infer the parameter names that are effectively
+#' associated with samplers. The function operates on MCMC samples and may
+#' optionally use a model object and its MCMC configuration for refinement.
+#'
+#' Parameter names matching any pattern in \code{ignore_patterns} (for example
+#' \code{"^lifted_"} or \code{"^logProb_"}) are removed. If
+#' \code{auto_configure = TRUE}, additional inspection of \code{model} or
+#' \code{mcmc_conf} may be performed to determine sampler targets. When
+#' \code{include_data = FALSE}, observed/data nodes are excluded.
+#'
+#' @param samples An object containing MCMC draws (for example an
+#'   \code{mcmc.list}, \code{mcmc}, \code{data.frame}, or \code{matrix}).
+#' @param model Optional model object used to refine sampler-target detection.
+#' @param mcmc_conf Optional MCMC configuration associated with \code{model}.
+#' @param ignore_patterns Character vector of regular expressions specifying
+#'   parameter-name patterns to exclude.
+#' @param auto_configure Logical; if TRUE, the function attempts to derive
+#'   sampler-attached parameters using additional model information.
+#' @param include_data Logical; if FALSE (default), observed/data nodes are
+#'   excluded from the result.
+#'
+#' @return A character vector of inferred sampler-attached parameter names.
+#'
+#' @keywords internal
+#' @noRd
+#' @importFrom stats median
 .derive_sampler_params_auto <- function(samples,
                                         model = NULL,
                                         mcmc_conf = NULL,
@@ -976,102 +1085,99 @@ plot_mcmc_histograms <- function(samples, runtime_s, rhat_thresh = 1.01, bins = 
 
   family_of <- function(x) sub("\\[.*$", "", x)
 
-#' Family-level Rhat bar plot (harmonised style)
-#'
-#' Plots median(Rhat) by family on the y-axis transformed as median_Rhat - 1,
-#' so that the standard convergence threshold 1.05 appears at 0.05 on the axis.
-#'
-#' @param samples mcmc.list/mcmc/data.frame/matrix
-#' @param runtime_s numeric(1) total runtime in seconds
-#' @param sampler_params optional character() to keep only sampler-attached parameters
-#' @param rhat_threshold numeric(1) convergence threshold (default 1.05)
-#' @return a `ggplot` object (or `NULL` if no finite Rhat values)
-#' @export
-#' @importFrom stats median
-plot_family_rhat_bar <- function(samples, runtime_s,
-                                 sampler_params = NULL,
-                                 model = NULL,
-                                 mcmc_conf = NULL,
-                                 samplers_df = NULL,
-                                 ignore_patterns = c("^lifted_","^logProb_"),
-                                 strict_sampler_only = TRUE,
-                                 rhat_threshold = 1.05) {
-  if (!requireNamespace("ggplot2", quietly = TRUE))
-    stop("plot_family_rhat_bar: requires ggplot2.")
-  ap <- assess_performance(samples, runtime_s)
-  pp <- as.data.frame(ap$per_param)
+  #' Family-level R-hat bar plot (harmonised style)
+  #'
+  #' Builds a bar plot of median R-hat by family, using the transformation
+  #' \code{median_Rhat - 1} on the y-axis. With this transformation, the usual
+  #' convergence threshold \code{rhat_threshold = 1.05} appears at \code{0.05}
+  #' on the vertical axis.
+  #'
+  #' Families are defined by the prefix before the first \code{"["} in the
+  #' parameter name (for example \code{"beta[1]"} and \code{"beta[2]"} both
+  #' map to the family \code{"beta"}).
+  #'
+  #' @param samples An object containing MCMC draws (for example an
+  #'   \code{mcmc.list}, \code{mcmc}, \code{data.frame}, or \code{matrix}).
+  #'   It must be compatible with \code{assess_performance()} via
+  #'   \code{as_mcmc_list()}.
+  #' @param runtime_s Numeric scalar; total runtime in seconds for the MCMC
+  #'   run. It is passed to \code{assess_performance()} for consistency.
+  #' @param sampler_params Optional character vector of parameter names to keep.
+  #'   If provided, only those parameters are used to compute family-level
+  #'   median R-hat. If \code{NULL} (default), all parameters in
+  #'   \code{assess_performance(samples, runtime_s)$per_param} are used.
+  #' @param rhat_threshold Numeric convergence threshold for R-hat (default
+  #'   \code{1.05}). A dashed horizontal line is drawn at
+  #'   \code{rhat_threshold - 1} on the transformed scale.
+  #'
+  #' @return
+  #' A \pkg{ggplot2} object representing the bar plot, or \code{NULL} if no
+  #' finite R-hat values are available.
+  #'
+  #' @export
+  #' @importFrom stats median aggregate reorder
+  plot_family_rhat_bar <- function(samples, runtime_s,
+                                   sampler_params = NULL,
+                                   rhat_threshold = 1.05) {
 
-  if (all(!is.finite(pp$Rhat))) return(NULL)
-
-  if (is.null(sampler_params) || !length(sampler_params)) {
-    sampler_params <- derive_sampler_params(samples, model, mcmc_conf, samplers_df,
-                                            include_data = FALSE,
-                                            ignore_patterns = ignore_patterns)
-  }
-  if (strict_sampler_only) {
-    if (!length(sampler_params)) {
-      stop("plot_family_rhat_bar: strict_sampler_only=TRUE but no sampler-attached parameters could be derived. ",
-           "Pass sampler_params or provide model/mcmc_conf/samplers_df.")
+    if (!requireNamespace("ggplot2", quietly = TRUE)) {
+      stop("plot_family_rhat_bar: requires the 'ggplot2' package.")
     }
-    pp <- pp[pp$parameter %in% sampler_params, , drop = FALSE]
-  } else if (length(sampler_params)) {
-    pp <- pp[pp$parameter %in% sampler_params, , drop = FALSE]
+
+    ap <- assess_performance(samples, runtime_s)
+    pp <- as.data.frame(ap$per_param)
+
+    if (!("Rhat" %in% names(pp))) {
+      stop("plot_family_rhat_bar: 'per_param' must contain a 'Rhat' column.")
+    }
+    if (!any(is.finite(pp$Rhat))) {
+      return(NULL)
+    }
+
+    # Optional restriction to a subset of parameters
+    if (!is.null(sampler_params) && length(sampler_params)) {
+      pp <- pp[pp$parameter %in% sampler_params, , drop = FALSE]
+      if (!nrow(pp)) {
+        stop("plot_family_rhat_bar: no parameters left after applying sampler_params filter.")
+      }
+    }
+
+    # Family = prefix before first '['
+    family_of <- function(x) sub("\\[.*$", "", x)
+    pp$Family <- family_of(pp$parameter)
+
+    # Median R-hat by family
+    rhat_family <- stats::aggregate(
+      list(median_Rhat = pp$Rhat),
+      by   = list(Family = pp$Family),
+      FUN  = function(z) stats::median(z, na.rm = TRUE)
+    )
+
+    # Transform to median_Rhat - 1 for plotting
+    rhat_family$y <- pmax(0, rhat_family$median_Rhat - 1)
+
+    ggplot2::ggplot(
+      rhat_family,
+      ggplot2::aes(x = stats::reorder(Family, median_Rhat), y = y)
+    ) +
+      ggplot2::geom_bar(stat = "identity", fill = "orange", color = "black") +
+      ggplot2::geom_hline(
+        yintercept = rhat_threshold - 1,
+        linetype   = "dashed",
+        color      = "red",
+        linewidth  = 1
+      ) +
+      ggplot2::xlab("Nodes (families)") +
+      ggplot2::ylab("Median Gelman-Rubin R-hat") +
+      ggplot2::theme_bw() +
+      ggplot2::theme(
+        axis.text.x = ggplot2::element_text(
+          angle = 90, hjust = 1, vjust = 0.5
+        )
+      ) +
+      ggplot2::scale_y_continuous(
+        limits = c(0, rhat_threshold - 1),
+        labels = function(y) y + 1
+      )
   }
-
-  family_of <- function(x) sub("\\[.*$", "", x)
-  pp$Family <- family_of(pp$parameter)
-
-  rhat_family <- stats::aggregate(list(median_Rhat = pp$Rhat), by = list(Family = pp$Family),
-                           FUN = function(z) stats::median(z, na.rm = TRUE))
-  rhat_family$y <- pmax(0, rhat_family$median_Rhat - 1)
-
-  ggplot2::ggplot(rhat_family, ggplot2::aes(x = stats::reorder(Family, median_Rhat), y = y)) +
-    ggplot2::geom_bar(stat = "identity", fill = "orange", color = "black") +
-    ggplot2::geom_hline(yintercept = rhat_threshold - 1, linetype = "dashed", color = "red", size = 1) +
-    ggplot2::xlab("Nodes (families)") +
-    ggplot2::ylab("Median Gelman-Rubin Rhat") +
-    ggplot2::theme_bw() +
-    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5)) +
-    ggplot2::scale_y_continuous(limits = c(0, rhat_threshold - 1), labels = function(y) y + 1)
-}
-
-
-  ggh <- function(df, xvar, title, vline = NULL, log_x = FALSE){
-    p <- ggplot2::ggplot(df, ggplot2::aes_string(x = xvar)) +
-      ggplot2::geom_histogram(bins = bins, alpha = 0.9) +
-      ggplot2::labs(title = title, x = xvar, y = "count")
-    if (!is.null(vline)) p <- p + ggplot2::geom_vline(xintercept = vline, linetype = 2)
-    if (isTRUE(log_x))   p <- p + ggplot2::scale_x_continuous(trans = "log10")
-    p
-  }
-
-
-  mk_top3 <- function(df, axis_label) {
-    if (is.null(df) || !nrow(df)) return(NULL)
-    k <- min(3L, nrow(df))
-    out <- df[seq_len(k), , drop = FALSE]
-    out$axis <- axis_label
-    out[, intersect(c("axis","parameter","ESS","CE","AE","slow_node_time",
-                      "CE_rank","AE_rank","TIME_rank"), names(out)), drop = FALSE]
-  }
-
-
-  take <- function(ord, k) {
-    idx <- ord[seq_len(min(k, length(ord)))]
-    if (length(idx) == 0L) return(valid[integer(0), ])
-    out <- valid[idx, , drop = FALSE]
-    out$CE_rank   <- CE_rank[idx]
-    out$AE_rank   <- AE_rank[idx]
-    out$TIME_rank <- TIME_rank[idx]
-    out
-  }
-
-
-  to_mlist <- function(x) {
-    if (inherits(x, "mcmc.list")) return(x)
-    if (inherits(x, "mcmc"))      return(coda::mcmc.list(x))
-    if (is.null(x)) return(NULL)
-    coda::mcmc.list(coda::as.mcmc(as.data.frame(x)))
-  }
-
 

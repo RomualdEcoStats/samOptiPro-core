@@ -31,7 +31,8 @@ Must include columns such as \code{target}, \code{Family}, \code{ESS}, \code{ESS
 
 \item{top_k}{Integer; number of worst or best nodes to display (default: \code{20L}).}
 
-\item{rhat_ref}{Numeric; reference threshold for Gelman–Rubin \eqn{\hat{R}} (default: \code{1.05}).}
+\item{rhat_ref}{Numeric; reference threshold for Gelman-Rubin \eqn{\hat{R}}
+(default: \code{1.05}).}
 
 \item{sampled_only}{Logical; if \code{TRUE}, restricts plots to nodes that have an
 explicit sampler in \code{conf.mcmc} and are present in \code{samples_ml}. Default: \code{FALSE}.}
@@ -60,15 +61,21 @@ worst Rhat targets (default: \code{TRUE}).}
 
 \item{make_rhat_median_families}{Logical; if \code{TRUE}, produces an alias
 of the median Rhat-by-family plot (default: \code{TRUE}).}
+
+\item{make_hist_ae_families}{Logical; if \code{TRUE}, draw AE histograms
+by family.}
+
+\item{make_hist_ce_families}{Logical; if \code{TRUE}, draw CE histograms
+by family.}
 }
 \value{
 Invisibly returns a named \code{list} of ggplot objects:
 \itemize{
-\item \code{bar_family_algorithmic_eff} — Median AE by family;
-\item \code{bar_family_computational_eff} — Median CE by family;
-\item \code{bar_target_CE} — Worst targets by CE;
-\item \code{rhat_family_template} — Median Rhat by family;
-\item \code{rhat_worst_targets} — Worst targets by Rhat.
+\item \code{bar_family_algorithmic_eff} - Median AE by family;
+\item \code{bar_family_computational_eff} - Median CE by family;
+\item \code{bar_target_CE} - Worst targets by CE;
+\item \code{rhat_family_template} - Median Rhat by family;
+\item \code{rhat_worst_targets} - Worst targets by Rhat.
 }
 Each plot is also saved in \code{out_dir} as both \code{.pdf} and \code{.png}.
 }
@@ -84,7 +91,7 @@ It produces publication-ready figures of:
 \item Median \emph{Algorithmic Efficiency} (AE = ESS/iter) by node family;
 \item Median \emph{Computational Efficiency} (CE = ESS/s) by node family;
 \item Worst targets by CE (lowest ESS/s);
-\item Median or worst \eqn{\hat{R}} (Gelman–Rubin) by node or family.
+\item Median or worst \eqn{\hat{R}} (Gelman-Rubin) by node or family.
 }
 
 The function saves each plot both as PDF and PNG in the specified output directory.

@@ -7,16 +7,21 @@
 checkInits(model, inits, silent = FALSE)
 }
 \arguments{
-\item{model}{a NIMBLE model object (or function that builds one)}
+\item{model}{A NIMBLE model object, or a function that returns either
+a NIMBLE model or a list containing a \verb{$model} component.}
 
-\item{inits}{list of initial values}
+\item{inits}{List of initial values, typically matching node/variable names
+used in the model.}
 
-\item{silent}{logical}
+\item{silent}{Logical; if FALSE (default), a short diagnostic message is
+emitted before the error is thrown.}
 }
 \value{
-logical TRUE if valid; otherwise throws informative error
+Invisibly returns \code{TRUE} if the initial values are valid; otherwise
+throws an error describing the offending field(s).
 }
 \description{
-Robustly check initial values against a compiled NIMBLE model
+This helper tries to apply a list of initial values to a NIMBLE model and
+fails early with an informative error if something is incompatible.
 }
 \keyword{internal}

@@ -1,0 +1,529 @@
+---
+title: "samOptiPro — Package Overview"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{samOptiPro — Overview}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Overview
+
+This document provides a structured overview of all exported and internal functions of **samOptiPro**.
+
+## Constants
+
+### `.collect_lengths`
+NA
+
+### `.pad_mat_cols`
+NA
+
+### `.pad_vec`
+NA
+
+### `normalize_constants_generic`
+Normalize constants in a model-agnostic way
+
+### `push`
+NA
+
+
+## Diagnostics
+
+### `.add_block`
+NA
+
+### `.add_block_family`
+NA
+
+### `.add_scalar`
+NA
+
+### `.add_scalar_family`
+NA
+
+### `.as_char_vec`
+NA
+
+### `.ask_yes_no_strict`
+NA
+
+### `.barrier_before_block`
+Temporarily switch nimble buildDir (clear compiled & GC)
+
+### `.compile_and_run`
+NA
+
+### `.ensure_unsampled`
+NA
+
+### `.fam_metrics`
+NA
+
+### `.head6`
+NA
+
+### `.is_ll`
+NA
+
+### `.log`
+NA
+
+### `.metrics_for`
+NA
+
+### `.mkdir`
+NA
+
+### `.opt_integer`
+NA
+
+### `.opt_logical`
+NA
+
+### `.print_step`
+NA
+
+### `.prompt_info`
+NA
+
+### `.restore_builddir`
+Restore previous nimble buildDir if it was changed
+
+### `.safe_scalar_targets`
+NA
+
+### `.sanitize_nodes`
+NA
+
+### `.sop_detect_nondiff_functions`
+NA
+
+### `.sop_supports_derivs`
+Check if derivatives/HMC are supported for a nimble model
+
+### `.timed`
+NA
+
+### `.to_family`
+NA
+
+### `compute_diag_from_mcmc`
+Build a standard diagnostics table from a \code{coda::mcmc.list}
+
+### `compute_diag_from_mcmc_vect`
+Compute Diagnostics from MCMC Samples (massively scalable)
+
+### `configure_hmc_safely_bis`
+Configure and run HMC/NUTS safely (global / subset / auto)
+
+### `diagnose_model_structure`
+Diagnose model structure, dependencies, and per-sampler time (parameter- and family-level)
+
+### `diagnostics_by_target`
+Target-level diagnostics (time + optional step-size proxy)
+
+### `get_bound`
+NA
+
+### `get_deps`
+NA
+
+### `get_deps_memo`
+NA
+
+### `get_dist`
+NA
+
+### `get_family_nodes`
+NA
+
+### `get_varinfo_dim`
+NA
+
+### `is_ll`
+NA
+
+### `normalize_dist`
+NA
+
+### `profile_sampler_times`
+Compile (once) and run a NIMBLE MCMC configured in \code{conf}, with
+
+### `profile_sampler_times_uncompiled`
+Uncompiled per-sampler timing (R-level)
+
+### `proxy_step_sd`
+Step proxy: sd(diff(chain)) on columns matching a pattern
+
+### `rebuild_nodes_df`
+NA
+
+### `root_of`
+NA
+
+### `run_structure_and_hmc_test`
+Run structural diagnostics and (optional) HMC/NUTS smoke test
+
+### `safe_time_check`
+NA
+
+### `say`
+NA
+
+### `strip_index`
+NA
+
+### `summarise_showstoppers`
+NA
+
+### `support_of`
+NA
+
+### `test_strategy`
+Test and compare MCMC strategies on selected bottleneck nodes
+
+### `test_strategy_family`
+Family-based sampler strategy: full HMC if allowed, else surgical on bottlenecks
+
+### `test_strategy_family_fast`
+Fast strategy testing for sampler plans (family-level, with optional full-model HMC/NUTS)
+
+### `to_logical`
+NA
+
+### `vmsg`
+NA
+
+
+## HMC Wrappers
+
+### `configure_hmc_safely`
+Configure and run HMC/NUTS safely
+
+
+## Inits / Robustness
+
+### `checkInits`
+Robustly check initial values against a compiled NIMBLE model
+
+### `checkInitsAndRun`
+Check inits then run MCMC
+
+
+## Misc
+
+### `.avail_vars`
+Available variable roots present in a model
+
+### `.compile_mcmc_with_build`
+Compile a nimble MCMC for a given build object
+
+### `.configure_with_monitors`
+Build a configureMCMC with sanitized/expanded monitors
+
+### `.default_sanitize_roots`
+Discover default monitors from a nimble model (variable-level)
+
+### `.derive_sampler_params_auto`
+NA
+
+### `.derive_sampler_params_from_conf`
+NA
+
+### `.family_of`
+NA
+
+### `.is_ignored`
+NA
+
+### `.plot_rhat_bar`
+Save a bar chart of R-hat for selected nodes
+
+### `.plot_traces`
+Save trace plots for a set of nodes
+
+### `.print_monitors`
+Pretty-print selected monitors (optional)
+
+### `.reorder_cols_family`
+NA
+
+### `.reorder_cols_param`
+NA
+
+### `.sample_cols`
+NA
+
+### `.sop_cbind_align`
+Bind two matrices by rows count (truncate to common minimum)
+
+### `.sop_detect_chain_prefix`
+Detect chain prefix "chainK." in column names
+
+### `.sop_expand_roots_to_nodes`
+Expand many roots to nodes
+
+### `.sop_expand_var_nodes`
+Expand one root to nodes via getVarInfo()
+
+### `.sop_get_uncompiled_model`
+Return the R-level (uncompiled) nimble model when given either R or compiled model
+
+### `.sop_has_model_api`
+Heuristic check that an object exposes nimble model API
+
+### `.sop_is_chol_ok`
+Cholesky check
+
+### `.sop_is_model`
+Is this a nimble model?
+
+### `.sop_make_propCov_PD`
+Try to make a symmetric matrix positive definite (nearPD/shrinkage/jitter)
+
+### `.sop_max`
+NA
+
+### `.sop_sanitize_roots`
+Sanitize monitor roots (drop numerics & empties)
+
+### `.sop_split_into_blocks`
+Correlation-based clustering into compact blocks
+
+### `.sop_strip_chain_prefix`
+Strip "chainK." prefix from column names
+
+### `agg`
+NA
+
+### `as_mcmc_list`
+Convert an object to `mcmc.list`
+
+### `as_mcmc_list_sop`
+Convert various sample formats to coda::mcmc.list (optionally merging samples2)
+
+### `assess_performance`
+Compute per-parameter and global performance diagnostics from an MCMC
+
+### `compute_WAIC`
+Compute WAIC from coda samples that include logLik[] columns
+
+### `customize_samplers`
+NA
+
+### `default_monitors`
+NA
+
+### `ensure_monitors_exist`
+Ensure monitors exist on the model (variable-aware)
+
+### `family_of`
+NA
+
+### `ggh`
+NA
+
+### `has_fun`
+NA
+
+### `identify_bottlenecks`
+NA
+
+### `identify_bottlenecks_family`
+Identify bottlenecks by parameter stats::family(medians within families)
+
+### `merge_mcmc_samples`
+Merge `res$samples` and `res$samples2` into a single `mcmc.list`
+
+### `mk_top3`
+NA
+
+### `plot_family_ess_bar`
+Family-level ESS bar plot (harmonised style)
+
+### `plot_family_rhat_bar`
+Family-level Rhat bar plot (harmonised style)
+
+### `plot_mcmc_histograms`
+Histograms for ESS / CE / AE / Rhat (ggplot2)
+
+### `strip_loglik_cols`
+NA
+
+### `take`
+NA
+
+### `time_it`
+NA
+
+### `to_mlist`
+NA
+
+
+## Plots
+
+### `.derive_sampler_targets_fast`
+NA
+
+### `.family_from_fast`
+NA
+
+### `.ggsave`
+NA
+
+### `.mk_dir`
+NA
+
+### `agg_safe`
+NA
+
+### `as_num`
+NA
+
+### `enrich_hmc_diag_tbl_for_plots`
+NA
+
+### `flatten_chr`
+NA
+
+### `get_param_df`
+NA
+
+### `get_sampler_targets`
+NA
+
+### `headn`
+NA
+
+### `mk_plot_all`
+NA
+
+### `mk_plot_step`
+NA
+
+### `mk_trace_density`
+NA
+
+### `pick_rhat`
+NA
+
+### `pick_vec`
+NA
+
+### `plot_bottlenecks`
+Plot MCMC Bottlenecks by Node or Family
+
+### `plot_bottlenecks_fast`
+Fast bottleneck plots (samplers-only) for large models
+
+### `plot_bottlenecks_index`
+Plot diagnostics for stochastic sampler targets (strict) + all-nodes panels
+
+### `plot_convergence_checks`
+Plot convergence diagnostics (R-hat & traces) with family-level R-hat bars
+
+### `plot_convergence_rhat_sampled_fast`
+Fast convergence plots for R-hat (samplers-only), thresholded
+
+### `plot_strategies_from_test_result_fast`
+Plot strategy comparisons from test_strategy_family_fast results (fast path)
+
+### `plot_strategies_from_test_result_hmc_fast`
+@export
+
+### `save_fig`
+NA
+
+
+## Runners
+
+### `.fresh_build`
+NA
+
+### `.merge_mcmc`
+NA
+
+### `.run_and_collect`
+NA
+
+### `.safe_as_mcmc_list`
+NA
+
+### `build_conf_with_monitors`
+Build a fresh MCMC configuration with automatic monitors if missing
+
+### `grab_mcpar`
+NA
+
+### `run_baseline_coda`
+Run baseline et retourne un mcmc.list fusionne (samples + samples2)
+
+### `run_baseline_config`
+Run baseline RW/Slice with robust compile/run
+
+### `run_hmc_all_nodes`
+Run HMC/NUTS where possible; fallback samplers for uncovered nodes
+
+
+## Samplers Utilities
+
+### `.as_list_safe`
+NA
+
+### `.get_targets`
+NA
+
+### `.get_type`
+NA
+
+### `.us_configure_with_monitors`
+NA
+
+### `.us_expand_compact_node`
+Expand a compact node Character scalar, e.g. `p[1, 1:3]` into explicit indices (numeric only)
+
+### `.us_expand_vars_to_nodes`
+Expand variable roots (e.g. "beta") to explicit node names using model metadata
+
+### `.us_sanitize_monitors`
+Drop numeric junk & control tokens from monitors
+
+### `.us_tokenize_monitors`
+Tokenize a monitors specification into clean symbols
+
+### `sampler_df`
+Return a data.frame (name, type, target, scale) from a sampler container.
+
+### `sampler_df_from_conf`
+Convenience: directly return sampler_df from an existing conf.
+
+### `sampler_env_dump`
+Long data.frame of sampler env numeric fields
+
+### `sampler_env_numeric_fields`
+Numeric scalar fields in the environment of each compiled sampler function
+
+### `sampler_functions_from_conf`
+Build and compile an MCMC from a conf to access samplerFunctions.
+
+### `sampler_scale`
+Extract a numeric scale proxy from a sampler object.
+
+### `sampler_scales_after_run`
+Extract sampler scales after a short adaptive run.
+
+### `sampler_scales_from_run`
+Preferred: read scales from a fresh samplerConf list (pre-run).
+
+### `sampler_targets`
+Targets (node names) for each sampler in a MCMC configuration
+
+### `sanitize_roots`
+NA
+
+### `var_to_nodes`
+NA
+
+

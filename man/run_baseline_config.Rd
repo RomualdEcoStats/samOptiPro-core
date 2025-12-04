@@ -2,9 +2,7 @@
 % Please edit documentation in R/runners.R
 \name{run_baseline_config}
 \alias{run_baseline_config}
-\title{Run baseline RW/Slice with robust compile/run
-Complete, robust version with safe opts resolution and fixed parallel loading
-Run a baseline MCMC configuration safely (sequential or parallel)}
+\title{Run a baseline RW/slice configuration (sequential)}
 \usage{
 run_baseline_config(
   build_fn,
@@ -17,35 +15,27 @@ run_baseline_config(
 )
 }
 \arguments{
-\item{build_fn}{Function with no args that, when called via .fresh_build(build_fn, ...),
-returns list(conf = \if{html}{\out{<MCMCconf>}}, cmodel = \if{html}{\out{<model or compiled model>}}).}
+\item{build_fn}{Function with no arguments that returns a list with at
+least \code{model}, \code{cmodel} and \code{conf}, or a builder that
+is passed to an internal fresh-build wrapper.}
 
-\item{niter, nburnin, thin}{MCMC schedule.}
+\item{niter}{Total number of MCMC iterations.}
 
-\item{monitors}{Character vector or NULL (passed to .fresh_build()).}
+\item{nburnin}{Number of initial iterations discarded as burn-in.}
 
-\item{nchains}{Integer number of chains.}
+\item{thin}{Thinning interval (keep 1 draw every \code{thin} iterations).}
 
-\item{opts}{Optional list of options (resolved like samOptiPro_options()).}
+\item{monitors}{Optional character vector of monitor roots; if \code{NULL},
+default monitors are inferred.}
 
-\item{parallel}{Logical; if TRUE and nchains > 1, run 1 chain per worker.}
+\item{nchains}{Integer; number of chains to run in \code{runMCMC}.}
 
-\item{parallel_type}{"psock" or "fork".}
-
-\item{quiet}{Silence outputs/messages (also prevents progress bars).}
-
-\item{return_samples}{If FALSE, stream to CSV on disk (huge RAM savings).}
-
-\item{out_dir}{Where to write streamed CSVs when return_samples = FALSE.}
+\item{opts}{List of options as returned by \code{samOptiPro_options()}.}
 }
 \value{
-list(samples, samples2, runtime_s, conf, csv_files)
-\itemize{
-\item If return_samples = FALSE, samples/samples2 are NULL and csv_files lists per-chain paths.
-}
+A list with components \code{samples}, \code{samples2},
+\code{runtime_s} and \code{conf}.
 }
 \description{
-Run baseline RW/Slice with robust compile/run
-Complete, robust version with safe opts resolution and fixed parallel loading
-Run a baseline MCMC configuration safely (sequential or parallel)
+Run a baseline RW/slice configuration (sequential)
 }

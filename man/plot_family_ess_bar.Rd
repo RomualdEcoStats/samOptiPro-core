@@ -16,16 +16,39 @@ plot_family_ess_bar(
 )
 }
 \arguments{
-\item{samples}{mcmc.list/mcmc/data.frame/matrix}
+\item{samples}{An object that can be converted to an \code{mcmc.list}
+(e.g., \code{mcmc.list}, \code{mcmc}, \code{data.frame}, or
+\code{matrix}).}
 
-\item{runtime_s}{numeric(1) total runtime in seconds (used to compute CE/AE if needed elsewhere)}
+\item{runtime_s}{Numeric scalar giving the total runtime in seconds.
+This value is not used directly inside the plot, but is kept for
+API consistency.}
 
-\item{sampler_params}{optional character() to keep only sampler-attached parameters}
+\item{sampler_params}{Optional character vector; if supplied, only
+parameters listed here are used when computing family-level ESS.}
+
+\item{model}{A \code{nimbleModel}.}
+
+\item{mcmc_conf}{Optional MCMC configuration; if \code{NULL}, one is built.}
+
+\item{samplers_df}{Optional data.frame describing samplers (type/target).}
+
+\item{ignore_patterns}{Optional character vector of patterns to exclude
+some families.}
+
+\item{strict_sampler_only}{Logical; if \code{TRUE}, only nodes actually
+sampled are considered.}
 }
 \value{
-a \code{ggplot} object
+A \code{ggplot} object representing median ESS per family.
 }
 \description{
-Builds a bar plot of median ESS by family with a dashed horizontal line at the 5\% quantile.
-The style mirrors the example you provided (fill, labels, themes, rotations).
+Produce a bar plot showing the median Effective Sample Size (ESS)
+for each parameter family. A horizontal dashed line indicates the
+5 percent quantile of ESS across all families.
+}
+\details{
+Families are defined by the substring before the first "[" in
+each parameter name. If \code{sampler_params} is provided, only
+parameters included in that vector are used when forming families.
 }

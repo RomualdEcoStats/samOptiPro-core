@@ -2,7 +2,7 @@
 % Please edit documentation in R/runners.R
 \name{run_hmc_all_nodes}
 \alias{run_hmc_all_nodes}
-\title{Run HMC/NUTS where possible; fallback samplers for uncovered nodes}
+\title{Run HMC/NUTS on all eligible nodes with slice fallback}
 \usage{
 run_hmc_all_nodes(
   build_fn,
@@ -14,6 +14,27 @@ run_hmc_all_nodes(
   opts = samOptiPro_options()
 )
 }
+\arguments{
+\item{build_fn}{Function with no arguments returning a list with
+\code{model}, optional \code{cmodel}, and optional \code{monitors}.}
+
+\item{niter}{Total number of MCMC iterations.}
+
+\item{nburnin}{Number of burn-in iterations discarded.}
+
+\item{thin}{Thinning interval (keep 1 draw every \code{thin} iterations).}
+
+\item{monitors}{Optional character vector of monitor roots; if \code{NULL},
+defaults are inferred.}
+
+\item{nchains}{Integer; number of chains for \code{runMCMC}.}
+
+\item{opts}{List of options as returned by \code{samOptiPro_options()}.}
+}
+\value{
+A list with \code{samples}, \code{samples2}, \code{runtime_s},
+\code{conf}, and a logical \code{hmc_applied} flag.
+}
 \description{
-Run HMC/NUTS where possible; fallback samplers for uncovered nodes
+Run HMC/NUTS on all eligible nodes with slice fallback
 }

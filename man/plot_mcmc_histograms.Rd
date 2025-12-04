@@ -2,7 +2,7 @@
 % Please edit documentation in R/assess.R
 \name{plot_mcmc_histograms}
 \alias{plot_mcmc_histograms}
-\title{Histograms for ESS / CE / AE / Rhat (ggplot2)}
+\title{Histograms for ESS, CE, AE, and Rhat}
 \usage{
 plot_mcmc_histograms(
   samples,
@@ -12,6 +12,31 @@ plot_mcmc_histograms(
   log_x = TRUE
 )
 }
+\arguments{
+\item{samples}{A \code{coda::mcmc.list} or compatible object.}
+
+\item{runtime_s}{Numeric runtime in seconds (used to compute CE metrics).}
+
+\item{rhat_thresh}{Numeric threshold used to flag Rhat deviations.}
+
+\item{bins}{Integer number of histogram bins (default typically 30).}
+
+\item{log_x}{Logical; if \code{TRUE}, x-axis is log-transformed.}
+}
+\value{
+A list of \code{ggplot} histograms.
+
+A \code{ggplot} histogram object.
+}
 \description{
-Histograms for ESS / CE / AE / Rhat (ggplot2)
+Produce histogram plots (via \code{ggplot2}) for a single metric such as
+Effective Sample Size (ESS), Computational Efficiency (CE = ESS/s),
+Algorithmic Efficiency (AE = ESS per draw), or the Gelman-Rubin statistic
+Rhat (often shifted as \code{Rhat - 1} for visual clarity).
+}
+\details{
+The function expects a data frame containing at least one numeric column
+whose name is supplied via \code{metric}. A histogram is then generated
+using a harmonised style consistent with other diagnostic plots in the
+package.
 }

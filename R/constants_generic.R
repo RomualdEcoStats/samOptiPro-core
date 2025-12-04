@@ -2,10 +2,6 @@
 #' @keywords internal
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
-
-
-## ---- Exported functions (1) ----
-
 #' Normalize constants in a model-agnostic way
 #' @param Const list of constants
 #' @param n_rule "min"|"nyear"|"max"

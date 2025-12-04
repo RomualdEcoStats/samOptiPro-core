@@ -30,6 +30,10 @@ test_strategy_family_fast(
 )
 }
 \arguments{
+\item{build_fn}{A model builder (function) or a pre-built list with at least
+\code{$model} and \code{$conf}. If a list is provided, it is wrapped to behave
+like a builder.}
+
 \item{monitors}{Character vector of monitors passed to runs (optional; forwarded).}
 
 \item{try_hmc}{Logical; if \code{TRUE}, attempt full-model NUTS via
@@ -98,9 +102,8 @@ diagnostics robustly for large hierarchical models.
 \strong{Pipeline}
 \enumerate{
 \item Fresh build via internal helpers (e.g., \code{.fresh_build()}), then a short \strong{baseline}
-run with \code{run_baseline_config()} to compute diagnostics (AE, CE, Rhat) using
-\code{compute_diag_from_mcmc_vect()} when available (falls back to
-\code{compute_diag_from_mcmc()}).
+run with \code{run_baseline_config()} to compute diagnostics (AE, CE, Rhat)
+using \code{compute_diag_from_mcmc_vect()}.
 \item If \code{try_hmc = TRUE} and the model supports differentiability (no blocking
 features such as hard truncations/simplex/non-diff ops) and \pkg{nimbleHMC}
 is installed, the function can \strong{attempt full-model NUTS} via
@@ -132,16 +135,14 @@ from the baseline samples; capped by \code{block_max}).
 \item Ignores likelihood-like targets when scoring families (\code{logLik}, \code{log_lik},
 \code{logdens}, \code{lpdf}) and internal nodes (\code{lifted_}, \code{logProb_}).
 \item Handles \code{NA} in diagnostics gracefully.
-
-and \code{$conf}. If a list is provided, it is wrapped to behave like a builder.
 }
 }
 \section{Diagnostics}{
 
 Diagnostics are computed per target and summarized per family using
 \itemize{
-\item AE = median ESS per iteration (AE\_ESS\_per\_it),
-\item CE = median ESS per second (ESS\_per\_sec),
+\item AE = median ESS per iteration (AE_ESS_per_it),
+\item CE = median ESS per second (ESS_per_sec),
 \item \eqn{\hat{R}} = max Rhat per group.
 }
 }

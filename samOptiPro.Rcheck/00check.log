@@ -1,0 +1,190 @@
+* using log directory ‘/home/hounyeme/samOptiPro_packages_dev/samOptiPro/samOptiPro.Rcheck’
+* using R version 4.4.2 (2024-10-31)
+* using platform: x86_64-pc-linux-gnu
+* R was compiled by
+    gcc (GCC) 11.3.1 20220421 (Red Hat 11.3.1-3)
+    GNU Fortran (GCC) 11.3.1 20220421 (Red Hat 11.3.1-3)
+* running under: Fedora Linux 35 (Server Edition)
+* using session charset: UTF-8
+* using option ‘--as-cran’
+* checking for file ‘samOptiPro/DESCRIPTION’ ... OK
+* checking extension type ... Package
+* this is package ‘samOptiPro’ version ‘0.1.0’
+* package encoding: UTF-8
+* checking CRAN incoming feasibility ... [4s/12s] NOTE
+Maintainer: ‘Romuald Hounyeme <romuald.hounyeme@agrocampus-ouest.fr>’
+
+New submission
+* checking package namespace information ... OK
+* checking package dependencies ... OK
+* checking if this is a source package ... OK
+* checking if there is a namespace ... OK
+* checking for executable files ... OK
+* checking for hidden files and directories ... OK
+* checking for portable file names ... OK
+* checking for sufficient/correct file permissions ... OK
+* checking whether package ‘samOptiPro’ can be installed ... OK
+* checking installed package size ... OK
+* checking package directory ... OK
+* checking for future file timestamps ... OK
+* checking ‘build’ directory ... OK
+* checking DESCRIPTION meta-information ... OK
+* checking top-level files ... OK
+* checking for left-over files ... OK
+* checking index information ... OK
+* checking package subdirectories ... OK
+* checking code files for non-ASCII characters ... WARNING
+Found the following files with non-ASCII characters:
+  R/plots.R
+  R/zzz_monitors_helpers.R
+Portable packages must use only ASCII characters in their R code and
+NAMESPACE directives, except perhaps in comments.
+Use \uxxxx escapes for other characters.
+Function ‘tools::showNonASCIIfile’ can help in finding non-ASCII
+characters in files.
+* checking R files for syntax errors ... OK
+* checking whether the package can be loaded ... OK
+* checking whether the package can be loaded with stated dependencies ... OK
+* checking whether the package can be unloaded cleanly ... OK
+* checking whether the namespace can be loaded with stated dependencies ... OK
+* checking whether the namespace can be unloaded cleanly ... OK
+* checking loading without being on the library search path ... OK
+* checking use of S3 registration ... OK
+* checking dependencies in R code ... NOTE
+Espaces de noms dans le champ Imports non importés depuis :
+  ‘dplyr’ ‘ggrepel’ ‘magrittr’ ‘methods’ ‘purrr’ ‘stringr’
+  All declared Imports should be used.
+Objet manquant ou non exporté : ‘nimble::setInits’
+* checking S3 generic/method consistency ... OK
+* checking replacement functions ... OK
+* checking foreign function calls ... OK
+* checking R code for possible problems ... [17s/17s] NOTE
+.configure_with_monitors: no visible global function definition for
+  ‘samOptiPro_options’
+.fresh_build: no visible global function definition for
+  ‘samOptiPro_options’
+build_conf_with_monitors: no visible global function definition for
+  ‘samOptiPro_options’
+checkInits: no visible global function definition for ‘msg’
+default_monitors: no visible global function definition for
+  ‘samOptiPro_options’
+diagnostics_by_target: no visible global function definition for
+  ‘samOptiPro_options’
+mk_plot_all: no visible global function definition for ‘:=’
+mk_plot_step: no visible global function definition for ‘:=’
+mk_trace_density: no visible global function definition for
+  ‘get_param_df’
+plot_family_ess_bar: no visible global function definition for
+  ‘derive_sampler_params’
+plot_strategies_from_test_result_fast: no visible global function
+  definition for ‘:=’
+plot_strategies_from_test_result_fast : mk_plot_all: no visible global
+  function definition for ‘:=’
+plot_strategies_from_test_result_fast : mk_plot_step: no visible global
+  function definition for ‘:=’
+run_baseline_coda: no visible global function definition for
+  ‘samOptiPro_options’
+run_baseline_config: no visible global function definition for
+  ‘samOptiPro_options’
+run_hmc_all_nodes: no visible global function definition for
+  ‘samOptiPro_options’
+test_strategy: no visible binding for global variable ‘itB’
+var_to_nodes: no visible binding for global variable ‘model’
+Undefined global functions or variables:
+  := derive_sampler_params get_param_df itB model msg
+  samOptiPro_options
+* checking Rd files ... NOTE
+checkRd: (-1) test_strategy_family.Rd:145: Escaped LaTeX specials: \_ \_ \_
+checkRd: (-1) test_strategy_family.Rd:146: Escaped LaTeX specials: \_ \_
+checkRd: (-1) test_strategy_family_fast.Rd:144: Escaped LaTeX specials: \_ \_ \_
+checkRd: (-1) test_strategy_family_fast.Rd:145: Escaped LaTeX specials: \_ \_
+* checking Rd metadata ... OK
+* checking Rd line widths ... OK
+* checking Rd cross-references ... OK
+* checking for missing documentation entries ... OK
+* checking for code/documentation mismatches ... OK
+* checking Rd \usage sections ... WARNING
+Documented arguments not in \usage in Rd file 'dot-default_sanitize_roots.Rd':
+  ‘model’ ‘opts’
+
+Undocumented arguments in Rd file 'identify_bottlenecks_family.Rd'
+  ‘model’ ‘mcmc_conf’ ‘ignore_patterns’ ‘strict_sampler_only’
+  ‘auto_configure’
+
+Undocumented arguments in Rd file 'plot_bottlenecks.Rd'
+  ‘make_hist_ae_families’ ‘make_hist_ce_families’
+
+Undocumented arguments in Rd file 'plot_bottlenecks_index.Rd'
+  ‘make_bar_ce_median_all’ ‘make_bar_ce_worst_all’ ‘make_bar_ess_q5’
+  ‘make_hist_ce’ ‘make_hist_ae’
+
+Undocumented arguments in Rd file 'plot_family_ess_bar.Rd'
+  ‘model’ ‘mcmc_conf’ ‘samplers_df’ ‘ignore_patterns’
+  ‘strict_sampler_only’
+
+Undocumented arguments in Rd file 'plot_mcmc_histograms.Rd'
+  ‘samples’ ‘runtime_s’ ‘rhat_thresh’ ‘log_x’
+Documented arguments not in \usage in Rd file 'plot_mcmc_histograms.Rd':
+  ‘df’ ‘metric’ ‘vline’
+
+Undocumented arguments in Rd file 'plot_strategies_from_test_result_fast.Rd'
+  ‘export_rds’
+Documented arguments not in \usage in Rd file 'plot_strategies_from_test_result_fast.Rd':
+  ‘export_csv’
+
+Undocumented arguments in Rd file 'plot_strategies_from_test_result_hmc_fast.Rd'
+  ‘res’ ‘out_dir’ ‘per’ ‘top_k’ ‘top_by’ ‘show_rhat_label’
+
+Documented arguments not in \usage in Rd file 'run_baseline_config.Rd':
+  ‘parallel’ ‘parallel_type’ ‘quiet’ ‘return_samples’ ‘out_dir’
+
+Undocumented arguments in Rd file 'run_hmc_all_nodes.Rd'
+  ‘build_fn’ ‘niter’ ‘nburnin’ ‘thin’ ‘monitors’ ‘nchains’ ‘opts’
+
+Functions with \usage entries need to have the appropriate \alias
+entries, and all their arguments documented.
+The \usage entries must correspond to syntactically valid R code.
+See chapter ‘Writing R documentation files’ in the ‘Writing R
+Extensions’ manual.
+* checking Rd contents ... OK
+* checking for unstated dependencies in examples ... OK
+* checking installed files from ‘inst/doc’ ... OK
+* checking files in ‘vignettes’ ... OK
+* checking examples ... OK
+* checking for unstated dependencies in vignettes ... OK
+* checking package vignettes ... OK
+* checking re-building of vignette outputs ... OK
+* checking PDF version of manual ... WARNING
+LaTeX errors when creating PDF version.
+This typically indicates Rd problems.
+LaTeX errors found:
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+* checking PDF version of manual without index ... ERROR
+* checking HTML version of manual ... NOTE
+Skipping checking HTML validation: no command 'tidy' found
+Skipping checking math rendering: package 'V8' unavailable
+* checking for non-standard things in the check directory ... NOTE
+Found the following files/directories:
+  ‘samOptiPro-manual.tex’
+* checking for detritus in the temp directory ... OK
+* DONE
+Status: 1 ERROR, 3 WARNINGs, 6 NOTEs

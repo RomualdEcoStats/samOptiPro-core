@@ -17,57 +17,63 @@ plot_strategies_from_test_result_fast(
 )
 }
 \arguments{
-\item{res}{A result object from \code{\link[=test_strategy_family_fast]{test_strategy_family_fast()}} or
-\code{\link[=configure_hmc_safely]{configure_hmc_safely()}} containing baseline/steps/HMC diagnostics.}
+\item{res}{Result object from \code{test_strategy_family_fast()} or
+\code{configure_hmc_safely()} containing baseline/steps/HMC diagnostics.}
 
-\item{out_dir}{Output directory for plots (created if missing).}
+\item{out_dir}{Output directory for plots; created if it does not exist.}
 
 \item{per}{Aggregation level: \code{"target"} or \code{"family"}.}
 
-\item{top_k}{Integer; number of keys (targets or families) to keep for plotting
-based on \code{top_by}. Use a large number to keep all.}
+\item{top_k}{Integer; number of keys (targets or families) kept for
+plotting based on \code{top_by}. Use a large number to keep all.}
 
 \item{top_by}{Selection metric for top-k: \code{"CE"} or \code{"AE"}.}
 
-\item{width, height, dpi}{Plot export parameters passed to \code{ggsave()}.}
+\item{export_rds}{Logical; if \code{TRUE}, writes a rds summary in
+\code{out_dir}.}
 
-\item{export_csv}{Logical; if \code{TRUE}, writes a CSV summary at \code{out_dir}.}
+\item{width, height, dpi}{Plot export parameters passed to \code{ggsave()}.}
 }
 \value{
-(Invisibly) a list with:
+Invisibly, a list with components:
 \describe{
 \item{data}{\code{data.table} of aggregated metrics used for plotting.}
 \item{out_dir}{Output directory path.}
-\item{plots_all}{A list of ggplot objects for AE/CE/Rhat global charts.}
+\item{plots_all}{List of \code{ggplot} objects for the global AE/CE/Rhat
+charts.}
 }
 }
 \description{
 Fast plotting utility to compare sampler strategies (scalar and block plans,
 including optional full-model HMC) using median efficiency metrics computed
 per target or per family. Designed to work with objects returned by
-\code{\link[=test_strategy_family_fast]{test_strategy_family_fast()}} and \code{\link[=configure_hmc_safely]{configure_hmc_safely()}}.
+\code{test_strategy_family_fast()} and \code{configure_hmc_safely()}.
 }
 \details{
-The function consumes \code{res} objects that contain:
+The function consumes \code{res} objects that typically contain:
 \itemize{
-\item \code{baseline$diag_tbl} \strong{or} (\code{baseline$samples}, \code{baseline$runtime_s})
-\item a list of \code{steps} with per-step diagnostics under \code{steps[[i]]$res$dg}
-\item optionally, \code{mode == "HMC_full"} with \code{hmc$diag_tbl}.
+\item \code{baseline$diag_tbl} \emph{or} (\code{baseline$samples},
+\code{baseline$runtime_s});
+\item a list of \code{steps} with per-step diagnostics stored in
+\code{steps[[i]]$res$dg};
+\item optionally, a full-model HMC mode (for instance
+\code{mode == "HMC_full"}) with \code{hmc$diag_tbl}.
 }
 
-When diagnostics are missing but samples/runtime are provided, the function
-prefers \code{compute_diag_from_mcmc_vect()} (vectorized) and falls back to
-\code{compute_diag_from_mcmc()} if needed (both assumed available in your package).
+When diagnostics are missing but samples and runtime are available, the
+function first tries \code{compute_diag_from_mcmc_vect()} (vectorised
+diagnostics) and falls back to \code{compute_diag_from_mcmc()} if needed.
 
-Filtering removes likelihood-like targets (\code{logLik}, \code{log_lik}, \code{logdens},
-\code{lpdf}) and internal/generated nodes (\code{lifted_}, \code{logProb_}). If the \code{Family}
-column is absent, it is derived as the root prefix of \code{target}.
+Filtering removes likelihood-like targets (\code{logLik}, \code{log_lik},
+\code{logdens}, \code{lpdf}) and internal/generated nodes
+(\code{lifted_}, \code{logProb_}). If the \code{Family} column is absent,
+it is derived as the root prefix of \code{target}.
 
 Plots include:
 \itemize{
-\item Global bar charts across steps for AE (ESS/iteration), CE (ESS/second),
-and \eqn{\hat{R}} (max per key);
-\item Per-step bar charts for the same metrics.
+\item global bar charts across steps for AE (ESS per iteration),
+CE (ESS per second), and max Rhat per key;
+\item per-step bar charts for the same metrics.
 }
 }
 \section{Metrics}{
@@ -75,17 +81,34 @@ and \eqn{\hat{R}} (max per key);
 \itemize{
 \item AE = median(ESS per iteration) over the aggregation key;
 \item CE = median(ESS per second) over the aggregation key;
-\item Rhat = max(\eqn{\hat{R}}) over the aggregation key.
+\item Rhat = max(Rhat) over the aggregation key.
 }
 }
 
 \examples{
 \dontrun{
-res <- test_strategy_family_fast(build_fn = build_M, nbot = 2, try_hmc = TRUE)
-plot_strategies_from_test_result_fast(res, per = "family", top_k = 30, top_by = "CE")
+  ## Minimal sketch (requires a valid build_fn defined in your session)
+  ## build_M <- function() {
+  ##   # return a list(model = <nimbleModel>, cmodel = <compiled model>,
+  ##   #              monitors = c("theta", "N", "logit_theta"))
+  ## }
+  ##
+  ## res <- test_strategy_family_fast(
+  ##   build_fn = build_M,
+  ##   nbot     = 2,
+  ##   try_hmc  = TRUE
+  ## )
+  ##
+  ## plot_strategies_from_test_result_fast(
+  ##   res    = res,
+  ##   per    = "family",
+  ##   top_k  = 30,
+  ##   top_by = "CE"
+  ## )
 }
- @export
+
 }
 \seealso{
-\code{\link[=test_strategy_family_fast]{test_strategy_family_fast()}}, \code{\link[=configure_hmc_safely]{configure_hmc_safely()}}
+\code{\link{test_strategy_family_fast}},
+\code{\link{configure_hmc_safely}}
 }

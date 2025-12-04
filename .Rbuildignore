@@ -13,3 +13,5 @@
 ^docs$
 ^pkgdown$
 ^\.github$
+^Tutorial_M3b\.Rmd$
+^outputs$

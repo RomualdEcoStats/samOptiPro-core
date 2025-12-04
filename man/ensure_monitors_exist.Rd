@@ -15,7 +15,6 @@ ensure_monitors_exist(model, monitors)
 sous-ensemble valide de \code{monitors}, avec warning soft si certains manquent
 }
 \description{
-Valide une liste de monitors donnee au NIVEAU VARIABLE (sans indices).
-Ne "coupe" plus selon les noeuds indexes ; on verifie juste que la VARIABLE existe.
+Ensure monitors exist on the model (variable-aware)
 }
 \keyword{internal}

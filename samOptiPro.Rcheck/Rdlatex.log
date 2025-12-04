@@ -1,0 +1,983 @@
+Hmm ... looks like a package
+Converting parsed Rd's to LaTeX .......
+Creating pdf output from LaTeX ...
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex)
+ restricted \write18 enabled.
+entering extended mode
+(./Rd2.tex
+LaTeX2e <2020-10-01> patch level 4
+L3 programming layer <2021-05-07>
+(/usr/share/texlive/texmf-dist/tex/latex/base/book.cls
+Document Class: book 2020/04/10 v1.4m Standard LaTeX document class
+(/usr/share/texlive/texmf-dist/tex/latex/base/bk10.clo))
+(/usr/local/lib64/R/share/texmf/tex/latex/Rd.sty
+(/usr/share/texlive/texmf-dist/tex/latex/base/ifthen.sty)
+(/usr/share/texlive/texmf-dist/tex/generic/iftex/iftex.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/tools/longtable.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/tools/bm.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/base/alltt.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/tools/verbatim.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/url/url.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/base/textcomp.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?' option.
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amstext.sty
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/amsfonts.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/amssymb.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/jknapltx/mathrsfs.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/base/fontenc.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/times.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/color.sty
+(/usr/share/texlive/texmf-dist/tex/latex/graphics-cfg/color.cfg)
+(/usr/share/texlive/texmf-dist/tex/latex/graphics-def/pdftex.def))
+(/usr/share/texlive/texmf-dist/tex/latex/hyperref/hyperref.sty
+(/usr/share/texlive/texmf-dist/tex/generic/ltxcmds/ltxcmds.sty)
+(/usr/share/texlive/texmf-dist/tex/generic/pdftexcmds/pdftexcmds.sty
+(/usr/share/texlive/texmf-dist/tex/generic/infwarerr/infwarerr.sty))
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/keyval.sty)
+(/usr/share/texlive/texmf-dist/tex/generic/kvsetkeys/kvsetkeys.sty)
+(/usr/share/texlive/texmf-dist/tex/generic/kvdefinekeys/kvdefinekeys.sty)
+(/usr/share/texlive/texmf-dist/tex/generic/pdfescape/pdfescape.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/hycolor/hycolor.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/letltxmacro/letltxmacro.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/auxhook/auxhook.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/kvoptions/kvoptions.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/hyperref/pd1enc.def)
+(/usr/share/texlive/texmf-dist/tex/latex/hyperref/hyperref-langpatches.def)
+(/usr/share/texlive/texmf-dist/tex/generic/intcalc/intcalc.sty)
+(/usr/share/texlive/texmf-dist/tex/generic/etexcmds/etexcmds.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/hyperref/puenc.def)
+(/usr/share/texlive/texmf-dist/tex/generic/bitset/bitset.sty
+(/usr/share/texlive/texmf-dist/tex/generic/bigintcalc/bigintcalc.sty))
+(/usr/share/texlive/texmf-dist/tex/latex/base/atbegshi-ltx.sty))
+(/usr/share/texlive/texmf-dist/tex/latex/hyperref/hpdftex.def
+(/usr/share/texlive/texmf-dist/tex/latex/base/atveryend-ltx.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/rerunfilecheck/rerunfilecheck.sty
+(/usr/share/texlive/texmf-dist/tex/generic/uniquecounter/uniquecounter.sty))))
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/t1ptm.fd)
+(/usr/share/texlive/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def)
+No file Rd2.aux.
+(/usr/share/texlive/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+) (/usr/share/texlive/texmf-dist/tex/latex/hyperref/nameref.sty
+(/usr/share/texlive/texmf-dist/tex/latex/refcount/refcount.sty)
+(/usr/share/texlive/texmf-dist/tex/generic/gettitlestring/gettitlestring.sty))
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/t1pcr.fd)
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/ts1ptm.fd)
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd)
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd)
+(/usr/share/texlive/texmf-dist/tex/latex/jknapltx/ursfs.fd) [1{/usr/share/texli
+ve/texmf-var/fonts/map/pdftex/updmap/pdftex.map}]
+Overfull \hbox (48.5567pt too wide) in paragraph at lines 86--88
+[]\T1/ptm/m/n/10 Always com-piles the MCMC against the same R-level model used 
+dur-ing the build step ([]\T1/pcr/m/n/10 build_obj$model[]\T1/ptm/m/n/10 ).
+
+Overfull \hbox (18.78088pt too wide) in paragraph at lines 92--92
+ []\T1/pcr/m/n/10 .compile_mcmc_with_build(conf, build_obj, reset = TRUE, show 
+= FALSE) 
+[2]
+Overfull \hbox (21.0574pt too wide) in paragraph at lines 144--147
+[]\T1/ptm/m/n/10 A []\T1/pcr/m/n/10 configureMCMC []\T1/ptm/m/n/10 ob-ject with
+ thin/thin2 har-monised and the at-tributes []\T1/pcr/m/n/10 ._sop_monitors_roo
+ts[]\T1/ptm/m/n/10 ,
+[3] [4] [5] [6] [7] [8]
+Overfull \hbox (0.31023pt too wide) in paragraph at lines 469--471
+[]\T1/ptm/m/n/10 For ex-am-ple, []\T1/pcr/m/n/10 "p[1, 1:3]" []\T1/ptm/m/n/10 i
+s ex-panded to []\T1/pcr/m/n/10 c("p[1,1]", "p[1,2]", "p[1,3]")[]\T1/ptm/m/n/10
+ , pro-vided
+[9] [10]
+Overfull \hbox (18.62764pt too wide) in paragraph at lines 574--576
+[]\T1/ptm/m/n/10 A list of MCMC sam-ples or any ob-ject that can be con-verted 
+by []\T1/pcr/m/n/10 as_mcmc_list()[]\T1/ptm/m/n/10 . 
+[11]
+Overfull \hbox (4.38043pt too wide) in paragraph at lines 623--623
+ []\T1/pcr/m/n/9 res <- run_baseline_config(build_M, niter = 2000, nburnin = 50
+0, thin = 2)[] 
+[12]
+Overfull \hbox (4.29926pt too wide) in paragraph at lines 635--637
+[]\T1/ptm/m/n/10 Converts an in-put ob-ject ([]\T1/pcr/m/n/10 mcmc.list[]\T1/pt
+m/m/n/10 , []\T1/pcr/m/n/10 mcmc[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 data.frame[
+]\T1/ptm/m/n/10 , or []\T1/pcr/m/n/10 matrix[]\T1/ptm/m/n/10 ) into a []\T1/pcr
+/m/n/10 coda[]\T1/ptm/m/n/10 -compatible
+
+Overfull \hbox (48.78088pt too wide) in paragraph at lines 665--665
+ []\T1/pcr/m/n/10 as_mcmc_list_sop(samples, samples2 = NULL, drop_loglik = FALS
+E, thin = 1L) 
+
+Overfull \hbox (66.78088pt too wide) in paragraph at lines 694--694
+ []\T1/pcr/m/n/10 build_conf_with_monitors(model, monitors = NULL, opts = samOp
+tiPro_options()) 
+[13]
+Overfull \hbox (16.29628pt too wide) in paragraph at lines 748--749
+[]\T1/ptm/m/n/10 function with sig-na-ture func-tion(inits) -> list(samples=sam
+ples, run-time_s=seconds) 
+[14] [15]
+Overfull \hbox (20.03004pt too wide) in paragraph at lines 830--832
+[]\T1/ptm/m/n/10 Character, one of []\T1/pcr/m/n/10 "none"[]\T1/ptm/m/n/10 , []
+\T1/pcr/m/n/10 "classic"[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 "split"[]\T1/ptm/m/
+n/10 , or []\T1/pcr/m/n/10 "both" []\T1/ptm/m/n/10 (de-fault []\T1/pcr/m/n/10 "
+none"[]\T1/ptm/m/n/10 ). 
+[16] [17] [18]
+Overfull \hbox (14.07034pt too wide) in paragraph at lines 1039--1045
+[]\T1/pcr/m/n/10 .fresh_build(build_fn, monitors, thin)[]\T1/ptm/m/n/10 . Oth-e
+r-wise, []\T1/pcr/m/n/10 build_fn()
+[19]
+Overfull \hbox (10.45938pt too wide) in paragraph at lines 1060--1061
+[]\T1/ptm/m/n/10 Global NUTS via []\T1/pcr/m/n/10 nimbleHMC::configureHMC(model
+, monitors
+
+Overfull \hbox (34.4294pt too wide) in paragraph at lines 1061--1063
+[]\T1/ptm/m/n/10 NUTS only on []\T1/pcr/m/n/10 nuts_nodes []\T1/ptm/m/n/10 via 
+[]\T1/pcr/m/n/10 nimbleHMC::configureHMC(conf,
+
+Overfull \hbox (0.94026pt too wide) in paragraph at lines 1063--1064
+[]\T1/ptm/m/n/10 Let []\T1/pcr/m/n/10 nimbleHMC::configureHMC(conf, model, ...)
+ []\T1/ptm/m/n/10 choose
+[20] [21]
+Overfull \hbox (169.13841pt too wide) in paragraph at lines 1181--1183
+[]\T1/ptm/m/n/10 Optional nu-meric vec-tor of per-sampler times aligned with []
+\T1/pcr/m/n/10 nimble::configureMCMC(model)$getSamplers()[]\T1/ptm/m/n/10 . 
+
+Overfull \hbox (28.4086pt too wide) in paragraph at lines 1184--1186
+[]\T1/ptm/m/n/10 Character la-bel for time axis (for ex-am-ple []\T1/pcr/m/n/10
+ "seconds"[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 "ms"[]\T1/ptm/m/n/10 ) (de-fault 
+[]\T1/pcr/m/n/10 "seconds"[]\T1/ptm/m/n/10 ). 
+
+Overfull \hbox (16.6874pt too wide) in paragraph at lines 1206--1208
+[]\T1/ptm/m/n/10 Logical; if []\T1/pcr/m/n/10 TRUE[]\T1/ptm/m/n/10 , com-pute a
+nd plot family-level sum-maries in ad-di-tion to parameter-
+[22]
+Overfull \hbox (44.23915pt too wide) in paragraph at lines 1255--1259
+[]\T1/pcr/m/n/10 plots[]\T1/ptm/m/n/10 : list of gg-plot ob-jects (some may be 
+[]\T1/pcr/m/n/10 NULL[]\T1/ptm/m/n/10 ): []\T1/pcr/m/n/10 plot_dependencies[]\T
+1/ptm/m/n/10 , []\T1/pcr/m/n/10 plot_sampler_time[]\T1/ptm/m/n/10 ,
+
+Overfull \hbox (4.32092pt too wide) in paragraph at lines 1255--1259
+[]\T1/pcr/m/n/10 plot_combined[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 plot_dependen
+cies_family[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 plot_sampler_time_family[]\T1/pt
+m/m/n/10 ,
+
+Overfull \hbox (5.92743pt too wide) in paragraph at lines 1286--1290
+[]\T1/ptm/m/n/10 Builds a ro-bust MCMC con-fig-u-ra-tion, pro-files per-sampler
+ time with [][][]\T1/pcr/m/n/10 profile_sampler_times[][][]\T1/ptm/m/n/10 ,
+
+Overfull \hbox (24.91719pt too wide) in paragraph at lines 1286--1290
+\T1/ptm/m/n/10 maps sam-plers to their tar-gets, and op-tion-ally com-putes a s
+tep-size proxy per tar-get via [][][]\T1/pcr/m/n/10 proxy_step_sd[][]
+[23]
+Overfull \hbox (59.95905pt too wide) in paragraph at lines 1315--1317
+[]\T1/ptm/m/n/10 Optional []\T1/pcr/m/n/10 coda::mcmc.list []\T1/ptm/m/n/10 use
+d to com-pute the step-size proxy via []\T1/pcr/m/n/10 proxy_step_sd()[]\T1/ptm
+/m/n/10 . 
+[24] [25] [26] [27]
+Overfull \hbox (29.42882pt too wide) in paragraph at lines 1546--1549
+[]\T1/ptm/m/n/10 When []\T1/pcr/m/n/10 sampler_params []\T1/ptm/m/n/10 is pro-v
+ided, only pa-ram-e-ters whose names are in-cluded in []\T1/pcr/m/n/10 sampler_
+params
+[28]
+Overfull \hbox (13.08931pt too wide) in paragraph at lines 1610--1613
+[]\T1/ptm/m/n/10 Data frame with at least columns []\T1/pcr/m/n/10 parameter[]\
+T1/ptm/m/n/10 , []\T1/pcr/m/n/10 ESS[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 CE[]\T1
+/ptm/m/n/10 , []\T1/pcr/m/n/10 AE[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 slow_node_
+time[]\T1/ptm/m/n/10 ,
+[29]
+Overfull \hbox (83.63803pt too wide) in paragraph at lines 1705--1707
+[]\T1/ptm/m/n/10 Character string; path to out-put di-rec-tory for sav-ing fig-
+ures (de-fault: []\T1/pcr/m/n/10 "outputs/diagnostics"[]\T1/ptm/m/n/10 ).
+
+Overfull \hbox (21.36789pt too wide) in paragraph at lines 1713--1715
+[]\T1/ptm/m/n/10 Logical; if []\T1/pcr/m/n/10 TRUE[]\T1/ptm/m/n/10 , re-stricts
+ plots to nodes that have an ex-plicit sam-pler in []\T1/pcr/m/n/10 conf.mcmc
+
+Overfull \hbox (47.3977pt too wide) in paragraph at lines 1716--1719
+[]\T1/ptm/m/n/10 NIMBLE MCMC con-fig-u-ra-tion ob-ject, typ-i-cally pro-duced b
+y []\T1/pcr/m/n/10 configureMCMC(model,
+[30]
+Overfull \hbox (57.82092pt too wide) in paragraph at lines 1772--1775
+[][][]\T1/pcr/m/n/10 identify_bottlenecks_family[][][]\T1/ptm/m/n/10 , [][][]\T
+1/pcr/m/n/10 profile_sampler_times[][][]\T1/ptm/m/n/10 , [][][]\T1/pcr/m/n/10 r
+un_structure_and_hmc_test[][] 
+[31]
+Overfull \hbox (1.33847pt too wide) in paragraph at lines 1828--1830
+[]\T1/ptm/m/n/10 A []\T1/pcr/m/n/10 coda::mcmc.list []\T1/ptm/m/n/10 (or com-pa
+t-i-ble) hold-ing pos-te-rior draws, re-quired when
+
+Overfull \hbox (107.84947pt too wide) in paragraph at lines 1831--1834
+[]\T1/ptm/m/n/10 Optional out-put di-rec-tory. When pro-vided, saves: []\T1/pcr
+/m/n/10 AE_median_by_family__samplers_only.png
+[32]
+Overfull \hbox (92.3688pt too wide) in paragraph at lines 1862--1866
+\T1/ptm/m/n/10 MCMC sam-pler, dis-cov-ered \T1/ptm/m/it/10 in-side \T1/ptm/m/n/
+10 via []\T1/pcr/m/n/10 conf.mcmc$getSamplers() []\T1/ptm/m/n/10 (or []\T1/pcr/
+m/n/10 attr(diag_tbl,"mcmc_conf")[]\T1/ptm/m/n/10 ,
+[33]
+Overfull \hbox (4.49782pt too wide) in paragraph at lines 1918--1921
+[]\T1/ptm/m/n/10 make_bar_ce_median_all, make_bar_ce_worst_all, make_bar_time_t
+op_all Tog-
+
+Overfull \hbox (7.62776pt too wide) in paragraph at lines 1922--1924
+[]\T1/ptm/m/n/10 make_bar_ess_q5, make_hist_ce, make_hist_ae Tog-gles for the e
+x-ist-ing \T1/ptm/b/n/10 sampled-
+[34]
+
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.1990 \item{} median R̂
+                          by family (bar chart with threshold line), and
+
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.1991 \item{} top-k worst nodes by R̂
+                                        (bar chart with threshold line).
+
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.2017 \item[\code{threshold}] Numeric; R̂
+                                            reference line (default \code{1....
+
+[35]
+Overfull \hbox (94.3197pt too wide) in paragraph at lines 2027--2031
+[]\T1/ptm/m/n/10 Optional out-put di-rec-tory. Saves: []\T1/pcr/m/n/10 Rhat_med
+ian_by_family__samplers_only_thr_*.png[]\T1/ptm/m/n/10 ,
+
+Overfull \hbox (1.05975pt too wide) in paragraph at lines 2027--2031
+[]\T1/pcr/m/n/10 TopK_worst_Rhat__samplers_only_thr_*.png[]\T1/ptm/m/n/10 , and
+ two CSV sum-
+
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.2032 ...}] Integer; number of worst nodes by R̂
+                                                   to display (default \code...
+
+[36]
+Overfull \hbox (14.82765pt too wide) in paragraph at lines 2101--2104
+[]\T1/ptm/m/n/10 Families are de-fined by the sub-string be-fore the first "[" 
+in each pa-ram-e-ter name. If []\T1/pcr/m/n/10 sampler_params
+
+Overfull \hbox (38.67871pt too wide) in paragraph at lines 2131--2135
+[]\T1/ptm/m/n/10 An ob-ject con-tain-ing MCMC draws (for ex-am-ple an []\T1/pcr
+/m/n/10 mcmc.list[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 mcmc[]\T1/ptm/m/n/10 , []\
+T1/pcr/m/n/10 data.frame[]\T1/ptm/m/n/10 ,
+[37]
+Overfull \hbox (33.89992pt too wide) in paragraph at lines 2139--2143
+\T1/ptm/m/n/10 all pa-ram-e-ters in []\T1/pcr/m/n/10 assess_performance(samples
+, runtime_s)$per_param
+
+Overfull \hbox (12.35782pt too wide) in paragraph at lines 2151--2154
+[]\T1/ptm/m/n/10 Families are de-fined by the pre-fix be-fore the first []\T1/p
+cr/m/n/10 "[" []\T1/ptm/m/n/10 in the pa-ram-e-ter name (for ex-am-ple []\T1/pc
+r/m/n/10 "beta[1]"
+[38]
+Overfull \hbox (16.54997pt too wide) in paragraph at lines 2209--2213
+\T1/ptm/m/n/10 with ob-jects re-turned by [][][]\T1/pcr/m/n/10 test_strategy_fa
+mily_fast()[][] []\T1/ptm/m/n/10 and [][][]\T1/pcr/m/n/10 configure_hmc_safely(
+)[][][]\T1/ptm/m/n/10 . 
+
+Overfull \hbox (69.0994pt too wide) in paragraph at lines 2233--2235
+[]\T1/ptm/m/n/10 A re-sult ob-ject from [][][]\T1/pcr/m/n/10 test_strategy_fami
+ly_fast()[][] []\T1/ptm/m/n/10 or [][][]\T1/pcr/m/n/10 configure_hmc_safely()[]
+[]
+
+Overfull \hbox (9.05835pt too wide) in paragraph at lines 2240--2242
+[]\T1/ptm/m/n/10 Integer; num-ber of keys (tar-gets or fam-i-lies) to keep for 
+plot-ting based on []\T1/pcr/m/n/10 top_by[]\T1/ptm/m/n/10 .
+[39]
+Overfull \hbox (114.11742pt too wide) in paragraph at lines 2262--2265
+[]\T1/ptm/m/n/10 When di-ag-nos-tics are miss-ing but sam-ples/runtime are pro-
+vided, the func-tion prefers []\T1/pcr/m/n/10 compute_diag_from_mcmc_vect()
+
+Overfull \hbox (20.23798pt too wide) in paragraph at lines 2266--2269
+[]\T1/ptm/m/n/10 Filtering re-moves likelihood-like tar-gets ([]\T1/pcr/m/n/10 
+logLik[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 log_lik[]\T1/ptm/m/n/10 , []\T1/pcr/m
+/n/10 logdens[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 lpdf[]\T1/ptm/m/n/10 ) and in-
+ter-nal/generated
+
+Overfull \hbox (25.98041pt too wide) in paragraph at lines 2312--2312
+ []\T1/pcr/m/n/9 res <- test_strategy_family_fast(build_fn = build_M, nbot = 2,
+ try_hmc = TRUE)[] 
+
+Overfull \hbox (63.78036pt too wide) in paragraph at lines 2313--2313
+ []\T1/pcr/m/n/9 plot_strategies_from_test_result_fast(res, per = "family", top
+_k = 30, top_by = "CE")[] 
+[40]
+Overfull \hbox (119.45706pt too wide) in paragraph at lines 2353--2355
+[]\T1/ptm/m/n/10 A NIM-BLE MCMC con-fig-u-ra-tion ob-ject (for ex-am-ple re-tur
+ned by []\T1/pcr/m/n/10 nimble::configureMCMC(model)[]\T1/ptm/m/n/10 ). 
+
+Overfull \hbox (37.60956pt too wide) in paragraph at lines 2356--2358
+[]\T1/ptm/m/n/10 A com-piled []\T1/pcr/m/n/10 nimbleModel []\T1/ptm/m/n/10 used
+ as []\T1/pcr/m/n/10 project =  []\T1/ptm/m/n/10 for []\T1/pcr/m/n/10 nimble::c
+ompileNimble()[]\T1/ptm/m/n/10 . 
+
+Overfull \hbox (15.18042pt too wide) in paragraph at lines 2374--2374
+ []  \T1/pcr/m/n/9 model  <- nimbleModel(code, constants = Const, data = Data, 
+inits = Inits)[] 
+[41] [42] [43]
+Overfull \hbox (11.15906pt too wide) in paragraph at lines 2538--2542
+\T1/ptm/m/n/10 tional el-e-ments: []\T1/pcr/m/n/10 cmodel[]\T1/ptm/m/n/10 , []\
+T1/pcr/m/n/10 monitors[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 code_text []\T1/ptm/m
+/n/10 (or []\T1/pcr/m/n/10 code[]\T1/ptm/m/n/10 ) used to strengthen
+[44]
+Overfull \hbox (49.02747pt too wide) in paragraph at lines 2567--2569
+[]\T1/pcr/m/n/10 diag[]\T1/ptm/m/n/10 : list with []\T1/pcr/m/n/10 nodes []\T1/
+ptm/m/n/10 (data.frame of node meta-data and HMC show-stop-per tags), []\T1/pcr
+/m/n/10 nondiff_signals[]\T1/ptm/m/n/10 ,
+
+Overfull \hbox (52.98038pt too wide) in paragraph at lines 2578--2578
+ []\T1/pcr/m/n/9 out <- run_structure_and_hmc_test(my_builder, include_data = F
+ALSE, try_hmc = TRUE)[] 
+[45] [46]
+Overfull \hbox (42.78088pt too wide) in paragraph at lines 2677--2677
+ []\T1/pcr/m/n/10 sampler_scales_after_run(build_fn, niter = 2000, nburnin = 50
+0, thin = 1) 
+[47]
+Overfull \hbox (91.11807pt too wide) in paragraph at lines 2753--2757
+[]\T1/pcr/m/n/10 TIME_rank []\T1/ptm/m/n/10 (typ-i-cally cre-ated in the sur-ro
+und-ing anal-y-sis func-tion and de-clared via []\T1/pcr/m/n/10 utils::globalVa
+riables()[]\T1/ptm/m/n/10 ). 
+[48] [49] [50] [51]
+Overfull \hbox (4.0384pt too wide) in paragraph at lines 2979--2981
+[]\T1/ptm/m/n/10 Logical; if []\T1/pcr/m/n/10 TRUE[]\T1/ptm/m/n/10 , at-tempt f
+ull-model NUTS via []\T1/pcr/m/n/10 configure_hmc_safely()
+
+Overfull \hbox (51.0087pt too wide) in paragraph at lines 2994--2996
+[]\T1/ptm/m/n/10 Character vec-tor of scalar sam-pler types to try in or-der, e
+.g. []\T1/pcr/m/n/10 c("NUTS","slice","RW")[]\T1/ptm/m/n/10 . 
+
+Overfull \hbox (139.90897pt too wide) in paragraph at lines 2997--2999
+[]\T1/ptm/m/n/10 Character vec-tor of block sam-pler types to try in or-der, e.
+g. []\T1/pcr/m/n/10 c("NUTS_block","AF_slice","RW_block")[]\T1/ptm/m/n/10 . 
+
+Overfull \hbox (35.43842pt too wide) in paragraph at lines 3003--3005
+[]\T1/ptm/m/n/10 Optional named list map-ping fam-ily -> ex-plicit node vec-tor
+ (e.g., []\T1/pcr/m/n/10 list(logit_theta
+[52]
+Underfull \hbox (badness 10000) in paragraph at lines 3014--3014
+[]\T1/pcr/m/n/10 slice_control[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 rw_control[]\
+T1/ptm/m/n/10 , []\T1/pcr/m/n/10 rwblock_control[]\T1/ptm/m/n/10 ,
+
+Overfull \hbox (107.5293pt too wide) in paragraph at lines 3025--3029
+[]\T1/pcr/m/n/10 run_baseline_config() []\T1/ptm/m/n/10 to com-pute di-ag-nos-t
+ics (AE, CE, Rhat) us-ing []\T1/pcr/m/n/10 compute_diag_from_mcmc_vect()
+
+Overfull \hbox (91.55861pt too wide) in paragraph at lines 3038--3040
+[]\T1/ptm/m/n/10 Applies \T1/ptm/b/n/10 strict scalar se-quences \T1/ptm/m/n/10
+ ([]\T1/pcr/m/n/10 strict_scalar_seq[]\T1/ptm/m/n/10 ) on fam-ily 1 (e.g., []\T
+1/pcr/m/n/10 c("NUTS","slice","RW")[]\T1/ptm/m/n/10 ). 
+
+Overfull \hbox (0.77844pt too wide) in paragraph at lines 3066--3068
+[]\T1/ptm/m/n/10 Ignores likelihood-like tar-gets when scor-ing fam-i-lies ([]\
+T1/pcr/m/n/10 logLik[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 log_lik[]\T1/ptm/m/n/10
+ , []\T1/pcr/m/n/10 logdens[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 lpdf[]\T1/ptm/m/
+n/10 )
+[53]
+Overfull \hbox (72.32092pt too wide) in paragraph at lines 3106--3111
+[][][]\T1/pcr/m/n/10 configure_hmc_safely[][][]\T1/ptm/m/n/10 , [][][]\T1/pcr/m
+/n/10 plot_strategies_from_test_result_fast[][][]\T1/ptm/m/n/10 , [][][]\T1/pcr
+/m/n/10 run_baseline_config[][][]\T1/ptm/m/n/10 ,
+[54]
+Overfull \hbox (4.0384pt too wide) in paragraph at lines 3160--3162
+[]\T1/ptm/m/n/10 Logical; if []\T1/pcr/m/n/10 TRUE[]\T1/ptm/m/n/10 , at-tempt f
+ull-model NUTS via []\T1/pcr/m/n/10 configure_hmc_safely()
+
+Overfull \hbox (51.0087pt too wide) in paragraph at lines 3175--3177
+[]\T1/ptm/m/n/10 Character vec-tor of scalar sam-pler types to try in or-der, e
+.g. []\T1/pcr/m/n/10 c("NUTS","slice","RW")[]\T1/ptm/m/n/10 . 
+
+Overfull \hbox (139.90897pt too wide) in paragraph at lines 3178--3180
+[]\T1/ptm/m/n/10 Character vec-tor of block sam-pler types to try in or-der, e.
+g. []\T1/pcr/m/n/10 c("NUTS_block","AF_slice","RW_block")[]\T1/ptm/m/n/10 . 
+
+Overfull \hbox (35.43842pt too wide) in paragraph at lines 3184--3186
+[]\T1/ptm/m/n/10 Optional named list map-ping fam-ily -> ex-plicit node vec-tor
+ (e.g., []\T1/pcr/m/n/10 list(logit_theta
+
+Underfull \hbox (badness 10000) in paragraph at lines 3195--3195
+[]\T1/pcr/m/n/10 slice_control[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 rw_control[]\
+T1/ptm/m/n/10 , []\T1/pcr/m/n/10 rwblock_control[]\T1/ptm/m/n/10 ,
+
+Overfull \hbox (110.0293pt too wide) in paragraph at lines 3206--3209
+[]\T1/pcr/m/n/10 run_baseline_config() []\T1/ptm/m/n/10 to com-pute di-ag-nos-t
+ics (AE, CE, Rhat) us-ing []\T1/pcr/m/n/10 compute_diag_from_mcmc_vect()[]\T1/p
+tm/m/n/10 . 
+[55]
+Overfull \hbox (91.55861pt too wide) in paragraph at lines 3218--3220
+[]\T1/ptm/m/n/10 Applies \T1/ptm/b/n/10 strict scalar se-quences \T1/ptm/m/n/10
+ ([]\T1/pcr/m/n/10 strict_scalar_seq[]\T1/ptm/m/n/10 ) on fam-ily 1 (e.g., []\T
+1/pcr/m/n/10 c("NUTS","slice","RW")[]\T1/ptm/m/n/10 ). 
+
+Overfull \hbox (0.77844pt too wide) in paragraph at lines 3246--3248
+[]\T1/ptm/m/n/10 Ignores likelihood-like tar-gets when scor-ing fam-i-lies ([]\
+T1/pcr/m/n/10 logLik[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 log_lik[]\T1/ptm/m/n/10
+ , []\T1/pcr/m/n/10 logdens[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 lpdf[]\T1/ptm/m/
+n/10 )
+
+Overfull \hbox (72.32092pt too wide) in paragraph at lines 3286--3291
+[][][]\T1/pcr/m/n/10 configure_hmc_safely[][][]\T1/ptm/m/n/10 , [][][]\T1/pcr/m
+/n/10 plot_strategies_from_test_result_fast[][][]\T1/ptm/m/n/10 , [][][]\T1/pcr
+/m/n/10 run_baseline_config[][][]\T1/ptm/m/n/10 ,
+[56] [57]
+Underfull \hbox (badness 10000) in paragraph at lines 3379--3379
+[]\T1/pcr/m/n/10 slice_control[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 rw_control[]\
+T1/ptm/m/n/10 , []\T1/pcr/m/n/10 rwblock_control[]\T1/ptm/m/n/10 ,
+[58] (./Rd2.aux)
+
+Package rerunfilecheck Warning: File `Rd2.out' has changed.
+(rerunfilecheck)                Rerun to get outlines right
+(rerunfilecheck)                or use package `bookmark'.
+
+ )
+(see the transcript file for additional information)pdfTeX warning (dest): name
+{Rfn.rhat} has been referenced but does not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{Rfn.ess.Rul.bulk} has been referenced but does not 
+exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{Rfn.effectiveSize} has been referenced but does not
+ exist, replaced by a fixed one
+
+{/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/share/texlive/
+texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-
+dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texlive/texmf-dist/fo
+nts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/typ
+e1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw
+/courier/ucrr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmb8a
+.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/shar
+e/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/texmf
+-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on Rd2.pdf (58 pages, 228210 bytes).
+Transcript written on Rd2.log.
+Error in texi2dvi(file = file, pdf = TRUE, clean = clean, quiet = quiet,  : 
+  impossible d'exécuter pdflatex sur 'Rd2.tex'
+LaTeX errors:
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex)
+ restricted \write18 enabled.
+entering extended mode
+(./Rd2.tex
+LaTeX2e <2020-10-01> patch level 4
+L3 programming layer <2021-05-07>
+(/usr/share/texlive/texmf-dist/tex/latex/base/book.cls
+Document Class: book 2020/04/10 v1.4m Standard LaTeX document class
+(/usr/share/texlive/texmf-dist/tex/latex/base/bk10.clo))
+(/usr/local/lib64/R/share/texmf/tex/latex/Rd.sty
+(/usr/share/texlive/texmf-dist/tex/latex/base/ifthen.sty)
+(/usr/share/texlive/texmf-dist/tex/generic/iftex/iftex.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/tools/longtable.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/tools/bm.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/base/alltt.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/tools/verbatim.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/url/url.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/base/textcomp.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?' option.
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amstext.sty
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/amsfonts.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/amssymb.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/jknapltx/mathrsfs.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/base/fontenc.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/times.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/color.sty
+(/usr/share/texlive/texmf-dist/tex/latex/graphics-cfg/color.cfg)
+(/usr/share/texlive/texmf-dist/tex/latex/graphics-def/pdftex.def))
+(/usr/share/texlive/texmf-dist/tex/latex/hyperref/hyperref.sty
+(/usr/share/texlive/texmf-dist/tex/generic/ltxcmds/ltxcmds.sty)
+(/usr/share/texlive/texmf-dist/tex/generic/pdftexcmds/pdftexcmds.sty
+(/usr/share/texlive/texmf-dist/tex/generic/infwarerr/infwarerr.sty))
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/keyval.sty)
+(/usr/share/texlive/texmf-dist/tex/generic/kvsetkeys/kvsetkeys.sty)
+(/usr/share/texlive/texmf-dist/tex/generic/kvdefinekeys/kvdefinekeys.sty)
+(/usr/share/texlive/texmf-dist/tex/generic/pdfescape/pdfescape.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/hycolor/hycolor.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/letltxmacro/letltxmacro.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/auxhook/auxhook.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/kvoptions/kvoptions.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/hyperref/pd1enc.def)
+(/usr/share/texlive/texmf-dist/tex/latex/hyperref/hyperref-langpatches.def)
+(/usr/share/texlive/texmf-dist/tex/generic/intcalc/intcalc.sty)
+(/usr/share/texlive/texmf-dist/tex/generic/etexcmds/etexcmds.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/hyperref/puenc.def)
+(/usr/share/texlive/texmf-dist/tex/generic/bitset/bitset.sty
+(/usr/share/texlive/texmf-dist/tex/generic/bigintcalc/bigintcalc.sty))
+(/usr/share/texlive/texmf-dist/tex/latex/base/atbegshi-ltx.sty))
+(/usr/share/texlive/texmf-dist/tex/latex/hyperref/hpdftex.def
+(/usr/share/texlive/texmf-dist/tex/latex/base/atveryend-ltx.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/rerunfilecheck/rerunfilecheck.sty
+(/usr/share/texlive/texmf-dist/tex/generic/uniquecounter/uniquecounter.sty))))
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/t1ptm.fd)
+(/usr/share/texlive/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def)
+(./Rd2.aux) (/usr/share/texlive/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+) (/usr/share/texlive/texmf-dist/tex/latex/hyperref/nameref.sty
+(/usr/share/texlive/texmf-dist/tex/latex/refcount/refcount.sty)
+(/usr/share/texlive/texmf-dist/tex/generic/gettitlestring/gettitlestring.sty))
+(./Rd2.out) (./Rd2.out)
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/t1pcr.fd)
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/ts1ptm.fd)
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd)
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd)
+(/usr/share/texlive/texmf-dist/tex/latex/jknapltx/ursfs.fd) (./Rd2.toc [1{/usr/
+share/texlive/texmf-var/fonts/map/pdftex/updmap/pdftex.map}] [2]) [3]
+Overfull \hbox (48.5567pt too wide) in paragraph at lines 86--88
+[]\T1/ptm/m/n/10 Always com-piles the MCMC against the same R-level model used 
+dur-ing the build step ([]\T1/pcr/m/n/10 build_obj$model[]\T1/ptm/m/n/10 ).
+
+Overfull \hbox (18.78088pt too wide) in paragraph at lines 92--92
+ []\T1/pcr/m/n/10 .compile_mcmc_with_build(conf, build_obj, reset = TRUE, show 
+= FALSE) 
+[4]
+Overfull \hbox (21.0574pt too wide) in paragraph at lines 144--147
+[]\T1/ptm/m/n/10 A []\T1/pcr/m/n/10 configureMCMC []\T1/ptm/m/n/10 ob-ject with
+ thin/thin2 har-monised and the at-tributes []\T1/pcr/m/n/10 ._sop_monitors_roo
+ts[]\T1/ptm/m/n/10 ,
+[5] [6] [7] [8] [9] [10]
+Overfull \hbox (0.31023pt too wide) in paragraph at lines 469--471
+[]\T1/ptm/m/n/10 For ex-am-ple, []\T1/pcr/m/n/10 "p[1, 1:3]" []\T1/ptm/m/n/10 i
+s ex-panded to []\T1/pcr/m/n/10 c("p[1,1]", "p[1,2]", "p[1,3]")[]\T1/ptm/m/n/10
+ , pro-vided
+[11] [12]
+Overfull \hbox (18.62764pt too wide) in paragraph at lines 574--576
+[]\T1/ptm/m/n/10 A list of MCMC sam-ples or any ob-ject that can be con-verted 
+by []\T1/pcr/m/n/10 as_mcmc_list()[]\T1/ptm/m/n/10 . 
+[13]
+Overfull \hbox (4.38043pt too wide) in paragraph at lines 623--623
+ []\T1/pcr/m/n/9 res <- run_baseline_config(build_M, niter = 2000, nburnin = 50
+0, thin = 2)[] 
+
+Overfull \hbox (4.29926pt too wide) in paragraph at lines 635--637
+[]\T1/ptm/m/n/10 Converts an in-put ob-ject ([]\T1/pcr/m/n/10 mcmc.list[]\T1/pt
+m/m/n/10 , []\T1/pcr/m/n/10 mcmc[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 data.frame[
+]\T1/ptm/m/n/10 , or []\T1/pcr/m/n/10 matrix[]\T1/ptm/m/n/10 ) into a []\T1/pcr
+/m/n/10 coda[]\T1/ptm/m/n/10 -compatible
+
+Overfull \hbox (48.78088pt too wide) in paragraph at lines 665--665
+ []\T1/pcr/m/n/10 as_mcmc_list_sop(samples, samples2 = NULL, drop_loglik = FALS
+E, thin = 1L) 
+[14]
+Overfull \hbox (66.78088pt too wide) in paragraph at lines 694--694
+ []\T1/pcr/m/n/10 build_conf_with_monitors(model, monitors = NULL, opts = samOp
+tiPro_options()) 
+[15]
+Overfull \hbox (16.29628pt too wide) in paragraph at lines 748--749
+[]\T1/ptm/m/n/10 function with sig-na-ture func-tion(inits) -> list(samples=sam
+ples, run-time_s=seconds) 
+[16] [17]
+Overfull \hbox (20.03004pt too wide) in paragraph at lines 830--832
+[]\T1/ptm/m/n/10 Character, one of []\T1/pcr/m/n/10 "none"[]\T1/ptm/m/n/10 , []
+\T1/pcr/m/n/10 "classic"[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 "split"[]\T1/ptm/m/
+n/10 , or []\T1/pcr/m/n/10 "both" []\T1/ptm/m/n/10 (de-fault []\T1/pcr/m/n/10 "
+none"[]\T1/ptm/m/n/10 ). 
+[18] [19] [20]
+Overfull \hbox (14.07034pt too wide) in paragraph at lines 1039--1045
+[]\T1/pcr/m/n/10 .fresh_build(build_fn, monitors, thin)[]\T1/ptm/m/n/10 . Oth-e
+r-wise, []\T1/pcr/m/n/10 build_fn()
+
+Overfull \hbox (10.45938pt too wide) in paragraph at lines 1060--1061
+[]\T1/ptm/m/n/10 Global NUTS via []\T1/pcr/m/n/10 nimbleHMC::configureHMC(model
+, monitors
+
+Overfull \hbox (34.4294pt too wide) in paragraph at lines 1061--1063
+[]\T1/ptm/m/n/10 NUTS only on []\T1/pcr/m/n/10 nuts_nodes []\T1/ptm/m/n/10 via 
+[]\T1/pcr/m/n/10 nimbleHMC::configureHMC(conf,
+[21]
+Overfull \hbox (0.94026pt too wide) in paragraph at lines 1063--1064
+[]\T1/ptm/m/n/10 Let []\T1/pcr/m/n/10 nimbleHMC::configureHMC(conf, model, ...)
+ []\T1/ptm/m/n/10 choose
+[22]
+Overfull \hbox (169.13841pt too wide) in paragraph at lines 1181--1183
+[]\T1/ptm/m/n/10 Optional nu-meric vec-tor of per-sampler times aligned with []
+\T1/pcr/m/n/10 nimble::configureMCMC(model)$getSamplers()[]\T1/ptm/m/n/10 . 
+
+Overfull \hbox (28.4086pt too wide) in paragraph at lines 1184--1186
+[]\T1/ptm/m/n/10 Character la-bel for time axis (for ex-am-ple []\T1/pcr/m/n/10
+ "seconds"[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 "ms"[]\T1/ptm/m/n/10 ) (de-fault 
+[]\T1/pcr/m/n/10 "seconds"[]\T1/ptm/m/n/10 ). 
+[23]
+Overfull \hbox (16.6874pt too wide) in paragraph at lines 1206--1208
+[]\T1/ptm/m/n/10 Logical; if []\T1/pcr/m/n/10 TRUE[]\T1/ptm/m/n/10 , com-pute a
+nd plot family-level sum-maries in ad-di-tion to parameter-
+
+Overfull \hbox (44.23915pt too wide) in paragraph at lines 1255--1259
+[]\T1/pcr/m/n/10 plots[]\T1/ptm/m/n/10 : list of gg-plot ob-jects (some may be 
+[]\T1/pcr/m/n/10 NULL[]\T1/ptm/m/n/10 ): []\T1/pcr/m/n/10 plot_dependencies[]\T
+1/ptm/m/n/10 , []\T1/pcr/m/n/10 plot_sampler_time[]\T1/ptm/m/n/10 ,
+
+Overfull \hbox (4.32092pt too wide) in paragraph at lines 1255--1259
+[]\T1/pcr/m/n/10 plot_combined[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 plot_dependen
+cies_family[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 plot_sampler_time_family[]\T1/pt
+m/m/n/10 ,
+[24]
+Overfull \hbox (5.92743pt too wide) in paragraph at lines 1286--1290
+[]\T1/ptm/m/n/10 Builds a ro-bust MCMC con-fig-u-ra-tion, pro-files per-sampler
+ time with [][][]\T1/pcr/m/n/10 profile_sampler_times[][][]\T1/ptm/m/n/10 ,
+
+Overfull \hbox (24.91719pt too wide) in paragraph at lines 1286--1290
+\T1/ptm/m/n/10 maps sam-plers to their tar-gets, and op-tion-ally com-putes a s
+tep-size proxy per tar-get via [][][]\T1/pcr/m/n/10 proxy_step_sd[][]
+
+Overfull \hbox (59.95905pt too wide) in paragraph at lines 1315--1317
+[]\T1/ptm/m/n/10 Optional []\T1/pcr/m/n/10 coda::mcmc.list []\T1/ptm/m/n/10 use
+d to com-pute the step-size proxy via []\T1/pcr/m/n/10 proxy_step_sd()[]\T1/ptm
+/m/n/10 . 
+[25] [26] [27] [28]
+Overfull \hbox (29.42882pt too wide) in paragraph at lines 1546--1549
+[]\T1/ptm/m/n/10 When []\T1/pcr/m/n/10 sampler_params []\T1/ptm/m/n/10 is pro-v
+ided, only pa-ram-e-ters whose names are in-cluded in []\T1/pcr/m/n/10 sampler_
+params
+[29]
+Overfull \hbox (13.08931pt too wide) in paragraph at lines 1610--1613
+[]\T1/ptm/m/n/10 Data frame with at least columns []\T1/pcr/m/n/10 parameter[]\
+T1/ptm/m/n/10 , []\T1/pcr/m/n/10 ESS[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 CE[]\T1
+/ptm/m/n/10 , []\T1/pcr/m/n/10 AE[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 slow_node_
+time[]\T1/ptm/m/n/10 ,
+[30] [31]
+Overfull \hbox (83.63803pt too wide) in paragraph at lines 1705--1707
+[]\T1/ptm/m/n/10 Character string; path to out-put di-rec-tory for sav-ing fig-
+ures (de-fault: []\T1/pcr/m/n/10 "outputs/diagnostics"[]\T1/ptm/m/n/10 ).
+
+Overfull \hbox (21.36789pt too wide) in paragraph at lines 1713--1715
+[]\T1/ptm/m/n/10 Logical; if []\T1/pcr/m/n/10 TRUE[]\T1/ptm/m/n/10 , re-stricts
+ plots to nodes that have an ex-plicit sam-pler in []\T1/pcr/m/n/10 conf.mcmc
+
+Overfull \hbox (47.3977pt too wide) in paragraph at lines 1716--1719
+[]\T1/ptm/m/n/10 NIMBLE MCMC con-fig-u-ra-tion ob-ject, typ-i-cally pro-duced b
+y []\T1/pcr/m/n/10 configureMCMC(model,
+[32]
+Overfull \hbox (57.82092pt too wide) in paragraph at lines 1772--1775
+[][][]\T1/pcr/m/n/10 identify_bottlenecks_family[][][]\T1/ptm/m/n/10 , [][][]\T
+1/pcr/m/n/10 profile_sampler_times[][][]\T1/ptm/m/n/10 , [][][]\T1/pcr/m/n/10 r
+un_structure_and_hmc_test[][] 
+[33]
+Overfull \hbox (1.33847pt too wide) in paragraph at lines 1828--1830
+[]\T1/ptm/m/n/10 A []\T1/pcr/m/n/10 coda::mcmc.list []\T1/ptm/m/n/10 (or com-pa
+t-i-ble) hold-ing pos-te-rior draws, re-quired when
+
+Overfull \hbox (107.84947pt too wide) in paragraph at lines 1831--1834
+[]\T1/ptm/m/n/10 Optional out-put di-rec-tory. When pro-vided, saves: []\T1/pcr
+/m/n/10 AE_median_by_family__samplers_only.png
+
+Overfull \hbox (92.3688pt too wide) in paragraph at lines 1862--1866
+\T1/ptm/m/n/10 MCMC sam-pler, dis-cov-ered \T1/ptm/m/it/10 in-side \T1/ptm/m/n/
+10 via []\T1/pcr/m/n/10 conf.mcmc$getSamplers() []\T1/ptm/m/n/10 (or []\T1/pcr/
+m/n/10 attr(diag_tbl,"mcmc_conf")[]\T1/ptm/m/n/10 ,
+[34]
+Overfull \hbox (4.49782pt too wide) in paragraph at lines 1918--1921
+[]\T1/ptm/m/n/10 make_bar_ce_median_all, make_bar_ce_worst_all, make_bar_time_t
+op_all Tog-
+
+Overfull \hbox (7.62776pt too wide) in paragraph at lines 1922--1924
+[]\T1/ptm/m/n/10 make_bar_ess_q5, make_hist_ce, make_hist_ae Tog-gles for the e
+x-ist-ing \T1/ptm/b/n/10 sampled-
+[35] [36]
+
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.1990 \item{} median R̂
+                          by family (bar chart with threshold line), and
+
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.1991 \item{} top-k worst nodes by R̂
+                                        (bar chart with threshold line).
+
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.2017 \item[\code{threshold}] Numeric; R̂
+                                            reference line (default \code{1....
+
+
+Overfull \hbox (94.3197pt too wide) in paragraph at lines 2027--2031
+[]\T1/ptm/m/n/10 Optional out-put di-rec-tory. Saves: []\T1/pcr/m/n/10 Rhat_med
+ian_by_family__samplers_only_thr_*.png[]\T1/ptm/m/n/10 ,
+
+Overfull \hbox (1.05975pt too wide) in paragraph at lines 2027--2031
+[]\T1/pcr/m/n/10 TopK_worst_Rhat__samplers_only_thr_*.png[]\T1/ptm/m/n/10 , and
+ two CSV sum-
+
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.2032 ...}] Integer; number of worst nodes by R̂
+                                                   to display (default \code...
+
+[37]
+Overfull \hbox (14.82765pt too wide) in paragraph at lines 2101--2104
+[]\T1/ptm/m/n/10 Families are de-fined by the sub-string be-fore the first "[" 
+in each pa-ram-e-ter name. If []\T1/pcr/m/n/10 sampler_params
+[38]
+Overfull \hbox (38.67871pt too wide) in paragraph at lines 2131--2135
+[]\T1/ptm/m/n/10 An ob-ject con-tain-ing MCMC draws (for ex-am-ple an []\T1/pcr
+/m/n/10 mcmc.list[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 mcmc[]\T1/ptm/m/n/10 , []\
+T1/pcr/m/n/10 data.frame[]\T1/ptm/m/n/10 ,
+
+Overfull \hbox (33.89992pt too wide) in paragraph at lines 2139--2143
+\T1/ptm/m/n/10 all pa-ram-e-ters in []\T1/pcr/m/n/10 assess_performance(samples
+, runtime_s)$per_param
+
+Overfull \hbox (12.35782pt too wide) in paragraph at lines 2151--2154
+[]\T1/ptm/m/n/10 Families are de-fined by the pre-fix be-fore the first []\T1/p
+cr/m/n/10 "[" []\T1/ptm/m/n/10 in the pa-ram-e-ter name (for ex-am-ple []\T1/pc
+r/m/n/10 "beta[1]"
+[39]
+Overfull \hbox (16.54997pt too wide) in paragraph at lines 2209--2213
+\T1/ptm/m/n/10 with ob-jects re-turned by [][][]\T1/pcr/m/n/10 test_strategy_fa
+mily_fast()[][] []\T1/ptm/m/n/10 and [][][]\T1/pcr/m/n/10 configure_hmc_safely(
+)[][][]\T1/ptm/m/n/10 . 
+[40]
+Overfull \hbox (69.0994pt too wide) in paragraph at lines 2233--2235
+[]\T1/ptm/m/n/10 A re-sult ob-ject from [][][]\T1/pcr/m/n/10 test_strategy_fami
+ly_fast()[][] []\T1/ptm/m/n/10 or [][][]\T1/pcr/m/n/10 configure_hmc_safely()[]
+[]
+
+Overfull \hbox (9.05835pt too wide) in paragraph at lines 2240--2242
+[]\T1/ptm/m/n/10 Integer; num-ber of keys (tar-gets or fam-i-lies) to keep for 
+plot-ting based on []\T1/pcr/m/n/10 top_by[]\T1/ptm/m/n/10 .
+
+Overfull \hbox (114.11742pt too wide) in paragraph at lines 2262--2265
+[]\T1/ptm/m/n/10 When di-ag-nos-tics are miss-ing but sam-ples/runtime are pro-
+vided, the func-tion prefers []\T1/pcr/m/n/10 compute_diag_from_mcmc_vect()
+
+Overfull \hbox (20.23798pt too wide) in paragraph at lines 2266--2269
+[]\T1/ptm/m/n/10 Filtering re-moves likelihood-like tar-gets ([]\T1/pcr/m/n/10 
+logLik[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 log_lik[]\T1/ptm/m/n/10 , []\T1/pcr/m
+/n/10 logdens[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 lpdf[]\T1/ptm/m/n/10 ) and in-
+ter-nal/generated
+[41]
+Overfull \hbox (25.98041pt too wide) in paragraph at lines 2312--2312
+ []\T1/pcr/m/n/9 res <- test_strategy_family_fast(build_fn = build_M, nbot = 2,
+ try_hmc = TRUE)[] 
+
+Overfull \hbox (63.78036pt too wide) in paragraph at lines 2313--2313
+ []\T1/pcr/m/n/9 plot_strategies_from_test_result_fast(res, per = "family", top
+_k = 30, top_by = "CE")[] 
+
+Overfull \hbox (119.45706pt too wide) in paragraph at lines 2353--2355
+[]\T1/ptm/m/n/10 A NIM-BLE MCMC con-fig-u-ra-tion ob-ject (for ex-am-ple re-tur
+ned by []\T1/pcr/m/n/10 nimble::configureMCMC(model)[]\T1/ptm/m/n/10 ). 
+[42]
+Overfull \hbox (37.60956pt too wide) in paragraph at lines 2356--2358
+[]\T1/ptm/m/n/10 A com-piled []\T1/pcr/m/n/10 nimbleModel []\T1/ptm/m/n/10 used
+ as []\T1/pcr/m/n/10 project =  []\T1/ptm/m/n/10 for []\T1/pcr/m/n/10 nimble::c
+ompileNimble()[]\T1/ptm/m/n/10 . 
+
+Overfull \hbox (15.18042pt too wide) in paragraph at lines 2374--2374
+ []  \T1/pcr/m/n/9 model  <- nimbleModel(code, constants = Const, data = Data, 
+inits = Inits)[] 
+[43] [44] [45]
+Overfull \hbox (11.15906pt too wide) in paragraph at lines 2538--2542
+\T1/ptm/m/n/10 tional el-e-ments: []\T1/pcr/m/n/10 cmodel[]\T1/ptm/m/n/10 , []\
+T1/pcr/m/n/10 monitors[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 code_text []\T1/ptm/m
+/n/10 (or []\T1/pcr/m/n/10 code[]\T1/ptm/m/n/10 ) used to strengthen
+
+Overfull \hbox (49.02747pt too wide) in paragraph at lines 2567--2569
+[]\T1/pcr/m/n/10 diag[]\T1/ptm/m/n/10 : list with []\T1/pcr/m/n/10 nodes []\T1/
+ptm/m/n/10 (data.frame of node meta-data and HMC show-stop-per tags), []\T1/pcr
+/m/n/10 nondiff_signals[]\T1/ptm/m/n/10 ,
+
+Overfull \hbox (52.98038pt too wide) in paragraph at lines 2578--2578
+ []\T1/pcr/m/n/9 out <- run_structure_and_hmc_test(my_builder, include_data = F
+ALSE, try_hmc = TRUE)[] 
+[46] [47]
+Overfull \hbox (42.78088pt too wide) in paragraph at lines 2677--2677
+ []\T1/pcr/m/n/10 sampler_scales_after_run(build_fn, niter = 2000, nburnin = 50
+0, thin = 1) 
+[48]
+Overfull \hbox (91.11807pt too wide) in paragraph at lines 2753--2757
+[]\T1/pcr/m/n/10 TIME_rank []\T1/ptm/m/n/10 (typ-i-cally cre-ated in the sur-ro
+und-ing anal-y-sis func-tion and de-clared via []\T1/pcr/m/n/10 utils::globalVa
+riables()[]\T1/ptm/m/n/10 ). 
+[49] [50] [51] [52]
+Overfull \hbox (4.0384pt too wide) in paragraph at lines 2979--2981
+[]\T1/ptm/m/n/10 Logical; if []\T1/pcr/m/n/10 TRUE[]\T1/ptm/m/n/10 , at-tempt f
+ull-model NUTS via []\T1/pcr/m/n/10 configure_hmc_safely()
+
+Overfull \hbox (51.0087pt too wide) in paragraph at lines 2994--2996
+[]\T1/ptm/m/n/10 Character vec-tor of scalar sam-pler types to try in or-der, e
+.g. []\T1/pcr/m/n/10 c("NUTS","slice","RW")[]\T1/ptm/m/n/10 . 
+
+Overfull \hbox (139.90897pt too wide) in paragraph at lines 2997--2999
+[]\T1/ptm/m/n/10 Character vec-tor of block sam-pler types to try in or-der, e.
+g. []\T1/pcr/m/n/10 c("NUTS_block","AF_slice","RW_block")[]\T1/ptm/m/n/10 . 
+
+Overfull \hbox (35.43842pt too wide) in paragraph at lines 3003--3005
+[]\T1/ptm/m/n/10 Optional named list map-ping fam-ily -> ex-plicit node vec-tor
+ (e.g., []\T1/pcr/m/n/10 list(logit_theta
+[53]
+Underfull \hbox (badness 10000) in paragraph at lines 3014--3014
+[]\T1/pcr/m/n/10 slice_control[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 rw_control[]\
+T1/ptm/m/n/10 , []\T1/pcr/m/n/10 rwblock_control[]\T1/ptm/m/n/10 ,
+
+Overfull \hbox (107.5293pt too wide) in paragraph at lines 3025--3029
+[]\T1/pcr/m/n/10 run_baseline_config() []\T1/ptm/m/n/10 to com-pute di-ag-nos-t
+ics (AE, CE, Rhat) us-ing []\T1/pcr/m/n/10 compute_diag_from_mcmc_vect()
+
+Overfull \hbox (91.55861pt too wide) in paragraph at lines 3038--3040
+[]\T1/ptm/m/n/10 Applies \T1/ptm/b/n/10 strict scalar se-quences \T1/ptm/m/n/10
+ ([]\T1/pcr/m/n/10 strict_scalar_seq[]\T1/ptm/m/n/10 ) on fam-ily 1 (e.g., []\T
+1/pcr/m/n/10 c("NUTS","slice","RW")[]\T1/ptm/m/n/10 ). 
+
+Overfull \hbox (0.77844pt too wide) in paragraph at lines 3066--3068
+[]\T1/ptm/m/n/10 Ignores likelihood-like tar-gets when scor-ing fam-i-lies ([]\
+T1/pcr/m/n/10 logLik[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 log_lik[]\T1/ptm/m/n/10
+ , []\T1/pcr/m/n/10 logdens[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 lpdf[]\T1/ptm/m/
+n/10 )
+[54]
+Overfull \hbox (72.32092pt too wide) in paragraph at lines 3106--3111
+[][][]\T1/pcr/m/n/10 configure_hmc_safely[][][]\T1/ptm/m/n/10 , [][][]\T1/pcr/m
+/n/10 plot_strategies_from_test_result_fast[][][]\T1/ptm/m/n/10 , [][][]\T1/pcr
+/m/n/10 run_baseline_config[][][]\T1/ptm/m/n/10 ,
+[55]
+Overfull \hbox (4.0384pt too wide) in paragraph at lines 3160--3162
+[]\T1/ptm/m/n/10 Logical; if []\T1/pcr/m/n/10 TRUE[]\T1/ptm/m/n/10 , at-tempt f
+ull-model NUTS via []\T1/pcr/m/n/10 configure_hmc_safely()
+
+Overfull \hbox (51.0087pt too wide) in paragraph at lines 3175--3177
+[]\T1/ptm/m/n/10 Character vec-tor of scalar sam-pler types to try in or-der, e
+.g. []\T1/pcr/m/n/10 c("NUTS","slice","RW")[]\T1/ptm/m/n/10 . 
+
+Overfull \hbox (139.90897pt too wide) in paragraph at lines 3178--3180
+[]\T1/ptm/m/n/10 Character vec-tor of block sam-pler types to try in or-der, e.
+g. []\T1/pcr/m/n/10 c("NUTS_block","AF_slice","RW_block")[]\T1/ptm/m/n/10 . 
+
+Overfull \hbox (35.43842pt too wide) in paragraph at lines 3184--3186
+[]\T1/ptm/m/n/10 Optional named list map-ping fam-ily -> ex-plicit node vec-tor
+ (e.g., []\T1/pcr/m/n/10 list(logit_theta
+
+Underfull \hbox (badness 10000) in paragraph at lines 3195--3195
+[]\T1/pcr/m/n/10 slice_control[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 rw_control[]\
+T1/ptm/m/n/10 , []\T1/pcr/m/n/10 rwblock_control[]\T1/ptm/m/n/10 ,
+
+Overfull \hbox (110.0293pt too wide) in paragraph at lines 3206--3209
+[]\T1/pcr/m/n/10 run_baseline_config() []\T1/ptm/m/n/10 to com-pute di-ag-nos-t
+ics (AE, CE, Rhat) us-ing []\T1/pcr/m/n/10 compute_diag_from_mcmc_vect()[]\T1/p
+tm/m/n/10 . 
+[56]
+Overfull \hbox (91.55861pt too wide) in paragraph at lines 3218--3220
+[]\T1/ptm/m/n/10 Applies \T1/ptm/b/n/10 strict scalar se-quences \T1/ptm/m/n/10
+ ([]\T1/pcr/m/n/10 strict_scalar_seq[]\T1/ptm/m/n/10 ) on fam-ily 1 (e.g., []\T
+1/pcr/m/n/10 c("NUTS","slice","RW")[]\T1/ptm/m/n/10 ). 
+
+Overfull \hbox (0.77844pt too wide) in paragraph at lines 3246--3248
+[]\T1/ptm/m/n/10 Ignores likelihood-like tar-gets when scor-ing fam-i-lies ([]\
+T1/pcr/m/n/10 logLik[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 log_lik[]\T1/ptm/m/n/10
+ , []\T1/pcr/m/n/10 logdens[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 lpdf[]\T1/ptm/m/
+n/10 )
+
+Overfull \hbox (72.32092pt too wide) in paragraph at lines 3286--3291
+[][][]\T1/pcr/m/n/10 configure_hmc_safely[][][]\T1/ptm/m/n/10 , [][][]\T1/pcr/m
+/n/10 plot_strategies_from_test_result_fast[][][]\T1/ptm/m/n/10 , [][][]\T1/pcr
+/m/n/10 run_baseline_config[][][]\T1/ptm/m/n/10 ,
+[57] [58]
+Underfull \hbox (badness 10000) in paragraph at lines 3379--3379
+[]\T1/pcr/m/n/10 slice_control[]\T1/ptm/m/n/10 , []\T1/pcr/m/n/10 rw_control[]\
+T1/ptm/m/n/10 , []\T1/pcr/m/n/10 rwblock_control[]\T1/ptm/m/n/10 ,
+[59] (./Rd2.aux) )
+(see the transcript file for additional information)pdfTeX warning (dest): name
+{Rfn.rhat} has been referenced but does not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{Rfn.ess.Rul.bulk} has been referenced but does not 
+exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{Rfn.effectiveSize} has been referenced but does not
+ exist, replaced by a fixed one
+
+{/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/share/texlive/
+texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-
+dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texlive/texmf-dist/fo
+nts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/typ
+e1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw
+/courier/ucrr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmb8a
+.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/shar
+e/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/texmf
+-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on Rd2.pdf (59 pages, 238061 bytes).
+Transcript written on Rd2.log.
+Error in texi2dvi(file = file, pdf = TRUE, clean = clean, quiet = quiet,  : 
+  impossible d'exécuter pdflatex sur 'Rd2.tex'
+LaTeX errors:
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+! Package inputenc Error: Unicode character ̂ (U+0302)
+(inputenc)                not set up for use with LaTeX.
+
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+Erreur lors de l'exécution de tools::texi2pdf()
+You may want to clean up by 'rm -Rf /tmp/Rtmpui7EjQ/Rd2pdff2d3f5496a97f'

@@ -2,26 +2,17 @@
 % Please edit documentation in R/monitors.R
 \name{.default_sanitize_roots}
 \alias{.default_sanitize_roots}
-\title{Discover default monitors from a nimble model (variable-level)}
+\title{Internal helper to sanitize monitor root names}
 \usage{
 .default_sanitize_roots(x)
 }
 \arguments{
-\item{model}{nimbleModel}
-
-\item{opts}{list from samOptiPro_options(); champs supportes :
-\itemize{
-\item include_data      : logical, inclure les data nodes dans l'exploration (rarement utile)
-\item include_logLik    : logical, inclure "logLik" dans la selection par defaut
-\item extra_monitors    : character(), variables supplementaires a monitorer (samples)
-\item extra_monitors2   : character(), variables supplementaires a monitorer en monitors2 (samples2)
-}}
+\item{x}{Character vector of candidate monitor roots.}
 }
 \value{
-character() de noms de variables sans indices (ex: "sd_proc","z","p","logLik")
+A character vector of cleaned, unique roots.
 }
 \description{
-Retourne des NOMS DE VARIABLES (sans indices) pour laisser le runner
-poser ensuite les monitors correctement via conf$setMonitors / setMonitors2.
+Internal helper to sanitize monitor root names
 }
 \keyword{internal}

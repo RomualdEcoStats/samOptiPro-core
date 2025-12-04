@@ -2,7 +2,7 @@
 % Please edit documentation in R/diagnostics.R
 \name{test_strategy_family}
 \alias{test_strategy_family}
-\title{Family-based sampler strategy: full HMC if allowed, else surgical on bottlenecks}
+\title{Fast strategy testing for sampler plans (family-level, with optional full-model HMC/NUTS)}
 \usage{
 test_strategy_family(
   build_fn,
@@ -30,61 +30,128 @@ test_strategy_family(
 )
 }
 \arguments{
-\item{build_fn}{Function; returns \code{list(model, cmodel?, monitors?)} used by the runners.}
+\item{build_fn}{A model builder (function) or a pre-built list with at least
+\code{$model} and \code{$conf}. If a list is provided, it is wrapped to behave
+like a builder.}
 
-\item{monitors}{Character or \code{NULL}; root names to monitor (\code{NULL} = auto).}
+\item{monitors}{Character vector of monitors passed to runs (optional; forwarded).}
 
-\item{try_hmc}{Logical; if \code{TRUE} and structure allows, run full HMC path.}
+\item{try_hmc}{Logical; if \code{TRUE}, attempt full-model NUTS via
+\code{configure_hmc_safely()} when derivatives and \pkg{nimbleHMC} are available.}
 
-\item{nchains}{Integer; number of chains.}
+\item{nchains}{Integer (default 3L); number of chains for baseline and strategy runs.}
 
-\item{pilot_niter}{Integer; iterations for pilot runs.}
+\item{pilot_niter}{Integer; number of iterations for baseline and strategy pilots.}
 
-\item{pilot_burnin}{Integer; burn-in for pilot runs.}
+\item{pilot_burnin}{Integer; burn-in for pilots (also used as NUTS warmup).}
 
-\item{thin}{Integer; thinning factor.}
+\item{thin}{Integer; thinning applied to all runs.}
 
-\item{out_dir}{Character; output directory for diagnostics/plots.}
+\item{out_dir}{Output directory for diagnostics and plots (created if missing).}
 
-\item{nbot}{Integer (\eqn{\ge} 1); number of bottleneck nodes to act on simultaneously.}
+\item{nbot}{Integer; number of bottleneck families to consider (1 or 2 recommended).}
 
-\item{strict_scalar_seq}{Character; sampler order for scalar mode.}
+\item{strict_scalar_seq}{Character vector of scalar sampler types to try in order,
+e.g. \code{c("NUTS","slice","RW")}.}
 
-\item{strict_block_seq}{Character; sampler order for block mode (\code{nbot >= 2}).}
+\item{strict_block_seq}{Character vector of block sampler types to try in order,
+e.g. \code{c("NUTS_block","AF_slice","RW_block")}.}
 
-\item{force_families}{Character or \code{NULL}; families to force.}
+\item{force_families}{Optional character vector of family names to force selection
+(overrides automatic picking by CE).}
 
-\item{force_nodes}{List or \code{NULL}; per-family forced node vectors.}
+\item{force_nodes}{Optional named list mapping family -> explicit node vector
+(e.g., \code{list(logit_theta = c("logit_theta[1]", ...))}).}
 
-\item{force_union}{Character or \code{NULL}; families to union for block stage.}
+\item{force_union}{Optional character vector of families to union for block steps.}
 
-\item{ask}{Logical; interactive confirmation after each step.}
+\item{ask}{Logical; if \code{TRUE} and \code{interactive()}, prompts between steps.}
 
-\item{ask_before_hmc}{Logical; ask before attempting full-model HMC.}
+\item{ask_before_hmc}{Logical; if \code{TRUE}, asks before attempting full-model HMC/NUTS.}
 
-\item{block_max}{Integer; maximum block size.}
+\item{block_max}{Integer; maximum number of nodes in a block union (hard cap).}
 
-\item{slice_control, rw_control, rwblock_control, af_slice_control}{Lists; sampler controls.}
+\item{slice_control, rw_control, rwblock_control, af_slice_control}{Named lists forwarded
+to the respective sampler control arguments.}
 
-\item{slice_max_contractions}{Integer; informational safety for AF_slice.}
+\item{slice_max_contractions}{Integer; passed to slice samplers when relevant.}
 }
 \value{
-A list describing baseline, steps, configurations, diagnostics, and plot paths.
-test_strategy_family
+A list with elements:
+\describe{
+\item{status}{Character; \code{"completed"} on success.}
+\item{mode}{One of \code{"HMC_full"}, \code{"surgical_nbot1"}, \code{"surgical_nbot2"}.}
+\item{baseline}{List with \code{runtime_s}, \code{samples}/\code{samples2}, and
+\code{diag_tbl} (if computed).}
+\item{families}{Character vector of selected bottleneck families.}
+\item{steps}{List of per-step results; each contains \code{res$out}, \code{res$ml},
+\code{res$dg} (diagnostics), and an output directory for plots.}
+\item{hmc}{When \code{mode == "HMC_full"}, the object returned by
+\code{configure_hmc_safely()} with \code{$diag_tbl} and \code{$res$runtime_s}.}
+}
 }
 \description{
-If the model is differentiable and \code{try_hmc = TRUE}, this runs a full
-HMC/NUTS configuration (via \code{configure_hmc_safely()}), executes the baseline,
-prints/plots diagnostics, and returns. Otherwise it switches to a
-\strong{surgical strategy}: it ranks families by median efficiency, extracts
-stochastic bottleneck nodes, and iteratively applies samplers on 1 or more nodes
-(\code{nbot}) in the order:
-\itemize{
-\item scalar: \code{NUTS} -> \code{slice} -> \code{RW}
-\item block (when \code{nbot >= 2}): \code{NUTS_block} -> \code{AF_slice} -> \code{RW_block}
+Runs a fast, reproducible workflow to (i) obtain a \strong{baseline} MCMC,
+(ii) optionally attempt \strong{full-model HMC/NUTS} when feasible, and/or
+(iii) evaluate \strong{surgical family-level strategies} (scalar and block plans)
+on one or two bottleneck families. The function is designed to minimize
+rebuild/compile overhead, auto-patch unsampled nodes, and produce
+diagnostics robustly for large hierarchical models.
 }
-After each assignment, a short MCMC is run, a side-by-side comparison versus the
-baseline is printed (runtime, AE = ESS/iter, CE = ESS/s, Rhat), clean plots are saved
-(Rhat bars + trace plots for the touched nodes), and the user is prompted to continue
-unless \code{ask = FALSE}.
+\details{
+\strong{Pipeline}
+\enumerate{
+\item Fresh build via internal helpers (e.g., \code{.fresh_build()}), then a short \strong{baseline}
+run with \code{run_baseline_config()} to compute diagnostics (AE, CE, Rhat)
+using \code{compute_diag_from_mcmc_vect()} when available (falls back to
+\code{compute_diag_from_mcmc()}).
+\item If \code{try_hmc = TRUE} and the model supports differentiability (no blocking
+features such as hard truncations/simplex/non-diff ops) and \pkg{nimbleHMC}
+is installed, the function can \strong{attempt full-model NUTS} via
+\code{configure_hmc_safely()} (with optional interactive confirmation).
+\item Otherwise (or if HMC is declined/fails), it follows a \strong{surgical plan}:
+\itemize{
+\item Selects \code{nbot} bottleneck families by median CE (ESS/s) from the baseline
+(or uses \code{force_families}/\code{force_nodes}/\code{force_union}).
+\item Applies \strong{strict scalar sequences} (\code{strict_scalar_seq}) on family 1
+(e.g., \code{c("NUTS","slice","RW")}).
+\item If \code{nbot >= 2}, applies \strong{strict block sequences} (\code{strict_block_seq})
+on the union of families 1 and 2 (optionally with a PD \code{propCov} built
+from the baseline samples; capped by \code{block_max}).
+}
+}
+
+\strong{Sampler assignment}
+\itemize{
+\item Scalar: \code{"NUTS"}, \code{"slice"}, \code{"RW"} (with respective control lists).
+\item Block:  \code{"NUTS_block"}, \code{"AF_slice"}, \code{"RW_block"} (with control).
+\item If \pkg{nimbleHMC} is missing, \code{"NUTS"} fallbacks to \code{"slice"} and
+\code{"NUTS_block"} fallbacks to \code{"AF_slice"}.
+}
+
+\strong{Robustness}
+\itemize{
+\item Auto-adds safe samplers to \strong{unsampled non-likelihood nodes} (slice) before compile.
+\item Retries compile/run up to 3 times with clean unloads (\code{nimble::clearCompiled()}).
+\item Ignores likelihood-like targets when scoring families (\code{logLik}, \code{log_lik},
+\code{logdens}, \code{lpdf}) and internal nodes (\code{lifted_}, \code{logProb_}).
+\item Handles \code{NA} in diagnostics gracefully.
+}
+}
+\section{Diagnostics}{
+
+Diagnostics are computed per target and summarized per family using
+\itemize{
+\item AE = median ESS per iteration (AE_ESS_per_it),
+\item CE = median ESS per second (ESS_per_sec),
+\item \eqn{\hat{R}} = max Rhat per group.
+}
+}
+
+\seealso{
+\code{\link{configure_hmc_safely}},
+\code{\link{plot_strategies_from_test_result_fast}},
+\code{\link{run_baseline_config}},
+\code{\link{compute_diag_from_mcmc_vect}},
+\code{\link{compute_diag_from_mcmc}}
 }

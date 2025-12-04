@@ -27,11 +27,11 @@ optional \code{ESS}/\code{ess}, \code{time_s}, \code{Rhat}.}
 
 \item{out_dir}{Output directory for figures (PDF + PNG). Default: "outputs/diagnostics".}
 
-\item{top_k}{Bars shown in the “worst/top” all-nodes panels. Default: 20L.}
+\item{top_k}{Bars shown in the "worst/top" all-nodes panels. Default: 20L.}
 
 \item{n_worst}{Rows returned in worst tables. Default: 20L.}
 
-\item{bins}{Kept for API compatibility (AE/CE “hist” are barplots). Default: 30L.}
+\item{bins}{Kept for API compatibility (AE/CE "hist" are barplots). Default: 30L.}
 
 \item{rhat_ref}{Rhat reference (Rhat-1 axis). Default: 1.05.}
 
@@ -39,8 +39,21 @@ optional \code{ESS}/\code{ess}, \code{time_s}, \code{Rhat}.}
 make_bar_ce_worst_all, make_bar_time_top_all
 Toggles for the \strong{all-nodes} panels (default TRUE).}
 
+\item{make_bar_ce_median_all}{Logical; if \code{TRUE}, draw CE median
+bars over all nodes.}
+
+\item{make_bar_ce_worst_all}{Logical; if \code{TRUE}, draw bars for
+worst CE nodes.}
+
 \item{make_bar_rhat_worst, }{make_bar_ess_q5,
 make_hist_ce, make_hist_ae Toggles for the existing \strong{sampled-only} panels (default TRUE).}
+
+\item{make_bar_ess_q5}{Logical; if \code{TRUE}, draw bars for 5\\% ESS
+quantiles.}
+
+\item{make_hist_ce}{Logical; if \code{TRUE}, include CE histograms.}
+
+\item{make_hist_ae}{Logical; if \code{TRUE}, include AE histograms.}
 }
 \value{
 Invisibly, a list with ggplot objects and worst-node tables.
@@ -54,10 +67,10 @@ to targets having an MCMC sampler, discovered \emph{inside} via
 \item \strong{All-nodes replacements (this change)}: replace the former sampled-only
 panels you listed with \strong{all-nodes} counterparts for the \strong{same metrics}:
 \itemize{
-\item AE median by Target — \strong{all nodes} (steelblue)
-\item CE median by Target — \strong{all nodes} (green)
-\item Worst CE — \strong{all nodes} (grey60 + labels)
-\item Top Time — \strong{all nodes} (grey40 + labels)
+\item AE median by Target - \strong{all nodes} (steelblue)
+\item CE median by Target - \strong{all nodes} (green)
+\item Worst CE - \strong{all nodes} (grey60 + labels)
+\item Top Time - \strong{all nodes} (grey40 + labels)
 }
 }
 }

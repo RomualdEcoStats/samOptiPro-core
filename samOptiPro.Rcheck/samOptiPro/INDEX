@@ -1,0 +1,58 @@
+assess_performance      Assess MCMC performance metrics (ESS, R-hat,
+                        AE, CE)
+compute_diag_from_mcmc
+                        Build a standard diagnostics table from MCMC
+                        samples
+compute_diag_from_mcmc_vect
+                        Scalable diagnostics from MCMC samples
+                        (block-wise)
+configure_hmc_safely_bis
+                        Configure and run HMC/NUTS safely (global /
+                        subset / auto)
+diagnose_model_structure
+                        Diagnose model structure, dependencies, and
+                        sampler time (parameter and family levels)
+identify_bottlenecks_family
+                        Identify bottlenecks at the parameter-family
+                        level
+plot_bottlenecks        Plot MCMC Bottlenecks by Node or Family
+plot_bottlenecks_fast   Fast bottleneck plots (samplers-only) for large
+                        models
+plot_bottlenecks_index
+                        Plot diagnostics for stochastic sampler targets
+                        (strict) + all-nodes panels
+plot_convergence_checks
+                        Plot convergence diagnostics (R-hat & traces)
+                        with family-level R-hat bars
+plot_convergence_rhat_sampled_fast
+                        Fast convergence plots for R-hat
+                        (samplers-only), thresholded
+plot_family_ess_bar     Family-level ESS bar plot (harmonised style)
+plot_family_rhat_bar    Family-level R-hat bar plot (harmonised style)
+plot_mcmc_histograms    Histograms for ESS, CE, AE, and Rhat
+plot_strategies_from_test_result_fast
+                        Plot strategy comparisons from
+                        test_strategy_family_fast results (fast path)
+plot_strategies_from_test_result_hmc_fast
+                        @export
+profile_sampler_times   Profile sampler times per MCMC sampler
+run_baseline_config     Run baseline RW/Slice with robust compile/run
+                        Complete, robust version with safe opts
+                        resolution and fixed parallel loading Run a
+                        baseline MCMC configuration safely (sequential
+                        or parallel)
+run_hmc_all_nodes       Run HMC/NUTS where possible; fallback samplers
+                        for uncovered nodes
+run_structure_and_hmc_test
+                        Run structural diagnostics and (optional)
+                        HMC/NUTS smoke test
+test_strategy_family    Fast strategy testing for sampler plans
+                        (family-level, with optional full-model
+                        HMC/NUTS)
+test_strategy_family_fast
+                        Fast strategy testing for sampler plans
+                        (family-level, with optional full-model
+                        HMC/NUTS)
+test_strategy_family_legacy
+                        Family-based sampler strategy: full HMC if
+                        allowed, else surgical on bottlenecks

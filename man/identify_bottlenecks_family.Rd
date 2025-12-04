@@ -2,7 +2,7 @@
 % Please edit documentation in R/assess.R
 \name{identify_bottlenecks_family}
 \alias{identify_bottlenecks_family}
-\title{Identify bottlenecks by parameter stats::family(medians within families)}
+\title{Identify bottlenecks at the parameter-family level}
 \usage{
 identify_bottlenecks_family(
   samples,
@@ -19,43 +19,84 @@ identify_bottlenecks_family(
 )
 }
 \arguments{
-\item{samples}{mcmc.list/mcmc/matrix/data.frame.}
+\item{samples}{An object containing MCMC samples; typically an object of
+class \code{mcmc.list}, \code{mcmc}, \code{matrix}, or \code{data.frame}.}
 
-\item{runtime_s}{numeric(1) wall time in seconds.}
+\item{runtime_s}{Numeric scalar. Wall-clock runtime of the MCMC run in seconds.}
 
-\item{ess_threshold}{numeric(1) target ESS per stats::family(default 1000).}
+\item{ess_threshold}{Numeric scalar. Target ESS per family (default is 1000).}
 
-\item{sampler_params}{character() optional vector of parameter names to keep.}
+\item{sampler_params}{Optional character vector of parameter names to keep
+when defining families. Parameters not in this vector are ignored.}
 
-\item{rhat_threshold}{numeric(1) kept for API symmetry (not used in ranks).}
+\item{model}{A \code{nimbleModel} (compiled or uncompiled).}
 
-\item{ess_per_s_min}{numeric(1) optional CE threshold to flag (0 = inactive).}
+\item{mcmc_conf}{Optional MCMC configuration (from \code{configureMCMC}).
+If \code{NULL}, a fresh configuration is built internally.}
+
+\item{ignore_patterns}{Character vector of regular expressions for node or
+family names to exclude from the bottleneck search.}
+
+\item{strict_sampler_only}{Logical; if \code{TRUE}, only nodes actually
+sampled by a user-level sampler are considered.}
+
+\item{auto_configure}{Logical; if \code{TRUE}, the function will configure
+a baseline MCMC when \code{mcmc_conf} is missing.}
+
+\item{rhat_threshold}{Numeric scalar kept for API symmetry (not used
+in the ranking).}
+
+\item{ess_per_s_min}{Numeric scalar. Optional CE threshold (ESS per second)
+used to flag families below this value. Use 0 to deactivate.}
 }
 \value{
-list(type="ok" or "degenerate_only",
-details=list(ce=..., ae=..., time=..., degenerate=...),
-per_family=..., summary=..., top3=data.frame)
-identify_bottlenecks_family
+A list or data.frame describing bottleneck families and their
+structural and computational load.
+
+A list with components:
+\describe{
+\item{\code{type}}{Character string, either \code{"ok"} or
+\code{"degenerate_only"}.}
+\item{\code{details}}{List with components \code{ce}, \code{ae},
+\code{time}, and \code{degenerate} summarising the diagnostics.}
+\item{\code{per_family}}{Data frame (or tibble) of metrics by family.}
+\item{\code{summary}}{Single-row data frame (or tibble) with global
+summaries across families.}
+\item{\code{top3}}{Data frame containing the three worst families
+according to the main ranking criterion.}
+}
 }
 \description{
-Parameters are grouped by stats::family(prefix before the first \code{[}), then family-level
-\strong{medians} are computed:
-\itemize{
-\item AE_med  = median(AE)            (low = worse),
-\item CE_med  = median(CE)            (low = worse, CE = ESS/s),
-\item ESS_med = median(ESS),
-\item Rhat_med= median(Rhat, na.rm=TRUE).
-}
+Parameters are grouped into families defined by the prefix before the first
+\code{"["} in their name (for example, \code{"beta[1]"} and \code{"beta[2]"}
+belong to the family \code{"beta"}). For each family, the function computes
+median efficiency metrics and derived quantities that help identify
+bottlenecks.
 }
 \details{
-Derived:
+Group parameters into families and rank them by median efficiency metrics.
+
+For each family, the following median metrics are computed:
 \itemize{
-\item slow_node_time = ess_threshold / CE_med  (seconds to target; high = worse),
-\item meet_target    = slow_node_time <= runtime_s.
+\item \code{AE_med}  = median(AE)            (low values are worse),
+\item \code{CE_med}  = median(CE)            (low values are worse, CE is ESS per second),
+\item \code{ESS_med} = median(ESS),
+\item \code{Rhat_med} = median(Rhat, with \code{na.rm = TRUE}).
 }
 
-Families with degenerate metrics (non-finite or non-positive) are listed in \code{degenerate}
-and excluded from rankings.
+From these, the following diagnostics are derived:
+\itemize{
+\item \code{slow_node_time} = \code{ess_threshold / CE_med}
+(seconds needed to reach the target ESS; higher is worse),
+\item \code{meet_target} = logical flag, \code{TRUE} when
+\code{slow_node_time <= runtime_s}.
+}
 
-If you pass \code{sampler_params}, only parameters belonging to those names are used to form families.
+Families with degenerate metrics (non-finite or non-positive ESS, AE,
+or CE) are reported in the \code{degenerate} component and excluded from
+the ranking.
+
+When \code{sampler_params} is provided, only parameters whose names are
+included in \code{sampler_params} are used to form families (typically
+stochastic nodes that are actually sampled).
 }

@@ -19,7 +19,7 @@ plot_convergence_rhat_sampled_fast(
 \item{diag_tbl}{A \code{data.frame} with at least column \code{target} and one of
 \code{Rhat_split} or \code{Rhat_classic} having finite values.}
 
-\item{threshold}{Numeric; R̂ reference line (default \code{1.01}).}
+\item{threshold}{Numeric; R-hat reference line (default \code{1.01}).}
 
 \item{sampled_only}{Logical (default \code{TRUE}). When \code{TRUE}, keep \strong{only} nodes
 that are targets of configured samplers and also present in \code{samples_ml}.
@@ -34,7 +34,7 @@ Raises an error if none remain (strict behavior).}
 \code{TopK_worst_Rhat__samplers_only_thr_*.png},
 and two CSV summaries.}
 
-\item{top_k}{Integer; number of worst nodes by R̂ to display (default \code{20L}).}
+\item{top_k}{Integer; number of worst nodes by R-hat to display (default \code{20L}).}
 
 \item{prefer_split}{Logical; if \code{TRUE} (default), use \code{Rhat_split} when available/finite,
 otherwise fallback to \code{Rhat_classic}.}
@@ -44,12 +44,14 @@ otherwise fallback to \code{Rhat_classic}.}
 \code{list(p_family, p_top, table_family, table_top, threshold)}.
 }
 \description{
-Builds \strong{samplers-only} convergence diagnostics based on \strong{R̂} with a
+Builds \strong{samplers-only} convergence diagnostics based on \eqn{\hat{R}} with:
+\enumerate{
+\item median \eqn{\hat{R}} by family (bar chart with threshold line), and
+\item top-k worst nodes by \eqn{\hat{R}} (bar chart with threshold line).
 configurable threshold (default 1.01). Prefers \code{Rhat_split} if available,
 falls back to \code{Rhat_classic} otherwise. Produces:
-\enumerate{
-\item median R̂ by family (bar chart with threshold line), and
-\item top-k worst nodes by R̂ (bar chart with threshold line).
+\item median R-hat by family (bar chart with threshold line), and
+\item top-k worst nodes by R-hat (bar chart with threshold line).
 }
 }
 \examples{

@@ -32,24 +32,21 @@ run_baseline_coda <- function(build_fn, niter,
 }
 
 
-#' Run baseline RW/Slice with robust compile/run
-#' Complete, robust version with safe opts resolution and fixed parallel loading
-#' Run a baseline MCMC configuration safely (sequential or parallel)
+#' Run a baseline RW/slice configuration (sequential)
 #'
-#' @param build_fn Function with no args that, when called via .fresh_build(build_fn, ...),
-#'   returns list(conf = <MCMCconf>, cmodel = <model or compiled model>).
-#' @param niter,nburnin,thin MCMC schedule.
-#' @param monitors Character vector or NULL (passed to .fresh_build()).
-#' @param nchains Integer number of chains.
-#' @param opts Optional list of options (resolved like samOptiPro_options()).
-#' @param parallel Logical; if TRUE and nchains > 1, run 1 chain per worker.
-#' @param parallel_type "psock" or "fork".
-#' @param quiet Silence outputs/messages (also prevents progress bars).
-#' @param return_samples If FALSE, stream to CSV on disk (huge RAM savings).
-#' @param out_dir Where to write streamed CSVs when return_samples = FALSE.
+#' @param build_fn Function with no arguments that returns a list with at
+#'   least \code{model}, \code{cmodel} and \code{conf}, or a builder that
+#'   is passed to an internal fresh-build wrapper.
+#' @param niter Total number of MCMC iterations.
+#' @param nburnin Number of initial iterations discarded as burn-in.
+#' @param thin Thinning interval (keep 1 draw every \code{thin} iterations).
+#' @param monitors Optional character vector of monitor roots; if \code{NULL},
+#'   default monitors are inferred.
+#' @param nchains Integer; number of chains to run in \code{runMCMC}.
+#' @param opts List of options as returned by \code{samOptiPro_options()}.
 #'
-#' @return list(samples, samples2, runtime_s, conf, csv_files)
-#'   - If return_samples = FALSE, samples/samples2 are NULL and csv_files lists per-chain paths.
+#' @return A list with components \code{samples}, \code{samples2},
+#'   \code{runtime_s} and \code{conf}.
 #' @export
 run_baseline_config <- function(build_fn, niter,
                                 nburnin = floor(0.25 * niter),
@@ -75,7 +72,20 @@ run_baseline_config <- function(build_fn, niter,
 }
 
 
-#' Run HMC/NUTS where possible; fallback samplers for uncovered nodes
+#' Run HMC/NUTS on all eligible nodes with slice fallback
+#'
+#' @param build_fn Function with no arguments returning a list with
+#'   \code{model}, optional \code{cmodel}, and optional \code{monitors}.
+#' @param niter Total number of MCMC iterations.
+#' @param nburnin Number of burn-in iterations discarded.
+#' @param thin Thinning interval (keep 1 draw every \code{thin} iterations).
+#' @param monitors Optional character vector of monitor roots; if \code{NULL},
+#'   defaults are inferred.
+#' @param nchains Integer; number of chains for \code{runMCMC}.
+#' @param opts List of options as returned by \code{samOptiPro_options()}.
+#'
+#' @return A list with \code{samples}, \code{samples2}, \code{runtime_s},
+#'   \code{conf}, and a logical \code{hmc_applied} flag.
 #' @export
 run_hmc_all_nodes <- function(build_fn, niter,
                               nburnin = floor(0.25 * niter),
