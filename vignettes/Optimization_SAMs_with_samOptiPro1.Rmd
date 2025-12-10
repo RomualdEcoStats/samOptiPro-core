@@ -1,0 +1,535 @@
+---
+title: "Optimizing Samplers in NIMBLE/Optimization of SAMs: example of a differentiable model"
+author:  "Romuald H."
+date: "08/09/2020"
+documentclass: article
+output: 
+  bookdown::word_document2:
+    fig_caption: yes
+    number_sections: no
+    reference_docx: "../../Rmarkdown/ICES_template.docx"
+bibliography: samOpti.bib
+csl: "../../Rmarkdown/ices-journal-of-marine-science.csl"
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+library(knitr)
+knitr::opts_chunk$set(
+  echo       = FALSE,
+  warning    = FALSE,
+  message    = FALSE,
+  fig.width  = 14.9/2.54,
+  fig.height = 10/2.54,
+  dpi        = 300
+)
+colorpalette <- c(
+  "#999999", "#E69F00", "#56B4E9", "#009E73",
+  "#F0E442", "#0072B2", "#D55E00", "#CC79A7"
+)
+```
+
+# Introduction
+
+This tutorial demonstrates how to **diagnose differentiability** and **optimize MCMC sampling strategies** in complex Bayesian state–space models using the R package **`samOptiPro`** (Hounyeme *et al.*, 2025).  
+We illustrate the workflow on a simple population dynamics model, using `nimble` and `nimbleHMC` as the computational back-end.
+
+We will:
+
+- Build and simulate a **population growth model** with a latent process and log-normal observations.  
+- Identify bottlenecks (algorithmic bottlenecks and time bottlenecks).  
+- Diagnose **non-differentiable components** (to decide whether HMC/NUTS is applicable).  
+- Automatically **benchmark samplers** (RW, slice, AF_slice, HMC, NUTS) using `test_strategy_family()` / `test_strategy()`.  
+- Assess **algorithmic efficiency (AE)** and **computational efficiency (CE)**.
+
+All results (traceplots, diagnostics, and performance summaries) are saved under `outputs/`.
+
+# Step 0 – Load packages
+
+```{r load-packages}
+library(coda)
+library(ggplot2)
+library(nimble)
+library(nimbleHMC)
+```
+
+```{r load-samoptipro}
+devtools::load_all("~/samOptiPro_packages_dev/samOptiPro")
+devtools::document()
+devtools::load_all()
+```
+
+# Step 1 – Simulated data, initial values and monitors
+
+```{r inputs-data-monitors}
+# Simulation constants
+time <- 8
+Const_nimble <- list(
+  n        = time,
+  sd_dummy = 0.05,
+  sd_obs   = c(0.05, rep(0.4, time - 1))
+)
+
+# Data simulation
+set.seed(42)
+Nobs  <- numeric(time)
+theta <- numeric(time - 1)
+Nobs[1] <- rlnorm(1, meanlog = 10, sdlog = 0.5)
+
+for (t in 1:(time - 1)) {
+  theta[t]  <- runif(1, 0.7, 0.9)
+  Nobs[t+1] <- Nobs[t] * theta[t]
+}
+
+Data_nimble <- list(Nobs = Nobs)
+
+# Initial values
+Inits_nimble <- list(
+  N           = 2e4 * c(1, cumprod(rep(0.8, time - 1))),
+  logit_theta = rep(logit(0.8), time - 1)
+)
+
+# Monitors
+monitors <- c("N", "theta", "logit_theta")
+```
+
+# Step 2 – Model M3
+
+```{r model-m3}
+M3.nimble <- nimbleCode({
+  # priors
+  for (t in 1:(n-1)) {
+    logit_theta[t] ~ dnorm(mean = 2, sd = 1)
+    theta[t] <- ilogit(logit_theta[t])
+  }
+  N[1] ~ dlnorm(meanlog = 10, sdlog = 5)
+
+  # process model
+  for (t in 1:(n-1)) {
+    N[t+1] <- N[t] * theta[t]
+  }
+
+  # observation model
+  Nobs[1] ~ dlnorm(meanlog = log(N[1]), sdlog = sd_obs[1])
+  for (t in 3:n) {
+    Nobs[t] ~ dlnorm(meanlog = log(N[t]), sdlog = sd_obs[t])
+  }
+})
+```
+
+# Step 3 – Building and compiling the model
+
+The function `build_M()` is the central entry point used by most `samOptiPro`
+tools. It returns the model, its compiled version, the default monitors and the
+model code as plain text.
+
+```{r build-compile}
+nimbleOptions(buildInterfacesForCompiledNestedNimbleFunctions = TRUE)
+nimbleOptions(MCMCsaveHistory = FALSE)
+
+m <- nimbleModel(
+  code        = M3.nimble,
+  name        = "M3",
+  constants   = Const_nimble,
+  data        = Data_nimble,
+  inits       = Inits_nimble,
+  buildDerivs = TRUE
+)
+
+cm <- compileNimble(m)
+
+build_M <- function() list(
+  model     = m,
+  cmodel    = cm,
+  monitors  = monitors,
+  code_text = paste(deparse(M3.nimble), collapse = "\n")
+)
+```
+
+# Step 4 – Diagnosing differentiability and HMC eligibility
+
+## `diagnose_model_structure()`: structural and timing bottlenecks
+
+The function `diagnose_model_structure()` inspects the **graph structure** of
+a NIMBLE model and returns a set of tables describing:
+
+- the list of stochastic and deterministic nodes;  
+- the dependency graph (downstream nodes for each variable);  
+- a decomposition of node families (e.g. `logit_theta`, `N`, `theta`) and
+  their dependency counts;  
+- optional timing information for samplers (via an internal profiling run).  
+
+Conceptually, `diagnose_model_structure()` is **purely structural**: it only
+needs a compiled model, not MCMC samples. It is therefore cheap and can be used
+early, even before running any long MCMC.
+
+In practice, we call it as follows for the M3 model:
+
+```{r diagnose-structure, message=FALSE, warning=FALSE}
+cat("\n[MODEL STRUCTURE CHECK]\n")
+diag_s <- diagnose_model_structure(
+  model              = m,
+  include_data       = FALSE,
+  removed_nodes      = NULL,
+  ignore_patterns    = c("^lifted_", "^logProb_"),
+  make_plots         = TRUE,
+  output_dir         = "outputs/diagnostics",
+  save_csv           = FALSE,
+  node_of_interest   = NULL,
+  sampler_times      = NULL,
+  sampler_times_unit = "seconds",
+  auto_profile       = TRUE,
+  profile_niter      = 2200,
+  profile_burnin     = 500,
+  profile_thin       = 1,
+  profile_seed       = NULL,
+  np                 = 0.10,
+  by_family          = TRUE,
+  family_stat        = c("median", "mean", "sum"),
+  time_normalize     = c("none", "per_node"),
+  only_family_plots  = TRUE
+)
+```
+
+## `run_structure_and_hmc_test()`: combined structure + HMC/NUTS check
+
+In practice, `run_structure_and_hmc_test()` is a convenience wrapper:
+it calls `diagnose_model_structure()` and, when possible, attempts a **full‑model
+HMC/NUTS configuration**. This gives, in a single object `out`, both the
+structural bottlenecks and an early indication of whether a global HMC strategy
+is realistic for the current model.
+
+```{r structure-hmc-test, message=FALSE, warning=FALSE}
+out <- run_structure_and_hmc_test(build_M, include_data = FALSE)
+```
+
+# Step 5 – Baseline MCMC, bottlenecks and performance assessment
+
+## `run_baseline_config()`: a safe default MCMC runner
+
+`run_baseline_config()` is the main entry point to run a **baseline NIMBLE
+configuration** on a given model:
+
+- it calls your model builder (here `build_M()`);  
+- it configures a default sampler strategy (typically scalar RW, possibly with
+  default slice samplers);  
+- it compiles the MCMC and runs it for the requested number of iterations and chains;  
+- it returns the raw samples together with the total runtime.
+
+In this vignette, we use it to generate a long baseline run for model M3.
+Because this can be time‑consuming, we mark the chunk as `eval = FALSE` so that
+the vignette compiles quickly while still showing the full code.
+
+```{r baseline-run-M3, eval=FALSE}
+## MCMC schedule for the baseline run
+n.iter   <- 1e6
+n.burnin <- 1e4
+n.thin   <- 2
+n.chains <- 3
+
+## Baseline configuration and run
+res_a <- run_baseline_config(
+  build_fn = build_M,
+  niter    = n.iter,
+  nburnin  = n.burnin,
+  thin     = n.thin,
+  nchains  = n.chains,
+  monitors = monitors
+)
+
+## Merge samples / samples2 into a clean mcmc.list
+samples_mla <- as_mcmc_list_sop(
+  res_a$samples,
+  res_a$samples2,
+  drop_loglik = FALSE,
+  thin        = n.thin
+)
+
+## Total runtime (seconds) for this baseline configuration
+runtime_s_a <- res_a$runtime_s
+
+## High-level performance summary (ESS / ESS/s / Rhat)
+ap <- assess_performance(
+  samples   = samples_mla,
+  runtime_s = runtime_s_a
+)
+
+## Node-level bottlenecks (ESS & Rhat), working at the target level
+bot <- identify_bottlenecks(
+  samples           = samples_mla,
+  runtime_s         = runtime_s_a,
+  ess_threshold     = 1000,
+  sampler_params    = NULL,
+  model             = m,
+  mcmc_conf         = NULL,
+  ignore_patterns   = c("^lifted_", "^logProb_"),
+  strict_sampler_only = TRUE,
+  auto_configure      = TRUE,
+  rhat_threshold      = 1.01,
+  ess_per_s_min       = 0
+)
+
+runtime_s_a      # total runtime
+ap$summary       # global performance summary
+bot$top3         # worst nodes (ESS/Rhat) at the target level
+
+## Family-level bottlenecks (aggregated by parameter family)
+bot2 <- identify_bottlenecks_family(
+  samples           = samples_mla,
+  runtime_s         = runtime_s_a,
+  ess_threshold     = 1000,
+  sampler_params    = NULL,
+  model             = m,
+  mcmc_conf         = NULL,
+  ignore_patterns   = c("^lifted_", "^logProb_"),
+  strict_sampler_only = TRUE,
+  auto_configure      = TRUE,
+  rhat_threshold      = 1.01,
+  ess_per_s_min       = 0
+)
+
+bot2$top3        # worst families by AE/CE and Rhat
+```
+
+**Summary.** The object `res_a` returned by `run_baseline_config()` is then
+the **baseline reference** for the whole pipeline:
+
+- `samples`, `samples2` are the raw draws used to derive ESS and R-hat;  
+- `runtime_s` is the total runtime used to compute computational efficiency;  
+- downstream tools such as `assess_performance()`, `identify_bottlenecks()`
+  and `identify_bottlenecks_family()` reuse these outputs to locate structural
+  and algorithmic bottlenecks in model M3.
+
+# Step 6 – Adaptive block strategy: `test_strategy_family()` and `test_strategy()`
+
+## `test_strategy_family()`: surgical strategy search by family
+
+The core function of the optimisation pipeline is `test_strategy_family()`.
+Given a **family of parameters** (e.g. `logit_theta`) and a baseline run, it:
+
+1. inspects the current samplers used for this family;  
+2. proposes alternative samplers (e.g. scalar slice or block-wise NUTS);  
+3. runs short **pilot chains** under each strategy;  
+4. compares per-parameter ESS, AE and CE against the baseline;  
+5. returns a structured object that can be further plotted or summarised.
+
+In the M3 toy example, one can use the legacy interface as:
+
+```{r strategy-family, eval=FALSE}
+diff <- test_strategy_family(
+  build_fn            = build_M,
+  monitors            = NULL,   # optional, just passed through
+  try_hmc             = TRUE,   # only used for full-model path; surgical ignores
+  nchains             = 3,
+  pilot_niter         = 4000,
+  pilot_burnin        = 1000,
+  thin                = 2,
+  out_dir             = "outputs/diagnostics",
+  nbot                = 1,
+  strict_scalar_seq   = c("NUTS","slice","RW"),
+  strict_block_seq    = c("NUTS_block","AF_slice","RW_block"),
+  force_families      = NULL,   # e.g. c("logit_theta","N")
+  force_nodes         = NULL,   # e.g. list(logit_theta=c("logit_theta[1]",...))
+  force_union         = NULL,   # e.g. c("logit_theta","N")
+  ask                 = TRUE,
+  ask_before_hmc      = TRUE,
+  block_max           = 20,
+  slice_control       = list(),
+  rw_control          = list(),
+  rwblock_control     = list(adaptScaleOnly = TRUE),
+  af_slice_control    = list(),
+  slice_max_contractions = 5000
+)
+```
+
+A more modern call uses `test_strategy_family()` directly, possibly **forcing**
+specific families such as `logit_theta` and `N` to NUTS/NUTS_block:
+
+For **singletons** or more local interventions, `test_strategy()` offers a
+similar interface but at the node level:
+
+```{r strategy-singletons, eval=FALSE}
+diff2 <- test_strategy(
+  build_fn          = build_M,
+  monitors          = NULL,
+  try_hmc           = FALSE,
+  nchains           = 3,
+  pilot_niter       = 4000,
+  pilot_burnin      = 1000,
+  thin              = 2,
+  out_dir           = "outputs/diagnostics",
+  nbot              = 1,
+  strict_scalar_seq = c("NUTS","slice","RW"),
+  strict_block_seq  = c("NUTS_block","AF_slice","RW_block"),
+  force_union       = NULL,
+  ask               = TRUE,
+  ask_before_hmc    = TRUE,
+  block_max         = 20,
+  slice_control     = list(),
+  rw_control        = list(),
+  rwblock_control   = list(adaptScaleOnly = TRUE),
+  af_slice_control  = list(),
+  slice_max_contractions = 5000
+)
+```
+
+The returned objects (e.g. `diff`, `diff2`, `diff3`) typically contain:
+
+- `baseline$diag_tbl`: diagnostics for the baseline strategy (restricted to
+  the family or nodes of interest);  
+- `steps`: a list of strategy steps, each with its own diagnostics and
+  bookkeeping information (sampler types, proposal scales, etc.).  
+
+In short, `test_strategy_family()` and `test_strategy()` automate the
+**surgical replacement of samplers** on a selected subset of nodes while
+keeping the rest of the model unchanged.
+
+Here:
+
+- `res_fast` bundles baseline and alternative strategies;  
+- `per` controls whether AE/CE/R-hat are aggregated per parameter (`"target"`)
+  or per family;  
+- `top_k` and `top_by` restrict the plots to the most interesting keys
+  according to CE (default) or AE.  
+
+Again, we use `eval = FALSE` to avoid long pilot runs during vignette
+compilation, while preserving executable code for practical use.
+
+# Step 7 – Visualization and diagnostics
+
+## `compute_diag_from_mcmc()` and `compute_diag_from_mcmc_vect()`
+
+At several steps in the workflow, we need to recompute convergence metrics
+from `coda::mcmc.list` objects. `compute_diag_from_mcmc_vect()` provides a
+vectorised and reasonably fast implementation for:
+
+- minimum ESS across chains per parameter;  
+- efficiency per iteration `AE_ESS_per_it`;  
+- efficiency per second `ESS_per_sec`;  
+- Gelman–Rubin diagnostic \(\hat{R}\) per parameter.
+
+Below we illustrate how these diagnostics are combined with plotting utilities
+from `samOptiPro`. Because this chunk depends on the baseline run, we also mark
+it as `eval = FALSE`.
+
+```{r viz-diagnostics, echo=TRUE, eval=FALSE}
+
+## Recompute diagnostics from the baseline samples (illustration)
+diag_tbl2 <- compute_diag_from_mcmc_vect(
+  samples   = samples_mla,
+  runtime_s = res_a$runtime_s
+)
+
+## Or, using the merged mcmc.list
+diag_tbl <- compute_diag_from_mcmc(
+  samples   = samples_mla,
+  runtime_s = res_a$runtime_s
+)
+
+conf.mcmc <- nimble::configureMCMC(m)
+
+plots_bn <- plot_bottlenecks(
+  diag_tbl,
+  sampled_only = TRUE,            # set TRUE for sampled-only nodes
+  conf.mcmc    = conf.mcmc,
+  samples_ml   = samples_mla
+)
+
+plots_cv <- plot_convergence_checks(
+  samples_mla,
+  out_dir             = "outputs/diagnostics",
+  top_k_rhat          = 8,
+  top_k_aelow         = 8,
+  runtime_s           = runtime_s_a,
+  rhat_ref            = 1.01,
+  make_rhat_hist      = TRUE,
+  make_traces_rhat    = TRUE,
+  make_traces_ae      = TRUE,
+  make_rhat_family_bars = TRUE
+)
+
+plots_bi <- plot_bottlenecks_index(
+  diag_tbl,
+  out_dir      = "outputs/diagnostics",
+  top_k        = 20L,
+  make_hist_ce = TRUE,
+  make_hist_ae = TRUE
+)
+
+cat("\nCreated bottleneck figures (plot_bottlenecks):\n")
+print(names(plots_bn))
+cat("\nConvergence outputs (plot_convergence_checks):\n")
+print(names(plots_cv))
+cat("\nIndex panels (plot_bottlenecks_index):\n")
+print(names(plots_bi))
+```
+
+This is exactly the kind of diagnostic object expected by the strategy-testing
+functions described above.
+
+# 8. Conclusions
+
+This workflow highlights how `samOptiPro` helps to:
+
+- Detect non-differentiable nodes that prevent HMC/NUTS usage.  
+- Automatically switch between gradient-based and non-gradient samplers.  
+- Quantify algorithmic and computational efficiency for each parameter family.  
+- Provide transparent diagnostic plots and benchmark reports.  
+- Use adaptive block design to ensure faster convergence and improved mixing
+  without manual tuning.
+
+Putting everything together:
+
+1. `run_baseline_config()` gives a robust starting point and a first diagnostic
+   table (`diag_tbl`).  
+2. `diagnose_model_structure()` reveals structural and timing bottlenecks at
+   the graph level.  
+3. `compute_diag_from_mcmc_vect()` allows you to recompute diagnostics from any
+   set of samples and a runtime.  
+4. `test_strategy_family()` lets you surgically optimise samplers for a given
+   family such as `logit_theta`.  
+5. `test_strategy_family_fast()` and
+   `plot_strategies_from_test_result_fast()` provide a fast, visual way to
+   compare multiple sampler strategies side‑by‑side.  
+
+The M3 toy model illustrates this workflow on a small, controlled example, but
+the same sequence of steps scales to much larger hierarchical models, including
+real‑world stock assessment and population dynamics models.
+
+# 9. Other useful `samOptiPro` tools
+
+In this last section, we briefly summarise additional `samOptiPro` functions
+that are not fully showcased in the M3 workflow but are useful building blocks
+for more advanced applications:
+
+- **`checkInits()` / `checkInitsAndRun()`**  
+  Robust helpers to validate initial values against a NIMBLE model, with clear
+  error messages and optional automatic launching of the MCMC once inits are
+  deemed valid.
+
+- **`run_hmc_all_nodes()`**  
+  Driver to attempt full‑model HMC on differentiable DAGs, using global
+  Hamiltonian proposals while keeping track of failures and fallbacks.
+
+- **`run_baseline_coda()`**  
+  Alternative baseline runner that focuses on standard `coda` workflows, useful
+  when existing MCMC runs already exist outside `samOptiPro` but one wishes to
+  reuse its diagnostic and plotting tools.
+
+- **`as_mcmc_list_sop()`**  
+  Flexible converter that merges primary and secondary monitor sets into a
+  single `coda::mcmc.list`, ensuring consistent parameter ordering across
+  chains and downstream diagnostics.
+
+- **`plot_strategies_from_test_result_hmc_fast()`**  
+  A plotting companion focusing on HMC/NUTS‑specific trials, providing quick
+  visual comparisons of AE/CE and convergence metrics for gradient‑based
+  strategies.
+
+- **`Other functions can be found here`**: ~/samOptiPro_packages_dev/samOptiPro/docs/reference
+
+These tools, together with the core workflow illustrated on model M3, form a
+coherent ecosystem for **designing, diagnosing and optimising** complex
+Bayesian samplers in `nimble`‑based ecological and stock‑assessment models.
+
+# 10. References

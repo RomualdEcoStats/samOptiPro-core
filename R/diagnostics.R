@@ -260,7 +260,7 @@ compute_diag_from_mcmc_vect <- function(
     }
     cols_by <- cols_by_auto
   } else {
-    cols_by <- as.integer(max(1000L, cols_by))
+    cols_by <- as.integer(max(3000L, cols_by))
   }
 
   nb <- as.integer(ceiling(P / cols_by))
@@ -826,7 +826,7 @@ configure_hmc_safely_bis <- function(build_fn,
 #'   \code{NULL}, profile sampler times automatically via a short MCMC run
 #'   (default \code{TRUE}).
 #' @param profile_niter Integer; iterations used by the auto-profiler
-#'   (default \code{1000L}).
+#'   (default \code{3000L}).
 #' @param profile_burnin Integer; burn-in iterations for auto-profiler
 #'   (kept for API compatibility; not used internally) (default \code{100L}).
 #' @param profile_thin Integer; thinning for auto-profiler (kept for API
@@ -894,7 +894,7 @@ diagnose_model_structure <- function(model,
                                      sampler_times       = NULL,
                                      sampler_times_unit  = "seconds",
                                      auto_profile        = TRUE,
-                                     profile_niter       = 1000L,
+                                     profile_niter       = 3000L,
                                      profile_burnin      = 100L,  # kept for compat (unused)
                                      profile_thin        = 1L,    # kept for compat (unused)
                                      profile_seed        = NULL,
@@ -2562,14 +2562,25 @@ test_strategy <- function(build_fn,
 
   `%||%` <- function(x, y) if (is.null(x)) y else x
   stopifnot(nbot >= 1L)
-  if (is.list(build_fn) && !is.null(build_fn$model)) { obj <- build_fn; build_fn <- function() obj }
+  if (is.list(build_fn) && !is.null(build_fn$model)) {
+    obj <- build_fn
+    build_fn <- function() obj
+  }
   stopifnot(is.function(build_fn))
-  if (!requireNamespace("nimble", quietly = TRUE)) stop("samOptiPro: 'nimble' is required.")
-  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+  if (!requireNamespace("nimble", quietly = TRUE))
+    stop("samOptiPro: 'nimble' is required.")
+  if (!dir.exists(out_dir))
+    dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
   # ---- utils
-  say     <- function(...) { msg <- try(sprintf(...), silent = TRUE); if (!inherits(msg,"try-error")) cat(msg,"\n") }
-  is_ll   <- function(x) grepl("^logLik(\\[.*\\])?$|log_?lik|logdens|lpdf", x, perl=TRUE, ignore.case=TRUE)
+  say   <- function(...) {
+    msg <- try(sprintf(...), silent = TRUE)
+    if (!inherits(msg,"try-error")) cat(msg,"\n")
+  }
+  is_ll <- function(x) {
+    grepl("^logLik(\\[.*\\])?$|log_?lik|logdens|lpdf",
+          x, perl = TRUE, ignore.case = TRUE)
+  }
 
   # (A) sanitize niter/burnin once, and reuse
   .sanitize_iters <- local({
@@ -2577,13 +2588,15 @@ test_strategy <- function(build_fn,
     function(niter, nburnin) {
       niter   <- as.integer(niter)
       nburnin <- as.integer(nburnin)
-      if (is.na(niter) || niter < 1L) niter <- 1L
+      if (is.na(niter)   || niter   < 1L) niter   <- 1L
       if (is.na(nburnin) || nburnin < 0L) nburnin <- 0L
       if (nburnin >= niter) {
         new_nburnin <- max(0L, niter - 1L)
         if (!warned) {
-          message(sprintf("[info] Adjusting nburnin (%d) to %d because nburnin must be < niter (%d).",
-                          nburnin, new_nburnin, niter))
+          message(sprintf(
+            "[info] Adjusting nburnin (%d) to %d because nburnin must be < niter (%d).",
+            nburnin, new_nburnin, niter
+          ))
           warned <<- TRUE
         }
         nburnin <- new_nburnin
@@ -2601,8 +2614,8 @@ test_strategy <- function(build_fn,
       ans <- try(readline(), silent = TRUE)
       if (inherits(ans, "try-error")) return(TRUE) # non-interactive fallback = proceed
       ans <- tolower(trimws(ans))
-      if (ans %in% c("y","yes","o","oui")) return(TRUE)
-      if (ans %in% c("n","no","non"))      return(FALSE)
+      if (ans %in% c("y","yes","o","oui"))         return(TRUE)
+      if (ans %in% c("n","no","non","0"))         return(FALSE)
       cat("Please answer 'yes' or 'no'.\n")
     }
   }
@@ -2610,7 +2623,14 @@ test_strategy <- function(build_fn,
   # barrier & restore for smooth scalar->block
   .barrier_before_block <- function(tag = "scalar_to_block") {
     try(nimble::clearCompiled(), silent = TRUE); gc()
-    new_bd <- file.path(tempdir(), paste0("samOptiPro_build_", gsub("[^A-Za-z0-9_]+","_", tag), "_", as.integer(stats::runif(1,1e9,9e9))))
+    new_bd <- file.path(
+      tempdir(),
+      paste0(
+        "samOptiPro_build_",
+        gsub("[^A-Za-z0-9_]+","_", tag), "_",
+        as.integer(stats::runif(1, 1e9, 9e9))
+      )
+    )
     dir.create(new_bd, recursive = TRUE, showWarnings = FALSE)
     assign(".sop_old_builddir", nimble::nimbleOptions("buildDir"), inherits = FALSE)
     nimble::nimbleOptions(buildDir = new_bd)
@@ -2619,7 +2639,8 @@ test_strategy <- function(build_fn,
   }
   .restore_builddir <- function() {
     old <- try(get(".sop_old_builddir", inherits = FALSE), silent = TRUE)
-    if (!inherits(old, "try-error") && !is.null(old)) try(nimble::nimbleOptions(buildDir = old), silent = TRUE)
+    if (!inherits(old, "try-error") && !is.null(old))
+      try(nimble::nimbleOptions(buildDir = old), silent = TRUE)
     invisible(TRUE)
   }
 
@@ -2631,104 +2652,182 @@ test_strategy <- function(build_fn,
     }
   }
 
+  # ---------- compile & run (aligned with family version: use compute_diag_from_mcmc) ----------
   .compile_and_run <- function(step_tag, build_obj, conf, niter, nburnin) {
-    it <- .sanitize_iters(niter, nburnin); niter <- it$niter; nburnin <- it$nburnin
-    attempts <- 0L; last_err <- NULL
+    it <- .sanitize_iters(niter, nburnin)
+    niter   <- it$niter
+    nburnin <- it$nburnin
+    attempts <- 0L
+    last_err <- NULL
     repeat {
       attempts <- attempts + 1L
       try(nimble::clearCompiled(), silent = TRUE); gc()
       res <- try({
         .ensure_unsampled(conf)
         cmcmc <- .compile_mcmc_with_build(conf, build_obj, reset = TRUE, show = FALSE)
-        out   <- .run_and_collect(cmcmc, niter = niter, nburnin = nburnin, thin = thin, nchains = nchains)
-        ml    <- as_mcmc_list_sop(out$samples, out$samples2, drop_loglik = FALSE, thin = thin)
-        dg <- .compute_diag_auto(ml, runtime_s = out$runtime_s)
-        if (!is.null(cmcmc) && is.list(cmcmc) && "unloadDLL" %in% names(cmcmc)) try(cmcmc$unloadDLL(), silent = TRUE)
-        list(out=out, ml=ml, dg=dg)
+        out   <- .run_and_collect(
+          cmcmc,
+          niter   = niter,
+          nburnin = nburnin,
+          thin    = thin,
+          nchains = nchains
+        )
+        ml <- as_mcmc_list_sop(
+          out$samples, out$samples2,
+          drop_loglik = FALSE, thin = thin
+        )
+        # diagnostics: same pipeline as baseline
+        dg <- compute_diag_from_mcmc(ml, runtime_s = out$runtime_s)
+        if (!is.null(cmcmc) && is.list(cmcmc) && "unloadDLL" %in% names(cmcmc))
+          try(cmcmc$unloadDLL(), silent = TRUE)
+        list(out = out, ml = ml, dg = dg)
       }, silent = TRUE)
       if (!inherits(res, "try-error")) return(res)
-      last_err <- tryCatch(conditionMessage(attr(res, "condition")), error=function(e) as.character(res))
-      if (attempts == 1L) message(sprintf("[info] First attempt failed at %s; retrying cleanly...", step_tag))
-      else message(sprintf("[retry %d @ %s] %s", attempts, step_tag, last_err))
+      last_err <- tryCatch(
+        conditionMessage(attr(res, "condition")),
+        error = function(e) as.character(res)
+      )
+      if (attempts == 1L)
+        message(sprintf("[info] First attempt failed at %s; retrying cleanly...", step_tag))
+      else
+        message(sprintf("[retry %d @ %s] %s", attempts, step_tag, last_err))
+
       build_obj <- .fresh_build(build_fn, monitors = monitors, thin = thin)
-      conf <- build_obj$conf
-      if (attempts >= 3L) stop(sprintf("Compilation failed after %d attempts at step '%s': %s", attempts, step_tag, last_err))
+      conf      <- build_obj$conf
+      if (attempts >= 3L)
+        stop(sprintf(
+          "Compilation failed after %d attempts at step '%s': %s",
+          attempts, step_tag, last_err
+        ))
     }
   }
 
   # assigners
   .add_scalar <- function(conf, nodes, type, has_hmc) {
     if (identical(type, "NUTS")) {
-      if (isTRUE(has_hmc)) { for (n in nodes) conf$addSampler(target = n, type = "NUTS") }
-      else { cat("[Info] nimbleHMC not available -> falling back to slice (scalar).\n"); for (n in nodes) conf$addSampler(n, "slice", slice_control) }
+      if (isTRUE(has_hmc)) {
+        for (n in nodes) conf$addSampler(target = n, type = "NUTS")
+      } else {
+        cat("[Info] nimbleHMC not available -> falling back to slice (scalar).\n")
+        for (n in nodes) conf$addSampler(n, "slice", slice_control)
+      }
       return(invisible())
     }
-    if (identical(type, "slice")) { for (n in nodes) conf$addSampler(n, "slice", slice_control); return(invisible()) }
-    if (identical(type, "RW"))    { for (n in nodes) conf$addSampler(n, "RW",    rw_control);    return(invisible()) }
+    if (identical(type, "slice")) {
+      for (n in nodes) conf$addSampler(n, "slice", slice_control)
+      return(invisible())
+    }
+    if (identical(type, "RW")) {
+      for (n in nodes) conf$addSampler(n, "RW", rw_control)
+      return(invisible())
+    }
     for (n in nodes) conf$addSampler(n, "slice", slice_control)
   }
+
   .add_block <- function(conf, nodes, type, has_hmc, Sc = NULL) {
     nodes <- unique(nodes)
     if (length(nodes) < 2L) {
       if (type == "NUTS_block") .add_scalar(conf, nodes, "NUTS", has_hmc) else
         if (type == "AF_slice")   for (n in nodes) conf$addSampler(n, "AF_slice", af_slice_control) else
-          if (type == "RW_block")   for (n in nodes) conf$addSampler(n, "RW", rw_control) else
+          if (type == "RW_block") for (n in nodes) conf$addSampler(n, "RW", rw_control) else
             for (n in nodes) conf$addSampler(n, "slice", slice_control)
       return(invisible())
     }
     if (identical(type, "NUTS_block")) {
-      if (isTRUE(has_hmc)) conf$addSampler(target = nodes, type = "NUTS")
-      else { cat("[Info] nimbleHMC not available -> falling back to AF_slice (block).\n"); conf$addSampler(target = nodes, type = "AF_slice", control = af_slice_control) }
+      if (isTRUE(has_hmc)) {
+        conf$addSampler(target = nodes, type = "NUTS")
+      } else {
+        cat("[Info] nimbleHMC not available -> falling back to AF_slice (block).\n")
+        conf$addSampler(target = nodes, type = "AF_slice", control = af_slice_control)
+      }
       return(invisible())
     }
     if (identical(type, "AF_slice")) {
       ok <- TRUE
-      tryCatch({ conf$addSampler(target = nodes, type = "AF_slice", control = af_slice_control) }, error = function(e) ok <<- FALSE)
+      tryCatch({
+        conf$addSampler(target = nodes, type = "AF_slice", control = af_slice_control)
+      }, error = function(e) ok <<- FALSE)
       if (!ok) for (n in nodes) conf$addSampler(n, "slice", slice_control)
       return(invisible())
     }
     if (identical(type, "RW_block")) {
-      ctrl <- rwblock_control; if (!is.null(Sc)) ctrl$propCov <- Sc
-      conf$addSampler(nodes, "RW_block", ctrl); return(invisible())
+      ctrl <- rwblock_control
+      if (!is.null(Sc)) ctrl$propCov <- Sc
+      conf$addSampler(nodes, "RW_block", ctrl)
+      return(invisible())
     }
     for (n in nodes) conf$addSampler(n, "slice", slice_control)
   }
 
   .metrics_for <- function(dg, nodes) {
     nodes <- nodes[!is.na(nodes) & nzchar(nodes)]
+    if (is.null(dg) || !nrow(dg)) {
+      return(list(AE = NA_real_, CE = NA_real_, Rhat = NA_real_))
+    }
+    if (!"target" %in% names(dg)) {
+      if ("Parameter" %in% names(dg)) {
+        dg$target <- as.character(dg$Parameter)
+      } else {
+        return(list(AE = NA_real_, CE = NA_real_, Rhat = NA_real_))
+      }
+    }
     keep <- dg$target %in% nodes & !is_ll(dg$target)
-    list(AE = stats::median(dg$AE_ESS_per_it[keep], na.rm = TRUE),
-         CE = stats::median(dg$ESS_per_sec[keep],   na.rm = TRUE),
-         Rhat = if (any(keep)) suppressWarnings(max(dg$Rhat[keep], na.rm = TRUE)) else NA_real_)
+    if (!any(keep)) {
+      return(list(AE = NA_real_, CE = NA_real_, Rhat = NA_real_))
+    }
+    list(
+      AE   = stats::median(dg$AE_ESS_per_it[keep], na.rm = TRUE),
+      CE   = stats::median(dg$ESS_per_sec[keep],   na.rm = TRUE),
+      Rhat = if (any(keep)) suppressWarnings(max(dg$Rhat[keep], na.rm = TRUE)) else NA_real_
+    )
   }
+
   .print_step <- function(title, label, nodes, sampler, runtime, met, base_dx, base_rt) {
     nodes <- nodes[!is.na(nodes) & nzchar(nodes)]
     say("--- %s ---", title)
     if (!is.null(label)) say("Target(s): %s", label)
-    say("Nodes: %s", paste(nodes, collapse=", "))
+    say("Nodes: %s", paste(nodes, collapse = ", "))
     say("Sampler: %s", sampler)
     say("Runtime_s: %.2f (baseline: %.2f)", runtime %||% NA_real_, base_rt %||% NA_real_)
-    say("AE median (ESS/iter): %.3g (baseline: %.3g)", met$AE %||% NA_real_,
-        stats::median(base_dx$AE_ESS_per_it, na.rm=TRUE))
-    say("CE median (ESS/s):    %.3g (baseline: %.3g)", met$CE %||% NA_real_,
-        stats::median(base_dx$ESS_per_sec,   na.rm=TRUE))
+    say("AE median (ESS/iter): %.3g (baseline: %.3g)",
+        met$AE %||% NA_real_,
+        stats::median(base_dx$AE_ESS_per_it, na.rm = TRUE))
+    say("CE median (ESS/s):    %.3g (baseline: %.3g)",
+        met$CE %||% NA_real_,
+        stats::median(base_dx$ESS_per_sec,   na.rm = TRUE))
     say("Rhat max:             %.3g (baseline max: %.3g)",
-        met$Rhat %||% NA_real_, suppressWarnings(max(base_dx$Rhat, na.rm=TRUE)))
+        met$Rhat %||% NA_real_,
+        suppressWarnings(max(base_dx$Rhat, na.rm = TRUE)))
   }
 
   # ---------- 0) Build + baseline ----------
   b0  <- .fresh_build(build_fn, monitors = monitors, thin = thin)
   mdl <- b0$model
   it  <- .sanitize_iters(pilot_niter, pilot_burnin)
-  rb  <- run_baseline_config(build_fn, it$niter, it$nburnin, thin, monitors, nchains)
-  base_ml <- as_mcmc_list_sop(rb$samples, rb$samples2, drop_loglik = FALSE, thin = thin)
+
+  rb  <- run_baseline_config(
+    build_fn = build_fn,
+    niter    = it$niter,
+    nburnin  = it$nburnin,
+    thin     = thin,
+    monitors = monitors,
+    nchains  = nchains
+  )
+
+  base_ml <- as_mcmc_list_sop(
+    rb$samples, rb$samples2,
+    drop_loglik = FALSE, thin = thin
+  )
   base_dg <- compute_diag_from_mcmc(base_ml, runtime_s = rb$runtime_s)
   base_dx <- base_dg[!is_ll(base_dg$target), , drop = FALSE]
-  say("Baseline runtime_s: %.2f s", rb$runtime_s %||% NA_real_)
-  say("Baseline median AE(ESS/iter): %.3g", stats::median(base_dx$AE_ESS_per_it, na.rm = TRUE))
-  say("Baseline median CE(ESS/s):    %.3g", stats::median(base_dx$ESS_per_sec,   na.rm = TRUE))
 
-  # ---------- 1) Optional full-model HMC ----------
+  say("Baseline runtime_s: %.2f s", rb$runtime_s %||% NA_real_)
+  say("Baseline median AE(ESS/iter): %.3g",
+      stats::median(base_dx$AE_ESS_per_it, na.rm = TRUE))
+  say("Baseline median CE(ESS/s):    %.3g",
+      stats::median(base_dx$ESS_per_sec,   na.rm = TRUE))
+
+  # ---------- 1) Optional full-model HMC (using run_hmc_all_nodes) ----------
   dg_struct <- try(diagnose_model_structure(mdl), silent = TRUE)
   suppressWarnings(has_hmc <- requireNamespace("nimbleHMC", quietly = TRUE))
   deriv_ok <- .sop_supports_derivs(mdl)
@@ -2739,25 +2838,64 @@ test_strategy <- function(build_fn,
     if (isTRUE(dg_struct$has_non_diff_fun)) blockers <- c(blockers, "non-diff-function")
   }
   nuts_ok_global <- isTRUE(try_hmc) && has_hmc && deriv_ok && (length(blockers) == 0L)
+
   if (isTRUE(nuts_ok_global)) {
-    if (.ask_yes_no_strict(sprintf("Baseline ready. Runtime=%.2fs; median AE=%.3g; median CE=%.3g\nProceed with full-model HMC/NUTS?",
-                                   rb$runtime_s %||% NA_real_,
-                                   median(base_dx$AE_ESS_per_it, na.rm = TRUE),
-                                   median(base_dx$ESS_per_sec,   na.rm = TRUE)))) {
-      hmc_try <- configure_hmc_safely(build_fn = build_fn, niter = it$niter, nburnin = it$nburnin,
-                                      thin = thin, monitors = monitors, nchains = nchains,
-                                      out_dir = file.path(out_dir, "HMC_full"))
-      if (isTRUE(hmc_try$ok)) {
-        dg <- hmc_try$diag_tbl
-        cat(sprintf("HMC runtime_s: %.3f\n", hmc_try$res$runtime_s %||% NA_real_))
-        cat(sprintf("HMC median AE: %.3g ; CE: %.3g ; max Rhat: %.3g\n",
-                    median(dg$AE_ESS_per_it, na.rm=TRUE), median(dg$ESS_per_sec, na.rm=TRUE),
-                    if (all(is.na(dg$Rhat))) NA_real_ else max(dg$Rhat, na.rm=TRUE)))
-        return(list(mode="HMC_full",
-                    baseline=list(runtime_s=rb$runtime_s, samples=base_ml, diag_tbl=base_dg),
-                    hmc=hmc_try, messages="Full HMC completed."))
+    proceed_hmc <- .ask_yes_no_strict(sprintf(
+      "Baseline ready. Runtime=%.2fs; median AE=%.3g; median CE=%.3g\nProceed with full-model HMC/NUTS?",
+      rb$runtime_s %||% NA_real_,
+      median(base_dx$AE_ESS_per_it, na.rm = TRUE),
+      median(base_dx$ESS_per_sec,   na.rm = TRUE)
+    ))
+
+    if (proceed_hmc) {
+      hmc_try <- try(
+        run_hmc_all_nodes(
+          build_fn = build_fn,
+          niter    = it$niter,
+          nburnin  = it$nburnin,
+          thin     = thin,
+          monitors = monitors,
+          nchains  = nchains,
+          opts     = samOptiPro_options()
+        ),
+        silent = TRUE
+      )
+
+      if (inherits(hmc_try, "try-error")) {
+        cat("[Warn] Full-model HMC (run_hmc_all_nodes) threw an error -> continuing with surgical singleton plan.\n")
+      } else if (!is.list(hmc_try) ||
+                 !all(c("samples","samples2","runtime_s") %in% names(hmc_try))) {
+        cat("[Warn] run_hmc_all_nodes returned an unexpected structure -> continuing with surgical singleton plan.\n")
       } else {
-        cat("[Warn] Full-model HMC failed -> continuing with surgical singleton plan.\n")
+        hmc_ml <- as_mcmc_list_sop(
+          hmc_try$samples,
+          hmc_try$samples2,
+          drop_loglik = FALSE,
+          thin = thin
+        )
+        hmc_dg <- compute_diag_from_mcmc(hmc_ml, runtime_s = hmc_try$runtime_s)
+
+        cat(sprintf("HMC runtime_s: %.3f\n", hmc_try$runtime_s %||% NA_real_))
+        cat(sprintf("HMC median AE: %.3g ; CE: %.3g ; max Rhat: %.3g\n",
+                    median(hmc_dg$AE_ESS_per_it, na.rm = TRUE),
+                    median(hmc_dg$ESS_per_sec,   na.rm = TRUE),
+                    if (all(is.na(hmc_dg$Rhat))) NA_real_ else max(hmc_dg$Rhat, na.rm = TRUE)))
+
+        return(list(
+          status   = "completed",
+          mode     = "HMC_full",
+          baseline = list(
+            runtime_s = rb$runtime_s,
+            samples   = base_ml,
+            diag_tbl  = base_dg
+          ),
+          hmc      = list(
+            run      = hmc_try,
+            mcmc     = hmc_ml,
+            diag_tbl = hmc_dg
+          ),
+          messages = "Full HMC (run_hmc_all_nodes) completed."
+        ))
       }
     } else {
       cat("User declined full-model HMC/NUTS. Switching to surgical singleton plan.\n")
@@ -2768,32 +2906,43 @@ test_strategy <- function(build_fn,
   stoch_nodes <- mdl$getNodeNames(stochOnly = TRUE, includeData = FALSE)
   stoch_nodes <- stoch_nodes[!is_ll(stoch_nodes)]
 
-  if (is.null(force_union_nodes) && !is.null(force_union)) force_union_nodes <- force_union
+  if (is.null(force_union_nodes) && !is.null(force_union))
+    force_union_nodes <- force_union
 
   pick_nodes <- character(0)
+
   # From forcing
   if (!is.null(force_singletons) && length(force_singletons)) {
-    pn <- unique(force_singletons)
-    present <- intersect(pn, intersect(stoch_nodes, unique(colnames(as.matrix(base_ml[[1]])))))
+    pn      <- unique(force_singletons)
+    present <- intersect(
+      pn,
+      intersect(stoch_nodes, unique(colnames(as.matrix(base_ml[[1]]))))
+    )
     pick_nodes <- utils::head(present, nbot)
   }
+
   # From diagnostics at node-level
   if (!length(pick_nodes)) {
     node_like <- grepl("\\[", base_dx$target) # heuristic
     if (any(node_like)) {
-      ord <- order(base_dx$ESS_per_sec[node_like], decreasing = FALSE)
+      ord  <- order(base_dx$ESS_per_sec[node_like], decreasing = FALSE)
       cand <- base_dx$target[node_like][ord]
       pick_nodes <- intersect(utils::head(cand, nbot), stoch_nodes)
     }
   }
+
   # From samples ESS/s
   if (!length(pick_nodes)) {
-    if (!requireNamespace("coda", quietly = TRUE)) stop("samOptiPro: 'coda' package required for node-level ESS.")
+    if (!requireNamespace("coda", quietly = TRUE))
+      stop("samOptiPro: 'coda' package required for node-level ESS.")
     common_cols <- Reduce(intersect, lapply(base_ml, function(m) colnames(as.matrix(m))))
     node_cols   <- intersect(common_cols, stoch_nodes)
     if (length(node_cols)) {
       ess_per_node <- sapply(node_cols, function(nm) {
-        ess_ch <- sapply(base_ml, function(m) { X <- as.matrix(m); if (nm %in% colnames(X)) coda::effectiveSize(X[, nm]) else NA_real_ })
+        ess_ch <- sapply(base_ml, function(m) {
+          X <- as.matrix(m)
+          if (nm %in% colnames(X)) coda::effectiveSize(X[, nm]) else NA_real_
+        })
         sum(ess_ch, na.rm = TRUE) / (rb$runtime_s %||% 1)
       })
       ord <- order(ess_per_node, decreasing = FALSE)
@@ -2801,13 +2950,17 @@ test_strategy <- function(build_fn,
       pick_nodes <- pick_nodes[!is.na(pick_nodes)]
     }
   }
+
   # Last resort
   if (!length(pick_nodes)) {
     present <- intersect(stoch_nodes, unique(colnames(as.matrix(base_ml[[1]]))))
     pick_nodes <- utils::head(present, nbot)
   }
-  if (!length(pick_nodes)) stop("No stochastic singleton targets to operate on.")
-  say("Selected singleton bottlenecks (nbot=%d): %s", length(pick_nodes), paste(pick_nodes, collapse = ", "))
+  if (!length(pick_nodes))
+    stop("No stochastic singleton targets to operate on.")
+
+  say("Selected singleton bottlenecks (nbot=%d): %s",
+      length(pick_nodes), paste(pick_nodes, collapse = ", "))
 
   steps <- list()
 
@@ -2815,76 +2968,143 @@ test_strategy <- function(build_fn,
   if (nbot == 1L) {
     node1 <- pick_nodes[1]
     for (samp in unique(as.character(strict_scalar_seq))) {
-      bS <- .fresh_build(build_fn, monitors = monitors, thin = thin)
+      bS    <- .fresh_build(build_fn, monitors = monitors, thin = thin)
       confS <- bS$conf
       try(confS$removeSamplers(node1), silent = TRUE)
       .add_scalar(confS, node1, samp, has_hmc)
 
       itS  <- .sanitize_iters(pilot_niter, pilot_burnin)
-      resS <- .compile_and_run(paste0("nbot1_", gsub("[^A-Za-z0-9_]+","_", node1), "_", samp), bS, confS, itS$niter, itS$nburnin)
+      resS <- .compile_and_run(
+        paste0("nbot1_", gsub("[^A-Za-z0-9_]+","_", node1), "_", samp),
+        bS, confS, itS$niter, itS$nburnin
+      )
       metS <- .metrics_for(resS$dg, node1)
-      .print_step("Scalar plan on singleton", node1, node1, samp, resS$out$runtime_s, metS, base_dx, rb$runtime_s)
+      .print_step(
+        "Scalar plan on singleton",
+        node1, node1, samp,
+        resS$out$runtime_s, metS, base_dx, rb$runtime_s
+      )
 
-      pdir <- file.path(out_dir, sprintf("singleton_%s_%s", gsub("[^A-Za-z0-9_]", "_", node1), samp))
-      if (!dir.exists(pdir)) dir.create(pdir, recursive = TRUE, showWarnings = FALSE)
-      .plot_rhat_bar(resS$dg, nodes = node1, out_file = file.path(pdir, "rhat_bar.png"))
-      .plot_traces(resS$ml, nodes = node1, out_file_prefix = file.path(pdir, "trace_"))
+      pdir <- file.path(
+        out_dir,
+        sprintf("singleton_%s_%s", gsub("[^A-Za-z0-9_]", "_", node1), samp)
+      )
+      if (!dir.exists(pdir))
+        dir.create(pdir, recursive = TRUE, showWarnings = FALSE)
+      .plot_rhat_bar(resS$dg, nodes = node1,
+                     out_file = file.path(pdir, "rhat_bar.png"))
+      .plot_traces(resS$ml, nodes = node1,
+                   out_file_prefix = file.path(pdir, "trace_"))
 
-      steps <- c(steps, list(list(level="singleton-scalar", nodes=node1, sampler=samp, res=resS, dir=pdir)))
-      if (!.ask_yes_no_strict(sprintf("Proceed to the next sampler for '%s'?", node1))) break
+      steps <- c(steps, list(list(
+        level   = "singleton-scalar",
+        nodes   = node1,
+        sampler = samp,
+        res     = resS,
+        dir     = pdir
+      )))
+
+      if (!.ask_yes_no_strict(sprintf("Proceed to the next sampler for '%s'?", node1)))
+        break
     }
-    return(list(status="completed", mode="surgical_nbot1_singleton", baseline=rb, targets=pick_nodes, steps=steps))
+    return(list(
+      status  = "completed",
+      mode    = "surgical_nbot1_singleton",
+      baseline = rb,
+      targets  = pick_nodes,
+      steps    = steps
+    ))
   }
 
   # ======================= CASE nbot >= 2 =======================
   # Step 1 -- singleton 1 scalar strict
   node1 <- pick_nodes[1]
   for (samp in unique(as.character(strict_scalar_seq))) {
-    bS <- .fresh_build(build_fn, monitors = monitors, thin = thin)
+    bS    <- .fresh_build(build_fn, monitors = monitors, thin = thin)
     confS <- bS$conf
     try(confS$removeSamplers(node1), silent = TRUE)
     .add_scalar(confS, node1, samp, has_hmc)
 
     itS  <- .sanitize_iters(pilot_niter, pilot_burnin)
-    resS <- .compile_and_run(paste0("nbot2_scalar_", gsub("[^A-Za-z0-9_]+","_", node1), "_", samp), bS, confS, itS$niter, itS$nburnin)
+    resS <- .compile_and_run(
+      paste0("nbot2_scalar_", gsub("[^A-Za-z0-9_]+","_", node1), "_", samp),
+      bS, confS, itS$niter, itS$nburnin
+    )
     metS <- .metrics_for(resS$dg, node1)
-    .print_step("Scalar plan on singleton", node1, node1, samp, resS$out$runtime_s, metS, base_dx, rb$runtime_s)
+    .print_step(
+      "Scalar plan on singleton",
+      node1, node1, samp,
+      resS$out$runtime_s, metS, base_dx, rb$runtime_s
+    )
 
-    pdir <- file.path(out_dir, sprintf("singleton_%s_%s", gsub("[^A-Za-z0-9_]", "_", node1), samp))
-    if (!dir.exists(pdir)) dir.create(pdir, recursive = TRUE, showWarnings = FALSE)
-    .plot_rhat_bar(resS$dg, nodes = node1, out_file = file.path(pdir, "rhat_bar.png"))
-    .plot_traces(resS$ml, nodes = node1, out_file_prefix = file.path(pdir, "trace_"))
+    pdir <- file.path(
+      out_dir,
+      sprintf("singleton_%s_%s", gsub("[^A-Za-z0-9_]", "_", node1), samp)
+    )
+    if (!dir.exists(pdir))
+      dir.create(pdir, recursive = TRUE, showWarnings = FALSE)
+    .plot_rhat_bar(resS$dg, nodes = node1,
+                   out_file = file.path(pdir, "rhat_bar.png"))
+    .plot_traces(resS$ml, nodes = node1,
+                 out_file_prefix = file.path(pdir, "trace_"))
 
-    steps <- c(steps, list(list(level="singleton-scalar", nodes=node1, sampler=samp, res=resS, dir=pdir)))
-    if (!.ask_yes_no_strict(sprintf("Proceed to the next sampler for '%s'?", node1))) break
+    steps <- c(steps, list(list(
+      level   = "singleton-scalar",
+      nodes   = node1,
+      sampler = samp,
+      res     = resS,
+      dir     = pdir
+    )))
+
+    if (!.ask_yes_no_strict(sprintf("Proceed to the next sampler for '%s'?", node1)))
+      break
   }
 
   # Step 2 -- Block strict on union {node1 ? node2} (or forced union)
   node2 <- pick_nodes[2] %||% NA_character_
-  union_nodes <- if (!is.null(force_union_nodes) && length(force_union_nodes) >= 2L) {
-    present <- intersect(unique(force_union_nodes),
-                         intersect(mdl$getNodeNames(stochOnly=TRUE, includeData=FALSE),
-                                   unique(colnames(as.matrix(base_ml[[1]])))))
-    unique(present)
-  } else unique(c(node1, node2))
-  union_nodes <- union_nodes[!is.na(union_nodes) & nzchar(union_nodes)]
-  union_nodes <- unique(union_nodes)
-  if (length(union_nodes) > block_max) union_nodes <- utils::head(union_nodes, block_max)
 
-  if (length(union_nodes) < 2L) {
-    message(sprintf("[info] Skipping block phase: need at least 2 valid nodes, got %d (%s).",
-                    length(union_nodes),
-                    paste(union_nodes, collapse = ", ")))
-    return(list(status="completed", mode="surgical_nbot2_singleton_no_block",
-                baseline=rb, targets=pick_nodes, steps=steps))
+  union_nodes <- if (!is.null(force_union_nodes) && length(force_union_nodes) >= 2L) {
+    present <- intersect(
+      unique(force_union_nodes),
+      intersect(
+        mdl$getNodeNames(stochOnly = TRUE, includeData = FALSE),
+        unique(colnames(as.matrix(base_ml[[1]])))
+      )
+    )
+    unique(present)
+  } else {
+    unique(c(node1, node2))
   }
 
-  .barrier_before_block("scalar_to_block_singletons"); on.exit(.restore_builddir(), add = TRUE)
+  union_nodes <- union_nodes[!is.na(union_nodes) & nzchar(union_nodes)]
+  union_nodes <- unique(union_nodes)
+  if (length(union_nodes) > block_max)
+    union_nodes <- utils::head(union_nodes, block_max)
+
+  if (length(union_nodes) < 2L) {
+    message(sprintf(
+      "[info] Skipping block phase: need at least 2 valid nodes, got %d (%s).",
+      length(union_nodes),
+      paste(union_nodes, collapse = ", ")
+    ))
+    return(list(
+      status  = "completed",
+      mode    = "surgical_nbot2_singleton_no_block",
+      baseline = rb,
+      targets  = pick_nodes,
+      steps    = steps
+    ))
+  }
+
+  .barrier_before_block("scalar_to_block_singletons")
+  on.exit(.restore_builddir(), add = TRUE)
 
   # optional PD propCov from baseline
   propCov <- NULL
   M_full <- do.call(rbind, lapply(base_ml, function(m) {
-    X <- as.matrix(m); keep <- intersect(colnames(X), union_nodes); X[, keep, drop = FALSE]
+    X <- as.matrix(m)
+    keep <- intersect(colnames(X), union_nodes)
+    X[, keep, drop = FALSE]
   }))
   if (!is.null(M_full) && is.matrix(M_full) && ncol(M_full) >= 2L) {
     S <- try(stats::cov(M_full, use = "pairwise.complete.obs"), silent = TRUE)
@@ -2895,30 +3115,63 @@ test_strategy <- function(build_fn,
   }
 
   for (samp in unique(as.character(strict_block_seq))) {
-    bB <- .fresh_build(build_fn, monitors = monitors, thin = thin)
+    bB    <- .fresh_build(build_fn, monitors = monitors, thin = thin)
     confB <- bB$conf
     for (n in union_nodes) try(confB$removeSamplers(n), silent = TRUE)
     .add_block(confB, union_nodes, samp, has_hmc, Sc = propCov)
 
-    resB <- .compile_and_run(paste0("nbot2_block_", paste(gsub("[^A-Za-z0-9_]+","_", union_nodes), collapse = "_"), "_", samp),
-                             bB, confB, itB$niter, itB$nburnin)
+    itB  <- .sanitize_iters(pilot_niter, pilot_burnin)
+    resB <- .compile_and_run(
+      paste0(
+        "nbot2_block_",
+        paste(gsub("[^A-Za-z0-9_]+","_", union_nodes), collapse = "_"),
+        "_", samp
+      ),
+      bB, confB, itB$niter, itB$nburnin
+    )
     metB <- .metrics_for(resB$dg, union_nodes)
-    .print_step("Block plan on union (singletons)", paste(union_nodes, collapse = " + "),
-                union_nodes, samp, resB$out$runtime_s, metB, base_dx, rb$runtime_s)
+    .print_step(
+      "Block plan on union (singletons)",
+      paste(union_nodes, collapse = " + "),
+      union_nodes, samp,
+      resB$out$runtime_s, metB, base_dx, rb$runtime_s
+    )
 
-    pdir <- file.path(out_dir, sprintf("block_union_singletons_%s",
-                                       paste(gsub("[^A-Za-z0-9_]+","_", union_nodes), collapse = "_")))
-    if (!dir.exists(pdir)) dir.create(pdir, recursive = TRUE, showWarnings = FALSE)
-    .plot_rhat_bar(resB$dg, nodes = union_nodes, out_file = file.path(pdir, "rhat_bar.png"))
-    .plot_traces(resB$ml, nodes = union_nodes, out_file_prefix = file.path(pdir, "trace_"))
+    pdir <- file.path(
+      out_dir,
+      sprintf(
+        "block_union_singletons_%s",
+        paste(gsub("[^A-Za-z0-9_]+","_", union_nodes), collapse = "_")
+      )
+    )
+    if (!dir.exists(pdir))
+      dir.create(pdir, recursive = TRUE, showWarnings = FALSE)
+    .plot_rhat_bar(resB$dg, nodes = union_nodes,
+                   out_file = file.path(pdir, "rhat_bar.png"))
+    .plot_traces(resB$ml, nodes = union_nodes,
+                 out_file_prefix = file.path(pdir, "trace_"))
 
-    steps <- c(steps, list(list(level="singletons-block", nodes=union_nodes, sampler=samp, res=resB, dir=pdir)))
-    if (!.ask_yes_no_strict("Proceed to the next BLOCK sampler for the union?")) break
+    steps <- c(steps, list(list(
+      level   = "singletons-block",
+      nodes   = union_nodes,
+      sampler = samp,
+      res     = resB,
+      dir     = pdir
+    )))
+
+    if (!.ask_yes_no_strict("Proceed to the next BLOCK sampler for the union?"))
+      break
   }
 
-  return(list(status="completed", mode="surgical_nbot2_singleton",
-              baseline=rb, targets=pick_nodes, steps=steps))
+  return(list(
+    status  = "completed",
+    mode    = "surgical_nbot2_singleton",
+    baseline = rb,
+    targets  = pick_nodes,
+    steps    = steps
+  ))
 }
+
 #' Family-based sampler strategy: full HMC if allowed, else surgical on bottlenecks
 #'
 #' If the model is differentiable and \code{try_hmc = TRUE}, this runs a full
@@ -2959,51 +3212,95 @@ test_strategy <- function(build_fn,
 #' @return A list describing baseline, steps, configurations, diagnostics, and plot paths.
 #'
 #' @export
-test_strategy_family_legacy <- function(build_fn,
-                                 monitors            = NULL,   # optional, just passed through
-                                 try_hmc             = TRUE,   # only used for full-model path; surgical ignores
-                                 nchains             = 3L,
-                                 pilot_niter         = 4000L,
-                                 pilot_burnin        = 1000L,
-                                 thin                = 2L,
-                                 out_dir             = "outputs/diagnostics_family",
-                                 nbot                = 1L,
-                                 # strict sequences (user can override; order strictly enforced)
-                                 strict_scalar_seq   = c("NUTS","slice","RW"),
-                                 strict_block_seq    = c("NUTS_block","AF_slice","RW_block"),
-                                 # forcing
-                                 force_families      = NULL,   # e.g. c("logit_theta","N")
-                                 force_nodes         = NULL,   # e.g. list(logit_theta=c("logit_theta[1]",...))
-                                 force_union         = NULL,   # e.g. c("logit_theta","N")
-                                 # interaction
-                                 ask                 = TRUE,
-                                 ask_before_hmc      = TRUE,
-                                 # safety caps
-                                 block_max           = 20L,
-                                 # sampler controls
-                                 slice_control       = list(),
-                                 rw_control          = list(),
-                                 rwblock_control     = list(adaptScaleOnly = TRUE),
-                                 af_slice_control    = list(),
-                                 slice_max_contractions = 5000L) {
+test_strategy_family       <- function(build_fn,
+                                        monitors            = NULL,   # optional, just passed through
+                                        try_hmc             = TRUE,   # only used for full-model path; surgical ignores
+                                        nchains             = 3L,
+                                        pilot_niter         = 10000L,
+                                        pilot_burnin        = 3000L,
+                                        thin                = 2L,
+                                        out_dir             = "outputs/diagnostics_family",
+                                        nbot                = 1L,
+                                        # strict sequences (user can override; order strictly enforced)
+                                        strict_scalar_seq   = c("NUTS","slice","RW"),
+                                        strict_block_seq    = c("NUTS_block","AF_slice","RW_block"),
+                                        # forcing
+                                        force_families      = NULL,   # e.g. c("logit_theta","N")
+                                        force_nodes         = NULL,   # e.g. list(logit_theta=c("logit_theta[1]",...))
+                                        force_union         = NULL,   # e.g. c("logit_theta","N")
+                                        # interaction
+                                        ask                 = TRUE,
+                                        ask_before_hmc      = TRUE,
+                                        # safety caps
+                                        block_max           = 20L,
+                                        # sampler controls
+                                        slice_control       = list(),
+                                        rw_control          = list(),
+                                        rwblock_control     = list(adaptScaleOnly = TRUE),
+                                        af_slice_control    = list(),
+                                        slice_max_contractions = 5000L) {
 
   `%||%` <- function(x, y) if (is.null(x)) y else x
   stopifnot(nbot >= 1L)
-  if (is.list(build_fn) && !is.null(build_fn$model)) { obj <- build_fn; build_fn <- function() obj }
+
+  if (is.list(build_fn) && !is.null(build_fn$model)) {
+    obj <- build_fn
+    build_fn <- function() obj
+  }
   stopifnot(is.function(build_fn))
-  if (!requireNamespace("nimble", quietly = TRUE)) stop("samOptiPro: 'nimble' is required.")
-  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
-  say     <- function(...) { msg <- try(sprintf(...), silent = TRUE); if(!inherits(msg,"try-error")) cat(msg,"\n") }
-  is_ll   <- function(x) grepl("^logLik(\\[.*\\])?$|log_?lik|logdens|lpdf", x, perl=TRUE, ignore.case=TRUE)
-  root_of <- function(x) sub("\\[.*", "", x)
-
-  .prompt_info <- function(txt) {
-    if (!isTRUE(ask) || !interactive()) return(invisible(NULL))
-    try(readline(paste0(txt, " (yes/no): ")), silent = TRUE); invisible(NULL)
+  if (!requireNamespace("nimble", quietly = TRUE)) {
+    stop("samOptiPro: 'nimble' is required.")
+  }
+  if (!dir.exists(out_dir)) {
+    dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   }
 
-  # --------- compile/run with robust unload & retries ----------
+  say     <- function(...) {
+    msg <- try(sprintf(...), silent = TRUE)
+    if (!inherits(msg,"try-error")) cat(msg,"\n")
+  }
+  is_ll   <- function(x) grepl("^logLik(\\[.*\\])?$|log_?lik|logdens|lpdf",
+                               x, perl = TRUE, ignore.case = TRUE)
+  root_of <- function(x) sub("\\[.*", "", x)
+
+  ## ---------- (A) sanitize niter/burnin (copied from test_strategy) ----------
+  .sanitize_iters <- local({
+    warned <- FALSE
+    function(niter, nburnin) {
+      niter   <- as.integer(niter)
+      nburnin <- as.integer(nburnin)
+      if (is.na(niter)   || niter   < 1L) niter   <- 1L
+      if (is.na(nburnin) || nburnin < 0L) nburnin <- 0L
+      if (nburnin >= niter) {
+        new_nburnin <- max(0L, niter - 1L)
+        if (!warned) {
+          message(sprintf("[info] Adjusting nburnin (%d) to %d because nburnin must be < niter (%d).",
+                          nburnin, new_nburnin, niter))
+          warned <<- TRUE
+        }
+        nburnin <- new_nburnin
+      }
+      list(niter = niter, nburnin = nburnin)
+    }
+  })
+
+  ## ---------- (B) strict yes/no helper (copied from test_strategy) ----------
+  .ask_yes_no_strict <- function(prompt) {
+    if (!isTRUE(ask) || !interactive()) return(TRUE)
+    while (TRUE) {
+      cat(paste0(prompt, " (yes/no): "))
+      utils::flush.console()
+      ans <- try(readline(), silent = TRUE)
+      if (inherits(ans, "try-error")) return(TRUE)  # non-interactive fallback = proceed
+      ans <- tolower(trimws(ans))
+      if (ans %in% c("y","yes","o","oui")) return(TRUE)
+      if (ans %in% c("n","no","non","0"))  return(FALSE)
+      cat("Please answer 'yes' or 'no'.\n")
+    }
+  }
+
+  # --------- ensure unsampled nodes get slice ----------
   .ensure_unsampled <- function(conf) {
     uns <- try(conf$getUnsampledNodes(), silent = TRUE)
     if (!inherits(uns, "try-error") && length(uns)) {
@@ -3012,39 +3309,61 @@ test_strategy_family_legacy <- function(build_fn,
     }
   }
 
-  .compile_and_run <- function(step_tag, build_obj, conf) {
+  ## ---------- compile + run (aligned with test_strategy) ----------
+  .compile_and_run <- function(step_tag, build_obj, conf, niter, nburnin) {
+    it <- .sanitize_iters(niter, nburnin)
+    niter   <- it$niter
+    nburnin <- it$nburnin
     attempts <- 0L
     last_err <- NULL
+
     repeat {
       attempts <- attempts + 1L
-      # clean state between attempts
       try(nimble::clearCompiled(), silent = TRUE)
       gc()
+
       res <- try({
         .ensure_unsampled(conf)
         cmcmc <- .compile_mcmc_with_build(conf, build_obj, reset = TRUE, show = FALSE)
-        out   <- .run_and_collect(cmcmc, niter = pilot_niter, nburnin = pilot_burnin,
-                                  thin = thin, nchains = nchains)
-        ml    <- as_mcmc_list_sop(out$samples, out$samples2, drop_loglik = FALSE, thin = thin)
-        dg <- .compute_diag_auto(ml, runtime_s = out$runtime_s)
-        # unload DLL to avoid lock for next step
+        out   <- .run_and_collect(
+          cmcmc,
+          niter   = niter,
+          nburnin = nburnin,
+          thin    = thin,
+          nchains = nchains
+        )
+        ml <- as_mcmc_list_sop(out$samples, out$samples2,
+                               drop_loglik = FALSE, thin = thin)
+
+        ## IMPORTANT: use same diagnostic function as test_strategy
+        dg <- compute_diag_from_mcmc(ml, runtime_s = out$runtime_s)
+
         if (!is.null(cmcmc) && is.list(cmcmc) && "unloadDLL" %in% names(cmcmc)) {
           try(cmcmc$unloadDLL(), silent = TRUE)
         }
-        list(out=out, ml=ml, dg=dg)
+        list(out = out, ml = ml, dg = dg)
       }, silent = TRUE)
 
       if (!inherits(res, "try-error")) return(res)
 
-      last_err <- tryCatch(conditionMessage(attr(res, "condition")), error=function(e) as.character(res))
-      cat(sprintf("[Retry %d @ %s] %s\n", attempts, step_tag, last_err))
+      last_err <- tryCatch(
+        conditionMessage(attr(res, "condition")),
+        error = function(e) as.character(res)
+      )
+      if (attempts == 1L) {
+        message(sprintf("[info] First attempt failed at %s; retrying cleanly...", step_tag))
+      } else {
+        message(sprintf("[retry %d @ %s] %s", attempts, step_tag, last_err))
+      }
 
       # fresh rebuild for next attempt
       build_obj <- .fresh_build(build_fn, monitors = monitors, thin = thin)
-      conf <- build_obj$conf
+      conf      <- build_obj$conf
 
-      if (attempts >= 3L) stop(sprintf("Compilation failed after %d attempts at step '%s': %s",
-                                       attempts, step_tag, last_err))
+      if (attempts >= 3L) {
+        stop(sprintf("Compilation failed after %d attempts at step '%s': %s",
+                     attempts, step_tag, last_err))
+      }
     }
   }
 
@@ -3059,149 +3378,271 @@ test_strategy_family_legacy <- function(build_fn,
       }
       return(invisible())
     }
-    if (identical(type, "slice")) { for (n in nodes) conf$addSampler(n, "slice", slice_control); return(invisible()) }
-    if (identical(type, "RW"))    { for (n in nodes) conf$addSampler(n, "RW",    rw_control);    return(invisible()) }
-    for (n in nodes) conf$addSampler(n, "slice", slice_control) # fallback
+    if (identical(type, "slice")) {
+      for (n in nodes) conf$addSampler(n, "slice", slice_control)
+      return(invisible())
+    }
+    if (identical(type, "RW")) {
+      for (n in nodes) conf$addSampler(n, "RW", rw_control)
+      return(invisible())
+    }
+    # fallback
+    for (n in nodes) conf$addSampler(n, "slice", slice_control)
   }
 
   .add_block_family <- function(conf, nodes, type, has_hmc, Sc = NULL) {
     nodes <- unique(nodes)
     if (length(nodes) < 2L) {
       # graceful fallback if block is degenerate
-      if (type == "NUTS_block") .add_scalar_family(conf, nodes, "NUTS", has_hmc) else
-        if (type == "AF_slice")   for (n in nodes) conf$addSampler(n, "AF_slice", af_slice_control) else
-          if (type == "RW_block")   for (n in nodes) conf$addSampler(n, "RW", rw_control) else
-            for (n in nodes) conf$addSampler(n, "slice", slice_control)
+      if (type == "NUTS_block") {
+        .add_scalar_family(conf, nodes, "NUTS", has_hmc)
+      } else if (type == "AF_slice") {
+        for (n in nodes) conf$addSampler(n, "AF_slice", af_slice_control)
+      } else if (type == "RW_block") {
+        for (n in nodes) conf$addSampler(n, "RW", rw_control)
+      } else {
+        for (n in nodes) conf$addSampler(n, "slice", slice_control)
+      }
       return(invisible())
     }
+
     if (identical(type, "NUTS_block")) {
-      if (isTRUE(has_hmc)) conf$addSampler(target = nodes, type = "NUTS") else {
+      if (isTRUE(has_hmc)) {
+        conf$addSampler(target = nodes, type = "NUTS")
+      } else {
         cat("[Info] nimbleHMC not available -> falling back to AF_slice (block).\n")
         conf$addSampler(target = nodes, type = "AF_slice", control = af_slice_control)
       }
       return(invisible())
     }
+
     if (identical(type, "AF_slice")) {
       ok <- TRUE
-      tryCatch({ conf$addSampler(target = nodes, type = "AF_slice", control = af_slice_control) },
-               error = function(e) ok <<- FALSE)
-      if (!ok) for (n in nodes) conf$addSampler(n, "slice", slice_control)
+      tryCatch({
+        conf$addSampler(target = nodes, type = "AF_slice", control = af_slice_control)
+      }, error = function(e) ok <<- FALSE)
+      if (!ok) {
+        for (n in nodes) conf$addSampler(n, "slice", slice_control)
+      }
       return(invisible())
     }
+
     if (identical(type, "RW_block")) {
-      ctrl <- rwblock_control; if (!is.null(Sc)) ctrl$propCov <- Sc
-      conf$addSampler(nodes, "RW_block", ctrl); return(invisible())
+      ctrl <- rwblock_control
+      if (!is.null(Sc)) ctrl$propCov <- Sc
+      conf$addSampler(nodes, "RW_block", ctrl)
+      return(invisible())
     }
+
+    # fallback
     for (n in nodes) conf$addSampler(n, "slice", slice_control)
   }
 
+  ## ---------- metrics (very proche de .metrics_for) ----------
   .fam_metrics <- function(dg, nodes) {
+    nodes <- nodes[!is.na(nodes) & nzchar(nodes)]
+    if (is.null(dg) || !nrow(dg)) {
+      return(list(AE = NA_real_, CE = NA_real_, Rhat = NA_real_))
+    }
+    if (!"target" %in% names(dg)) {
+      if ("Parameter" %in% names(dg)) {
+        dg$target <- as.character(dg$Parameter)
+      } else {
+        return(list(AE = NA_real_, CE = NA_real_, Rhat = NA_real_))
+      }
+    }
     keep <- dg$target %in% nodes & !is_ll(dg$target)
-    list(AE = stats::median(dg$AE_ESS_per_it[keep], na.rm = TRUE),
-         CE = stats::median(dg$ESS_per_sec[keep],   na.rm = TRUE),
-         Rhat = if (any(keep) && any(!is.na(dg$Rhat[keep])))
-           suppressWarnings(max(dg$Rhat[keep], na.rm = TRUE))
-         else NA_real_)
+    if (!any(keep)) {
+      return(list(AE = NA_real_, CE = NA_real_, Rhat = NA_real_))
+    }
+    list(
+      AE   = stats::median(dg$AE_ESS_per_it[keep], na.rm = TRUE),
+      CE   = stats::median(dg$ESS_per_sec[keep],   na.rm = TRUE),
+      Rhat = if (any(keep)) suppressWarnings(max(dg$Rhat[keep], na.rm = TRUE)) else NA_real_
+    )
   }
 
   .print_step <- function(title, fam_label, nodes, sampler, runtime, met, base_dx, base_rt) {
+    nodes <- nodes[!is.na(nodes) & nzchar(nodes)]
     say("--- %s ---", title)
     if (!is.null(fam_label)) say("Family: %s", fam_label)
-    say("Nodes: %s", paste(nodes, collapse=", "))
+    say("Nodes: %s", paste(nodes, collapse = ", "))
     say("Sampler: %s", sampler)
     say("Runtime_s: %.2f (baseline: %.2f)", runtime %||% NA_real_, base_rt %||% NA_real_)
-    say("AE median (ESS/iter): %.3g (baseline: %.3g)", met$AE %||% NA_real_,
-        stats::median(base_dx$AE_ESS_per_it, na.rm=TRUE))
-    say("CE median (ESS/s):    %.3g (baseline: %.3g)", met$CE %||% NA_real_,
-        stats::median(base_dx$ESS_per_sec,   na.rm=TRUE))
+    say("AE median (ESS/iter): %.3g (baseline: %.3g)",
+        met$AE %||% NA_real_,
+        stats::median(base_dx$AE_ESS_per_it, na.rm = TRUE))
+    say("CE median (ESS/s):    %.3g (baseline: %.3g)",
+        met$CE %||% NA_real_,
+        stats::median(base_dx$ESS_per_sec,   na.rm = TRUE))
     say("Rhat max:             %.3g (baseline max: %.3g)",
-        met$Rhat %||% NA_real_, suppressWarnings(max(base_dx$Rhat, na.rm=TRUE)))
+        met$Rhat %||% NA_real_,
+        suppressWarnings(max(base_dx$Rhat, na.rm = TRUE)))
   }
 
   # ---------- 0) Build + baseline ----------
-  bld <- .fresh_build(build_fn, monitors = monitors, thin = thin)
-  mdl <- bld$model
-  rb  <- run_baseline_config(build_fn, pilot_niter, pilot_burnin, thin, monitors, nchains)
-  base_ml <- as_mcmc_list_sop(rb$samples, rb$samples2, drop_loglik = FALSE, thin = thin)
+  bld0 <- .fresh_build(build_fn, monitors = monitors, thin = thin)
+  mdl  <- bld0$model
+
+  it0 <- .sanitize_iters(pilot_niter, pilot_burnin)
+  rb  <- run_baseline_config(
+    build_fn = build_fn,
+    niter    = it0$niter,
+    nburnin  = it0$nburnin,
+    thin     = thin,
+    monitors = monitors,
+    nchains  = nchains
+  )
+
+  base_ml <- as_mcmc_list_sop(rb$samples, rb$samples2,
+                              drop_loglik = FALSE, thin = thin)
   base_dg <- compute_diag_from_mcmc(base_ml, runtime_s = rb$runtime_s)
   base_dx <- base_dg[!is_ll(base_dg$target), , drop = FALSE]
-  say("Baseline runtime_s: %.2f s", rb$runtime_s %||% NA_real_)
-  say("Baseline median AE(ESS/iter): %.3g", stats::median(base_dx$AE_ESS_per_it, na.rm = TRUE))
-  say("Baseline median CE(ESS/s):    %.3g", stats::median(base_dx$ESS_per_sec,   na.rm = TRUE))
 
-  # ---------- 1) Full-model HMC (optionnel) ----------
+  say("Baseline runtime_s: %.2f s", rb$runtime_s %||% NA_real_)
+  say("Baseline median AE(ESS/iter): %.3g",
+      stats::median(base_dx$AE_ESS_per_it, na.rm = TRUE))
+  say("Baseline median CE(ESS/s):    %.3g",
+      stats::median(base_dx$ESS_per_sec,   na.rm = TRUE))
+
+  # ---------- 1) Full-model HMC (optional, same spirit as test_strategy) ----------
   dg_struct <- try(diagnose_model_structure(mdl), silent = TRUE)
   suppressWarnings(has_hmc <- requireNamespace("nimbleHMC", quietly = TRUE))
   deriv_ok <- .sop_supports_derivs(mdl)
   blockers <- character(0)
-  if (!inherits(dg_struct,"try-error") && !is.null(dg_struct)) {
+  if (!inherits(dg_struct, "try-error") && !is.null(dg_struct)) {
     if (isTRUE(dg_struct$has_truncation))   blockers <- c(blockers, "truncation")
     if (isTRUE(dg_struct$has_simplex))      blockers <- c(blockers, "simplex-constraint")
     if (isTRUE(dg_struct$has_non_diff_fun)) blockers <- c(blockers, "non-diff-function")
   }
   nuts_ok_global <- isTRUE(try_hmc) && has_hmc && deriv_ok && (length(blockers) == 0L)
 
-  if (isTRUE(nuts_ok_global)) {
-    if (isTRUE(ask) && isTRUE(ask_before_hmc) && isTRUE(interactive())) {
-      cat(sprintf("Baseline ready. Runtime=%.2fs; median AE=%.3g; median CE=%.3g\n",
-                  rb$runtime_s %||% NA_real_,
-                  median(base_dx$AE_ESS_per_it, na.rm = TRUE),
-                  median(base_dx$ESS_per_sec,   na.rm = TRUE)))
-      ans <- try(readline("Proceed with full-model HMC/NUTS? (yes/no): "), silent = TRUE)
-      if (!inherits(ans, "try-error") && tolower(trimws(ans)) %in% c("no","n")) {
-        cat("User declined full-model HMC/NUTS. Switching to surgical family plan.\n")
+  if (isTRUE(nuts_ok_global) && isTRUE(ask) && isTRUE(ask_before_hmc) && isTRUE(interactive())) {
+
+    proceed_hmc <- .ask_yes_no_strict(
+      sprintf(
+        "Baseline ready. Runtime=%.2fs; median AE=%.3g; median CE=%.3g\nProceed with full-model HMC/NUTS?",
+        rb$runtime_s %||% NA_real_,
+        median(base_dx$AE_ESS_per_it, na.rm = TRUE),
+        median(base_dx$ESS_per_sec,   na.rm = TRUE)
+      )
+    )
+
+    if (proceed_hmc) {
+
+      ## --- NEW: use run_hmc_all_nodes() instead of configure_hmc_safely() ---
+      hmc_try <- try(
+        run_hmc_all_nodes(
+          build_fn = build_fn,
+          niter    = it0$niter,
+          nburnin  = it0$nburnin,
+          thin     = thin,
+          monitors = monitors,
+          nchains  = nchains,
+          opts     = samOptiPro_options()  # ou opts par défaut si tu en as un autre
+        ),
+        silent = TRUE
+      )
+
+      if (inherits(hmc_try, "try-error")) {
+        cat("[Warn] Full-model HMC (run_hmc_all_nodes) threw an error -> continuing with surgical family plan.\n")
+      } else if (!is.list(hmc_try) ||
+                 !all(c("samples","samples2","runtime_s") %in% names(hmc_try))) {
+        cat("[Warn] run_hmc_all_nodes returned an unexpected structure -> continuing with surgical family plan.\n")
       } else {
-        hmc_try <- configure_hmc_safely(
-          build_fn = build_fn, niter = pilot_niter, nburnin = pilot_burnin,
-          thin = thin, monitors = monitors, nchains = nchains,
-          out_dir = file.path(out_dir, "HMC_full"))
-        if (isTRUE(hmc_try$ok)) {
-          dg <- hmc_try$diag_tbl
-          cat(sprintf("HMC runtime_s: %.3f\n", hmc_try$res$runtime_s %||% NA_real_))
-          cat(sprintf("HMC median AE: %.3g ; CE: %.3g ; max Rhat: %.3g\n",
-                      median(dg$AE_ESS_per_it, na.rm=TRUE),
-                      median(dg$ESS_per_sec,   na.rm=TRUE),
-                      if (all(is.na(dg$Rhat))) NA_real_ else max(dg$Rhat, na.rm=TRUE)))
-          return(list(mode="HMC_full",
-                      baseline=list(runtime_s=rb$runtime_s, samples=base_ml, diag_tbl=base_dg),
-                      hmc=hmc_try, messages="Full HMC completed."))
-        } else cat("[Warn] Full-model HMC failed -> continuing with surgical family plan.\n")
+
+        ## Rebuild mcmc.list and diagnostics with the SAME pipeline as baseline
+        hmc_ml <- as_mcmc_list_sop(
+          hmc_try$samples,
+          hmc_try$samples2,
+          drop_loglik = FALSE,
+          thin = thin
+        )
+
+        hmc_dg <- compute_diag_from_mcmc(
+          hmc_ml,
+          runtime_s = hmc_try$runtime_s
+        )
+
+        cat(sprintf("HMC runtime_s: %.3f\n", hmc_try$runtime_s %||% NA_real_))
+        cat(sprintf("HMC median AE: %.3g ; CE: %.3g ; max Rhat: %.3g\n",
+                    median(hmc_dg$AE_ESS_per_it, na.rm = TRUE),
+                    median(hmc_dg$ESS_per_sec,   na.rm = TRUE),
+                    if (all(is.na(hmc_dg$Rhat))) NA_real_ else max(hmc_dg$Rhat, na.rm = TRUE)))
+
+        ## On retourne le HMC full ici, comme avant
+        return(list(
+          mode     = "HMC_full",
+          baseline = list(
+            runtime_s = rb$runtime_s,
+            samples   = base_ml,
+            diag_tbl  = base_dg
+          ),
+          hmc      = list(
+            run      = hmc_try,
+            mcmc     = hmc_ml,
+            diag_tbl = hmc_dg
+          ),
+          messages = "Full HMC (run_hmc_all_nodes) completed."
+        ))
       }
+
+    } else {
+      cat("User declined full-model HMC/NUTS. Switching to surgical family plan.\n")
     }
   }
+
 
   # ---------- 2) Families selection (respecting forcing) ----------
   stoch_nodes <- mdl$getNodeNames(stochOnly = TRUE, includeData = FALSE)
   stoch_nodes <- stoch_nodes[!is_ll(stoch_nodes)]
-  if (!"Family" %in% names(base_dx)) base_dx$Family <- root_of(base_dx$target)
+
+  if (!"Family" %in% names(base_dx)) {
+    base_dx$Family <- root_of(base_dx$target)
+  }
 
   fam_med <- stats::aggregate(ESS_per_sec ~ Family, data = base_dx, median)
   fam_med <- fam_med[order(fam_med$ESS_per_sec, decreasing = FALSE), , drop = FALSE]
 
   pick_fams <- character(0)
+
   if (!is.null(force_families) && length(force_families)) {
-    pf <- unique(force_families)
+    pf      <- unique(force_families)
     present <- pf[pf %in% unique(base_dx$Family)]
     pick_fams <- utils::head(present, nbot)
-    if (!length(pick_fams)) warning("force_families provided but none matched diagnostics; using automatic selection.")
+    if (!length(pick_fams)) {
+      warning("force_families provided but none matched diagnostics; using automatic selection.")
+    }
   }
+
   if (!length(pick_fams)) {
     for (fam in fam_med$Family) {
-      fam_nodes_all <- intersect(stoch_nodes[root_of(stoch_nodes) == fam], unique(base_dx$target))
+      fam_nodes_all <- intersect(
+        stoch_nodes[root_of(stoch_nodes) == fam],
+        unique(base_dx$target)
+      )
       if (length(fam_nodes_all)) pick_fams <- unique(c(pick_fams, fam))
       if (length(pick_fams) >= nbot) break
     }
     pick_fams <- utils::head(pick_fams, nbot)
   }
+
   if (!length(pick_fams)) stop("No stochastic bottleneck families found.")
-  say("Selected bottleneck families (nbot=%d): %s", nbot, paste(pick_fams, collapse = ", "))
+
+  say("Selected bottleneck families (nbot=%d): %s",
+      nbot, paste(pick_fams, collapse = ", "))
 
   get_family_nodes <- function(fam) {
-    allf <- intersect(stoch_nodes[root_of(stoch_nodes) == fam], unique(base_dx$target))
+    allf <- intersect(
+      stoch_nodes[root_of(stoch_nodes) == fam],
+      unique(base_dx$target)
+    )
     forced <- force_nodes[[fam]] %||% NULL
     if (!is.null(forced)) {
       forced <- intersect(forced, allf)
-      if (!length(forced)) warning(sprintf("force_nodes for '%s' not found in diagnostics; using detected nodes.", fam))
+      if (!length(forced)) {
+        warning(sprintf("force_nodes for '%s' not found in diagnostics; using detected nodes.", fam))
+      }
       return(if (length(forced)) forced else allf)
     }
     allf
@@ -3211,61 +3652,127 @@ test_strategy_family_legacy <- function(build_fn,
 
   # ========================== CASE nbot = 1 ==========================
   if (nbot == 1L) {
-    fam1 <- pick_fams[1]
+    fam1       <- pick_fams[1]
     fam1_nodes <- get_family_nodes(fam1)
+
     for (samp in unique(as.character(strict_scalar_seq))) {
-      bS <- .fresh_build(build_fn, monitors = monitors, thin = thin)
+      bS    <- .fresh_build(build_fn, monitors = monitors, thin = thin)
       confS <- bS$conf
-      for (n in fam1_nodes) try(confS$removeSamplers(n), silent = TRUE)
+      for (n in fam1_nodes) {
+        try(confS$removeSamplers(n), silent = TRUE)
+      }
       .add_scalar_family(confS, fam1_nodes, samp, has_hmc)
 
-      resS <- .compile_and_run(paste0("nbot1_", fam1, "_", samp), bS, confS)
+      resS <- .compile_and_run(
+        step_tag  = paste0("nbot1_", fam1, "_", samp),
+        build_obj = bS,
+        conf      = confS,
+        niter     = pilot_niter,
+        nburnin   = pilot_burnin
+      )
       metS <- .fam_metrics(resS$dg, fam1_nodes)
-      .print_step("Scalar plan on family", fam1, fam1_nodes, samp,
-                  resS$out$runtime_s, metS, base_dx, rb$runtime_s)
+      .print_step(
+        "Scalar plan on family",
+        fam1, fam1_nodes, samp,
+        resS$out$runtime_s, metS, base_dx, rb$runtime_s
+      )
 
-      pdir <- file.path(out_dir, sprintf("scalar_family_%s_%s", gsub("[^A-Za-z0-9_]", "_", fam1), samp))
-      if (!dir.exists(pdir)) dir.create(pdir, recursive = TRUE, showWarnings = FALSE)
-      .plot_rhat_bar(resS$dg, nodes = fam1_nodes, out_file = file.path(pdir, "rhat_bar.png"))
-      .plot_traces(resS$ml, nodes = fam1_nodes, out_file_prefix = file.path(pdir, "trace_"))
+      pdir <- file.path(
+        out_dir,
+        sprintf("scalar_family_%s_%s",
+                gsub("[^A-Za-z0-9_]", "_", fam1), samp)
+      )
+      if (!dir.exists(pdir)) {
+        dir.create(pdir, recursive = TRUE, showWarnings = FALSE)
+      }
+      .plot_rhat_bar(resS$dg, nodes = fam1_nodes,
+                     out_file = file.path(pdir, "rhat_bar.png"))
+      .plot_traces(resS$ml, nodes = fam1_nodes,
+                   out_file_prefix = file.path(pdir, "trace_"))
 
-      steps <- c(steps, list(list(level="family-scalar", family=fam1, nodes=fam1_nodes,
-                                  sampler=samp, res=resS, dir=pdir)))
+      steps <- c(steps, list(list(
+        level   = "family-scalar",
+        family  = fam1,
+        nodes   = fam1_nodes,
+        sampler = samp,
+        res     = resS,
+        dir     = pdir
+      )))
 
-      .prompt_info(sprintf("Proceed to the next sampler for family '%s'?", fam1))
+      cont <- .ask_yes_no_strict(
+        sprintf("Proceed to the next sampler for family '%s'?", fam1)
+      )
+      if (!isTRUE(cont)) break
     }
-    return(list(status="completed", mode="surgical_nbot1",
-                baseline=rb, families=pick_fams, steps=steps))
+
+    return(list(
+      status   = "completed",
+      mode     = "surgical_nbot1",
+      baseline = rb,
+      families = pick_fams,
+      steps    = steps
+    ))
   }
 
   # ========================== CASE nbot >= 2 ==========================
   # Step 1 -- Family 1 scalar strict
-  fam1 <- pick_fams[1]
+  fam1       <- pick_fams[1]
   fam1_nodes <- get_family_nodes(fam1)
+
   for (samp in unique(as.character(strict_scalar_seq))) {
-    bS <- .fresh_build(build_fn, monitors = monitors, thin = thin)
+    bS    <- .fresh_build(build_fn, monitors = monitors, thin = thin)
     confS <- bS$conf
-    for (n in fam1_nodes) try(confS$removeSamplers(n), silent = TRUE)
+    for (n in fam1_nodes) {
+      try(confS$removeSamplers(n), silent = TRUE)
+    }
     .add_scalar_family(confS, fam1_nodes, samp, has_hmc)
 
-    resS <- .compile_and_run(paste0("nbot2_scalar_", fam1, "_", samp), bS, confS)
+    resS <- .compile_and_run(
+      step_tag  = paste0("nbot2_scalar_", fam1, "_", samp),
+      build_obj = bS,
+      conf      = confS,
+      niter     = pilot_niter,
+      nburnin   = pilot_burnin
+    )
     metS <- .fam_metrics(resS$dg, fam1_nodes)
-    .print_step("Scalar plan on family", fam1, fam1_nodes, samp,
-                resS$out$runtime_s, metS, base_dx, rb$runtime_s)
+    .print_step(
+      "Scalar plan on family",
+      fam1, fam1_nodes, samp,
+      resS$out$runtime_s, metS, base_dx, rb$runtime_s
+    )
 
-    pdir <- file.path(out_dir, sprintf("scalar_family_%s_%s", gsub("[^A-Za-z0-9_]", "_", fam1), samp))
-    if (!dir.exists(pdir)) dir.create(pdir, recursive = TRUE, showWarnings = FALSE)
-    .plot_rhat_bar(resS$dg, nodes = fam1_nodes, out_file = file.path(pdir, "rhat_bar.png"))
-    .plot_traces(resS$ml, nodes = fam1_nodes, out_file_prefix = file.path(pdir, "trace_"))
+    pdir <- file.path(
+      out_dir,
+      sprintf("scalar_family_%s_%s",
+              gsub("[^A-Za-z0-9_]", "_", fam1), samp)
+    )
+    if (!dir.exists(pdir)) {
+      dir.create(pdir, recursive = TRUE, showWarnings = FALSE)
+    }
+    .plot_rhat_bar(resS$dg, nodes = fam1_nodes,
+                   out_file = file.path(pdir, "rhat_bar.png"))
+    .plot_traces(resS$ml, nodes = fam1_nodes,
+                 out_file_prefix = file.path(pdir, "trace_"))
 
-    steps <- c(steps, list(list(level="family-scalar", family=fam1, nodes=fam1_nodes,
-                                sampler=samp, res=resS, dir=pdir)))
-    .prompt_info(sprintf("Proceed to the next sampler for family '%s'?", fam1))
+    steps <- c(steps, list(list(
+      level   = "family-scalar",
+      family  = fam1,
+      nodes   = fam1_nodes,
+      sampler = samp,
+      res     = resS,
+      dir     = pdir
+    )))
+
+    cont <- .ask_yes_no_strict(
+      sprintf("Proceed to the next sampler for family '%s'?", fam1)
+    )
+    if (!isTRUE(cont)) break
   }
 
-  # Step 2 -- Block strict on union
-  fam2 <- pick_fams[2]
+  # Step 2 -- Block strict on union of families
+  fam2       <- pick_fams[2]
   fam2_nodes <- get_family_nodes(fam2)
+
   if (!is.null(force_union) && length(force_union) >= 2L) {
     union_fams  <- unique(force_union)
     union_nodes <- unique(unlist(lapply(union_fams, get_family_nodes)))
@@ -3274,1010 +3781,88 @@ test_strategy_family_legacy <- function(build_fn,
     union_nodes <- unique(c(fam1_nodes, fam2_nodes))
     fam_label   <- paste(fam1, "+", fam2)
   }
-  if (length(union_nodes) > block_max) union_nodes <- utils::head(union_nodes, block_max)
+
+  if (length(union_nodes) > block_max) {
+    union_nodes <- utils::head(union_nodes, block_max)
+  }
 
   # optional PD propCov from baseline
   propCov <- NULL
   if (length(union_nodes) >= 2L) {
     M_full <- do.call(rbind, lapply(base_ml, function(m) {
-      X <- as.matrix(m); keep <- intersect(colnames(X), union_nodes); X[, keep, drop = FALSE]
+      X <- as.matrix(m)
+      keep <- intersect(colnames(X), union_nodes)
+      X[, keep, drop = FALSE]
     }))
     if (!is.null(M_full) && is.matrix(M_full) && ncol(M_full) >= 2L) {
       S <- try(stats::cov(M_full, use = "pairwise.complete.obs"), silent = TRUE)
-      if (!inherits(S,"try-error")) {
+      if (!inherits(S, "try-error")) {
         pc <- try(.sop_make_propCov_PD(S), silent = TRUE)
-        if (!inherits(pc,"try-error")) propCov <- pc
+        if (!inherits(pc, "try-error")) propCov <- pc
       }
     }
   }
 
   for (samp in unique(as.character(strict_block_seq))) {
-    bB <- .fresh_build(build_fn, monitors = monitors, thin = thin)
+    bB    <- .fresh_build(build_fn, monitors = monitors, thin = thin)
     confB <- bB$conf
-    for (n in union_nodes) try(confB$removeSamplers(n), silent = TRUE)
+    for (n in union_nodes) {
+      try(confB$removeSamplers(n), silent = TRUE)
+    }
     .add_block_family(confB, union_nodes, samp, has_hmc, Sc = propCov)
 
-    resB <- .compile_and_run(paste0("nbot2_block_", gsub("[^A-Za-z0-9_]+","_", fam_label), "_", samp), bB, confB)
+    resB <- .compile_and_run(
+      step_tag  = paste0("nbot2_block_",
+                         gsub("[^A-Za-z0-9_]+", "_", fam_label), "_", samp),
+      build_obj = bB,
+      conf      = confB,
+      niter     = pilot_niter,
+      nburnin   = pilot_burnin
+    )
     metB <- .fam_metrics(resB$dg, union_nodes)
-    .print_step("Block plan on families union", fam_label, union_nodes, samp,
-                resB$out$runtime_s, metB, base_dx, rb$runtime_s)
+    .print_step(
+      "Block plan on families union",
+      fam_label, union_nodes, samp,
+      resB$out$runtime_s, metB, base_dx, rb$runtime_s
+    )
 
-    pdir <- file.path(out_dir, sprintf("block_union_%s_%s", gsub("[^A-Za-z0-9_]", "_", fam_label), samp))
-    if (!dir.exists(pdir)) dir.create(pdir, recursive = TRUE, showWarnings = FALSE)
-    .plot_rhat_bar(resB$dg, nodes = union_nodes, out_file = file.path(pdir, "rhat_bar.png"))
-    .plot_traces(resB$ml, nodes = union_nodes, out_file_prefix = file.path(pdir, "trace_"))
+    pdir <- file.path(
+      out_dir,
+      sprintf("block_union_%s_%s",
+              gsub("[^A-Za-z0-9_]", "_", fam_label), samp)
+    )
+    if (!dir.exists(pdir)) {
+      dir.create(pdir, recursive = TRUE, showWarnings = FALSE)
+    }
+    .plot_rhat_bar(resB$dg, nodes = union_nodes,
+                   out_file = file.path(pdir, "rhat_bar.png"))
+    .plot_traces(resB$ml, nodes = union_nodes,
+                 out_file_prefix = file.path(pdir, "trace_"))
 
-    steps <- c(steps, list(list(level="families-block", families=fam_label, nodes=union_nodes,
-                                sampler=samp, res=resB, dir=pdir)))
-    .prompt_info(sprintf("Proceed to the next BLOCK sampler for union '%s'?", fam_label))
+    steps <- c(steps, list(list(
+      level    = "families-block",
+      families = fam_label,
+      nodes    = union_nodes,
+      sampler  = samp,
+      res      = resB,
+      dir      = pdir
+    )))
+
+    cont <- .ask_yes_no_strict(
+      sprintf("Proceed to the next BLOCK sampler for union '%s'?", fam_label)
+    )
+    if (!isTRUE(cont)) break
   }
 
-  return(list(status="completed", mode=if (nbot==1L) "surgical_nbot1" else "surgical_nbot2",
-              baseline=rb, families=pick_fams, steps=steps))
+  return(list(
+    status   = "completed",
+    mode     = if (nbot == 1L) "surgical_nbot1" else "surgical_nbot2",
+    baseline = rb,
+    families = pick_fams,
+    steps    = steps
+  ))
 }
 
-#' Fast strategy testing for sampler plans (family-level, with optional full-model HMC/NUTS)
-#'
-#' @description
-#' Runs a fast, reproducible workflow to (i) obtain a **baseline** MCMC,
-#' (ii) optionally attempt **full-model HMC/NUTS** when feasible, and/or
-#' (iii) evaluate **surgical family-level strategies** (scalar and block plans)
-#' on one or two bottleneck families. The function is designed to minimize
-#' rebuild/compile overhead, auto-patch unsampled nodes, and produce
-#' diagnostics robustly for large hierarchical models.
-#'
-#' @details
-#' **Pipeline**
-#' 1. Fresh build via internal helpers (e.g., `.fresh_build()`), then a short **baseline**
-#'    run with \code{run_baseline_config()} to compute diagnostics (AE, CE, Rhat)
-#'    using \code{compute_diag_from_mcmc_vect()}.
-#' 2. If \code{try_hmc = TRUE} and the model supports differentiability (no blocking
-#'    features such as hard truncations/simplex/non-diff ops) and \pkg{nimbleHMC}
-#'    is installed, the function can **attempt full-model NUTS** via
-#'    \code{configure_hmc_safely()} (with optional interactive confirmation).
-#' 3. Otherwise (or if HMC is declined/fails), it follows a **surgical plan**:
-#'    - Selects \code{nbot} bottleneck families by median CE (ESS/s) from the baseline
-#'      (or uses \code{force_families}/\code{force_nodes}/\code{force_union}).
-#'    - Applies **strict scalar sequences** (\code{strict_scalar_seq}) on family 1
-#'      (e.g., \code{c("NUTS","slice","RW")}).
-#'    - If \code{nbot >= 2}, applies **strict block sequences** (\code{strict_block_seq})
-#'      on the union of families 1 and 2 (optionally with a PD \code{propCov} built
-#'      from the baseline samples; capped by \code{block_max}).
-#'
-#' **Sampler assignment**
-#' - Scalar: \code{"NUTS"}, \code{"slice"}, \code{"RW"} (with respective control lists).
-#' - Block:  \code{"NUTS_block"}, \code{"AF_slice"}, \code{"RW_block"} (with control).
-#' - If \pkg{nimbleHMC} is missing, \code{"NUTS"} fallbacks to \code{"slice"} and
-#'   \code{"NUTS_block"} fallbacks to \code{"AF_slice"}.
-#'
-#' **Robustness**
-#' - Auto-adds safe samplers to **unsampled non-likelihood nodes** (slice) before compile.
-#' - Retries compile/run up to 3 times with clean unloads (\code{nimble::clearCompiled()}).
-#' - Ignores likelihood-like targets when scoring families (\code{logLik}, \code{log_lik},
-#'   \code{logdens}, \code{lpdf}) and internal nodes (\code{lifted_}, \code{logProb_}).
-#' - Handles \code{NA} in diagnostics gracefully.
-#'
-#' @param build_fn A model builder (function) or a pre-built list with at least
-#'   \code{$model} and \code{$conf}. If a list is provided, it is wrapped to behave
-#'   like a builder.
-#' @param monitors Character vector of monitors passed to runs (optional; forwarded).
-#' @param try_hmc Logical; if \code{TRUE}, attempt full-model NUTS via
-#'   \code{configure_hmc_safely()} when derivatives and \pkg{nimbleHMC} are available.
-#' @param nchains Integer (default 3L); number of chains for baseline and strategy runs.
-#' @param pilot_niter Integer; number of iterations for baseline and strategy pilots.
-#' @param pilot_burnin Integer; burn-in for pilots (also used as NUTS warmup).
-#' @param thin Integer; thinning applied to all runs.
-#' @param out_dir Output directory for diagnostics and plots (created if missing).
-#' @param nbot Integer; number of bottleneck families to consider (1 or 2 recommended).
-#' @param strict_scalar_seq Character vector of scalar sampler types to try in order,
-#'   e.g. \code{c("NUTS","slice","RW")}.
-#' @param strict_block_seq Character vector of block sampler types to try in order,
-#'   e.g. \code{c("NUTS_block","AF_slice","RW_block")}.
-#' @param force_families Optional character vector of family names to force selection
-#'   (overrides automatic picking by CE).
-#' @param force_nodes Optional named list mapping family -> explicit node vector
-#'   (e.g., \code{list(logit_theta = c("logit_theta[1]", ...))}).
-#' @param force_union Optional character vector of families to union for block steps.
-#' @param ask Logical; if \code{TRUE} and \code{interactive()}, prompts between steps.
-#' @param ask_before_hmc Logical; if \code{TRUE}, asks before attempting full-model HMC/NUTS.
-#' @param block_max Integer; maximum number of nodes in a block union (hard cap).
-#' @param slice_control,rw_control,rwblock_control,af_slice_control Named lists forwarded
-#'   to the respective sampler control arguments.
-#' @param slice_max_contractions Integer; passed to slice samplers when relevant.
-#'
-#' @return A list with elements:
-#' \describe{
-#'   \item{status}{Character; \code{"completed"} on success.}
-#'   \item{mode}{One of \code{"HMC_full"}, \code{"surgical_nbot1"}, \code{"surgical_nbot2"}.}
-#'   \item{baseline}{List with \code{runtime_s}, \code{samples}/\code{samples2}, and
-#'     \code{diag_tbl} (if computed).}
-#'   \item{families}{Character vector of selected bottleneck families.}
-#'   \item{steps}{List of per-step results; each contains \code{res$out}, \code{res$ml},
-#'     \code{res$dg} (diagnostics), and an output directory for plots.}
-#'   \item{hmc}{When \code{mode == "HMC_full"}, the object returned by
-#'     \code{configure_hmc_safely()} with \code{$diag_tbl} and \code{$res$runtime_s}.}
-#' }
-#'
-#' @section Diagnostics:
-#' Diagnostics are computed per target and summarized per family using
-#' \itemize{
-#'   \item AE = median ESS per iteration (AE_ESS_per_it),
-#'   \item CE = median ESS per second (ESS_per_sec),
-#'   \item \eqn{\hat{R}} = max Rhat per group.
-#' }
-#'
-#' @seealso
-#' \code{\link{configure_hmc_safely}},
-#' \code{\link{plot_strategies_from_test_result_fast}},
-#' \code{\link{run_baseline_config}},
-#' \code{\link{compute_diag_from_mcmc_vect}},
-#' \code{\link{compute_diag_from_mcmc}}
-#'
-#' @importFrom stats cov median
-#' @importFrom utils head
-#' @export
-test_strategy_family_fast <- function(build_fn,
-                                      monitors            = NULL,   # optional, just passed through
-                                      try_hmc             = TRUE,   # only used for full-model path; surgical ignores
-                                      nchains             = 3L,
-                                      pilot_niter         = 4000L,
-                                      pilot_burnin        = 1000L,
-                                      thin                = 2L,
-                                      out_dir             = "outputs/diagnostics_family",
-                                      nbot                = 1L,
-                                      # strict sequences (user can override; order strictly enforced)
-                                      strict_scalar_seq   = c("NUTS","slice","RW"),
-                                      strict_block_seq    = c("NUTS_block","AF_slice","RW_block"),
-                                      # forcing
-                                      force_families      = NULL,   # e.g. c("logit_theta","N")
-                                      force_nodes         = NULL,   # e.g. list(logit_theta=c("logit_theta[1]",...))
-                                      force_union         = NULL,   # e.g. c("logit_theta","N")
-                                      # interaction
-                                      ask                 = TRUE,
-                                      ask_before_hmc      = TRUE,
-                                      # safety caps
-                                      block_max           = 20L,
-                                      # sampler controls
-                                      slice_control       = list(),
-                                      rw_control          = list(),
-                                      rwblock_control     = list(adaptScaleOnly = TRUE),
-                                      af_slice_control    = list(),
-                                      slice_max_contractions = 5000L) {
-  `%||%` <- function(x, y) if (is.null(x)) y else x
-  stopifnot(nbot >= 1L)
-  if (is.list(build_fn) && !is.null(build_fn$model)) { obj <- build_fn; build_fn <- function() obj }
-  stopifnot(is.function(build_fn))
-  if (!requireNamespace("nimble", quietly = TRUE)) stop("samOptiPro: 'nimble' is required.")
-  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
-
-  say     <- function(...) { msg <- try(sprintf(...), silent = TRUE); if(!inherits(msg,"try-error")) cat(msg,"\n") }
-  is_ll   <- function(x) grepl("^logLik(\\[.*\\])?$|log_?lik|logdens|lpdf", x, perl=TRUE, ignore.case=TRUE)
-  root_of <- function(x) sub("\\[.*", "", x)
-
-  .prompt_info <- function(txt) {
-    if (!isTRUE(ask) || !interactive()) return(invisible(NULL))
-    try(readline(paste0(txt, " (yes/no): ")), silent = TRUE); invisible(NULL)
-  }
-
-  # ---------- mini-patch: sanitisation des cibles ----------
-  .sanitize_nodes <- function(nodes, model) {
-    if (is.null(nodes)) return(character(0))
-    nodes <- unique(stats::na.omit(as.character(nodes)))
-    if (!length(nodes)) return(character(0))
-    nodes <- nodes[nzchar(nodes)]
-    nodes <- nodes[!is_ll(nodes)]
-    nodes <- nodes[!grepl("^lifted_|^logProb_", nodes)]
-    avail <- model$getNodeNames(stochOnly = FALSE, includeData = FALSE)
-    intersect(nodes, avail)
-  }
-
-  # --------- compile/run with robust unload & retries ----------
-  .ensure_unsampled <- function(conf) {
-    uns <- try(conf$getUnsampledNodes(), silent = TRUE)
-    if (!inherits(uns, "try-error") && length(uns)) {
-      uns <- uns[!is_ll(uns)]
-      for (u in uns) conf$addSampler(u, type = "slice")
-    }
-  }
-
-  .compile_and_run <- function(step_tag, build_obj, conf) {
-    attempts <- 0L
-    last_err <- NULL
-    repeat {
-      attempts <- attempts + 1L
-      try(nimble::clearCompiled(), silent = TRUE)
-      gc()
-      res <- try({
-        .ensure_unsampled(conf)
-        cmcmc <- .compile_mcmc_with_build(conf, build_obj, reset = TRUE, show = FALSE)
-        out   <- .run_and_collect(cmcmc, niter = pilot_niter, nburnin = pilot_burnin,
-                                  thin = thin, nchains = nchains)
-        ml    <- as_mcmc_list_sop(out$samples, out$samples2, drop_loglik = FALSE, thin = thin)
-        # ---- version vectorisée ----
-        dg <- .compute_diag_auto(ml, runtime_s = out$runtime_s)
-        if (!is.null(cmcmc) && is.list(cmcmc) && "unloadDLL" %in% names(cmcmc)) {
-          try(cmcmc$unloadDLL(), silent = TRUE)
-        }
-        list(out=out, ml=ml, dg=dg)
-      }, silent = TRUE)
-
-      if (!inherits(res, "try-error")) return(res)
-
-      last_err <- tryCatch(conditionMessage(attr(res, "condition")), error=function(e) as.character(res))
-      cat(sprintf("[Retry %d @ %s] %s\n", attempts, step_tag, last_err))
-
-      build_obj <- .fresh_build(build_fn, monitors = monitors, thin = thin)
-      conf <- build_obj$conf
-
-      if (attempts >= 3L) stop(sprintf("Compilation failed after %d attempts at step '%s': %s",
-                                       attempts, step_tag, last_err))
-    }
-  }
-
-  # --------- sampler assigners (family-level) ----------
-  .add_scalar_family <- function(conf, nodes, type, has_hmc) {
-    nodes <- .sanitize_nodes(nodes, conf$model)
-    if (!length(nodes)) return(invisible())
-    if (identical(type, "NUTS")) {
-      if (isTRUE(has_hmc)) {
-        for (n in nodes) conf$addSampler(target = n, type = "NUTS")
-      } else {
-        cat("[Info] nimbleHMC not available -> falling back to slice (scalar).\n")
-        for (n in nodes) conf$addSampler(n, "slice", slice_control)
-      }
-      return(invisible())
-    }
-    if (identical(type, "slice")) { for (n in nodes) conf$addSampler(n, "slice", slice_control); return(invisible()) }
-    if (identical(type, "RW"))    { for (n in nodes) conf$addSampler(n, "RW",    rw_control);    return(invisible()) }
-    for (n in nodes) conf$addSampler(n, "slice", slice_control) # fallback
-  }
-
-  .add_block_family <- function(conf, nodes, type, has_hmc, Sc = NULL) {
-    nodes <- unique(nodes)
-    nodes <- .sanitize_nodes(nodes, conf$model)
-    if (!length(nodes)) return(invisible())
-
-    if (length(nodes) < 2L) {
-      if (type == "NUTS_block") .add_scalar_family(conf, nodes, "NUTS", has_hmc) else
-        if (type == "AF_slice")   for (n in nodes) conf$addSampler(n, "AF_slice", af_slice_control) else
-          if (type == "RW_block")   for (n in nodes) conf$addSampler(n, "RW", rw_control) else
-            for (n in nodes) conf$addSampler(n, "slice", slice_control)
-      return(invisible())
-    }
-    if (identical(type, "NUTS_block")) {
-      if (isTRUE(has_hmc)) conf$addSampler(target = nodes, type = "NUTS") else {
-        cat("[Info] nimbleHMC not available -> falling back to AF_slice (block).\n")
-        conf$addSampler(target = nodes, type = "AF_slice", control = af_slice_control)
-      }
-      return(invisible())
-    }
-    if (identical(type, "AF_slice")) {
-      ok <- TRUE
-      tryCatch({ conf$addSampler(target = nodes, type = "AF_slice", control = af_slice_control) },
-               error = function(e) ok <<- FALSE)
-      if (!ok) for (n in nodes) conf$addSampler(n, "slice", slice_control)
-      return(invisible())
-    }
-    if (identical(type, "RW_block")) {
-      ctrl <- rwblock_control; if (!is.null(Sc)) ctrl$propCov <- Sc
-      conf$addSampler(nodes, "RW_block", ctrl); return(invisible())
-    }
-    for (n in nodes) conf$addSampler(n, "slice", slice_control)
-  }
-
-  .fam_metrics <- function(dg, nodes) {
-    keep <- dg$target %in% nodes & !is_ll(dg$target)
-    list(AE = stats::median(dg$AE_ESS_per_it[keep], na.rm = TRUE),
-         CE = stats::median(dg$ESS_per_sec[keep],   na.rm = TRUE),
-         Rhat = if (any(keep)) suppressWarnings(max(dg$Rhat[keep], na.rm = TRUE)) else NA_real_)
-  }
-
-  .print_step <- function(title, fam_label, nodes, sampler, runtime, met, base_dx, base_rt) {
-    say("--- %s ---", title)
-    if (!is.null(fam_label)) say("Family: %s", fam_label)
-    say("Nodes: %s", paste(nodes, collapse=", "))
-    say("Sampler: %s", sampler)
-    say("Runtime_s: %.2f (baseline: %.2f)", runtime %||% NA_real_, base_rt %||% NA_real_)
-    say("AE median (ESS/iter): %.3g (baseline: %.3g)", met$AE %||% NA_real_,
-        stats::median(base_dx$AE_ESS_per_it, na.rm=TRUE))
-    say("CE median (ESS/s):    %.3g (baseline: %.3g)", met$CE %||% NA_real_,
-        stats::median(base_dx$ESS_per_sec,   na.rm=TRUE))
-    say("Rhat max:             %.3g (baseline max: %.3g)",
-        met$Rhat %||% NA_real_, suppressWarnings(max(base_dx$Rhat, na.rm=TRUE)))
-  }
-
-  # ---------- 0) Build + baseline ----------
-  bld <- .fresh_build(build_fn, monitors = monitors, thin = thin)
-  mdl <- bld$model
-  rb  <- run_baseline_config(build_fn, pilot_niter, pilot_burnin, thin, monitors, nchains)
-  base_ml <- as_mcmc_list_sop(rb$samples, rb$samples2, drop_loglik = FALSE, thin = thin)
-  base_dg <- compute_diag_from_mcmc_vect(base_ml, runtime_s = rb$runtime_s)
-  base_dx <- base_dg[!is_ll(base_dg$target), , drop = FALSE]
-  say("Baseline runtime_s: %.2f s", rb$runtime_s %||% NA_real_)
-  say("Baseline median AE(ESS/iter): %.3g", stats::median(base_dx$AE_ESS_per_it, na.rm = TRUE))
-  say("Baseline median CE(ESS/s):    %.3g", stats::median(base_dx$ESS_per_sec,   na.rm = TRUE))
-
-  # ---------- 1) Full-model HMC (optionnel, inchangé) ----------
-  dg_struct <- try(diagnose_model_structure(mdl), silent = TRUE)
-  suppressWarnings(has_hmc <- requireNamespace("nimbleHMC", quietly = TRUE))
-  deriv_ok <- .sop_supports_derivs(mdl)
-  blockers <- character(0)
-  if (!inherits(dg_struct,"try-error") && !is.null(dg_struct)) {
-    if (isTRUE(dg_struct$has_truncation))   blockers <- c(blockers, "truncation")
-    if (isTRUE(dg_struct$has_simplex))      blockers <- c(blockers, "simplex-constraint")
-    if (isTRUE(dg_struct$has_non_diff_fun)) blockers <- c(blockers, "non-diff-function")
-  }
-  nuts_ok_global <- isTRUE(try_hmc) && has_hmc && deriv_ok && (length(blockers) == 0L)
-
-  if (isTRUE(nuts_ok_global)) {
-    if (isTRUE(ask) && isTRUE(ask_before_hmc) && isTRUE(interactive())) {
-      cat(sprintf("Baseline ready. Runtime=%.2fs; median AE=%.3g; median CE=%.3g\n",
-                  rb$runtime_s %||% NA_real_,
-                  median(base_dx$AE_ESS_per_it, na.rm = TRUE),
-                  median(base_dx$ESS_per_sec,   na.rm = TRUE)))
-      ans <- try(readline("Proceed with full-model HMC/NUTS? (yes/no): "), silent = TRUE)
-      if (!inherits(ans, "try-error") && tolower(trimws(ans)) %in% c("no","n")) {
-        cat("User declined full-model HMC/NUTS. Switching to surgical family plan.\n")
-      } else {
-        hmc_try <- configure_hmc_safely(
-          build_fn = build_fn, niter = pilot_niter, nburnin = pilot_burnin,
-          thin = thin, monitors = monitors, nchains = nchains,
-          out_dir = file.path(out_dir, "HMC_full"))
-        if (isTRUE(hmc_try$ok)) {
-          dg <- hmc_try$diag_tbl
-          cat(sprintf("HMC runtime_s: %.3f\n", hmc_try$res$runtime_s %||% NA_real_))
-          cat(sprintf("HMC median AE: %.3g ; CE: %.3g ; max Rhat: %.3g\n",
-                      median(dg$AE_ESS_per_it, na.rm=TRUE),
-                      median(dg$ESS_per_sec,   na.rm=TRUE),
-                      if (all(is.na(dg$Rhat))) NA_real_ else max(dg$Rhat, na.rm=TRUE)))
-          return(list(mode="HMC_full",
-                      baseline=list(runtime_s=rb$runtime_s, samples=base_ml, diag_tbl=base_dg),
-                      hmc=hmc_try, messages="Full HMC completed."))
-        } else cat("[Warn] Full-model HMC failed -> continuing with surgical family plan.\n")
-      }
-    }
-  }
-
-  # ---------- 2) Families selection (respecting forcing) ----------
-  stoch_nodes <- mdl$getNodeNames(stochOnly = TRUE, includeData = FALSE)
-  stoch_nodes <- stoch_nodes[!is_ll(stoch_nodes)]
-  if (!"Family" %in% names(base_dx)) base_dx$Family <- root_of(base_dx$target)
-
-  fam_med <- stats::aggregate(ESS_per_sec ~ Family, data = base_dx, median)
-  fam_med <- fam_med[order(fam_med$ESS_per_sec, decreasing = FALSE), , drop = FALSE]
-
-  pick_fams <- character(0)
-  if (!is.null(force_families) && length(force_families)) {
-    pf <- unique(force_families)
-    present <- pf[pf %in% unique(base_dx$Family)]
-    pick_fams <- utils::head(present, nbot)
-    if (!length(pick_fams)) warning("force_families provided but none matched diagnostics; using automatic selection.")
-  }
-  if (!length(pick_fams)) {
-    for (fam in fam_med$Family) {
-      fam_nodes_all <- intersect(stoch_nodes[root_of(stoch_nodes) == fam], unique(base_dx$target))
-      if (length(fam_nodes_all)) pick_fams <- unique(c(pick_fams, fam))
-      if (length(pick_fams) >= nbot) break
-    }
-    pick_fams <- utils::head(pick_fams, nbot)
-  }
-  if (!length(pick_fams)) stop("No stochastic bottleneck families found.")
-  say("Selected bottleneck families (nbot=%d): %s", nbot, paste(pick_fams, collapse = ", "))
-
-  get_family_nodes <- function(fam) {
-    allf <- intersect(stoch_nodes[root_of(stoch_nodes) == fam], unique(base_dx$target))
-    forced <- force_nodes[[fam]] %||% NULL
-    if (!is.null(forced)) {
-      forced <- intersect(forced, allf)
-      if (!length(forced)) warning(sprintf("force_nodes for '%s' not found in diagnostics; using detected nodes.", fam))
-      return(if (length(forced)) forced else allf)
-    }
-    allf
-  }
-
-  steps <- list()
-
-  # ========================== CASE nbot = 1 ==========================
-  if (nbot == 1L) {
-    fam1 <- pick_fams[1]
-    fam1_nodes <- get_family_nodes(fam1)
-    for (samp in unique(as.character(strict_scalar_seq))) {
-      bS <- .fresh_build(build_fn, monitors = monitors, thin = thin)
-      confS <- bS$conf
-      fam1_nodes_s <- .sanitize_nodes(fam1_nodes, confS$model)
-      for (n in fam1_nodes_s) try(confS$removeSamplers(n), silent = TRUE)
-      .add_scalar_family(confS, fam1_nodes_s, samp, has_hmc)
-
-      resS <- .compile_and_run(paste0("nbot1_", fam1, "_", samp), bS, confS)
-      metS <- .fam_metrics(resS$dg, fam1_nodes_s)
-      .print_step("Scalar plan on family", fam1, fam1_nodes_s, samp,
-                  resS$out$runtime_s, metS, base_dx, rb$runtime_s)
-
-      pdir <- file.path(out_dir, sprintf("scalar_family_%s_%s", gsub("[^A-Za-z0-9_]", "_", fam1), samp))
-      if (!dir.exists(pdir)) dir.create(pdir, recursive = TRUE, showWarnings = FALSE)
-      .plot_rhat_bar(resS$dg, nodes = fam1_nodes_s, out_file = file.path(pdir, "rhat_bar.png"))
-      .plot_traces(resS$ml, nodes = fam1_nodes_s, out_file_prefix = file.path(pdir, "trace_"))
-
-      steps <- c(steps, list(list(level="family-scalar", family=fam1, nodes=fam1_nodes_s,
-                                  sampler=samp, res=resS, dir=pdir)))
-
-      .prompt_info(sprintf("Proceed to the next sampler for family '%s'?", fam1))
-    }
-    return(list(status="completed", mode="surgical_nbot1",
-                baseline=rb, families=pick_fams, steps=steps))
-  }
-
-  # ========================== CASE nbot >= 2 ==========================
-  # Step 1 -- Family 1 scalar strict
-  fam1 <- pick_fams[1]
-  fam1_nodes <- get_family_nodes(fam1)
-  for (samp in unique(as.character(strict_scalar_seq))) {
-    bS <- .fresh_build(build_fn, monitors = monitors, thin = thin)
-    confS <- bS$conf
-    fam1_nodes_s <- .sanitize_nodes(fam1_nodes, confS$model)
-    for (n in fam1_nodes_s) try(confS$removeSamplers(n), silent = TRUE)
-    .add_scalar_family(confS, fam1_nodes_s, samp, has_hmc)
-
-    resS <- .compile_and_run(paste0("nbot2_scalar_", fam1, "_", samp), bS, confS)
-    metS <- .fam_metrics(resS$dg, fam1_nodes_s)
-    .print_step("Scalar plan on family", fam1, fam1_nodes_s, samp,
-                resS$out$runtime_s, metS, base_dx, rb$runtime_s)
-
-    pdir <- file.path(out_dir, sprintf("scalar_family_%s_%s", gsub("[^A-Za-z0-9_]", "_", fam1), samp))
-    if (!dir.exists(pdir)) dir.create(pdir, recursive = TRUE, showWarnings = FALSE)
-    .plot_rhat_bar(resS$dg, nodes = fam1_nodes_s, out_file = file.path(pdir, "rhat_bar.png"))
-    .plot_traces(resS$ml, nodes = fam1_nodes_s, out_file_prefix = file.path(pdir, "trace_"))
-
-    steps <- c(steps, list(list(level="family-scalar", family=fam1, nodes=fam1_nodes_s,
-                                sampler=samp, res=resS, dir=pdir)))
-    .prompt_info(sprintf("Proceed to the next sampler for family '%s'?", fam1))
-  }
-
-  # Step 2 -- Block strict on union
-  fam2 <- pick_fams[2]
-  fam2_nodes <- get_family_nodes(fam2)
-  if (!is.null(force_union) && length(force_union) >= 2L) {
-    union_fams  <- unique(force_union)
-    union_nodes <- unique(unlist(lapply(union_fams, get_family_nodes)))
-    fam_label   <- paste(union_fams, collapse = " + ")
-  } else {
-    union_nodes <- unique(c(fam1_nodes, fam2_nodes))
-    fam_label   <- paste(fam1, "+", fam2)
-  }
-  if (length(union_nodes) > block_max) union_nodes <- utils::head(union_nodes, block_max)
-
-  # optional PD propCov from baseline
-  propCov <- NULL
-  if (length(union_nodes) >= 2L) {
-    M_full <- do.call(rbind, lapply(base_ml, function(m) {
-      X <- as.matrix(m); keep <- intersect(colnames(X), union_nodes); X[, keep, drop = FALSE]
-    }))
-    if (!is.null(M_full) && is.matrix(M_full) && ncol(M_full) >= 2L) {
-      S <- try(stats::cov(M_full, use = "pairwise.complete.obs"), silent = TRUE)
-      if (!inherits(S,"try-error")) {
-        pc <- try(.sop_make_propCov_PD(S), silent = TRUE)
-        if (!inherits(pc,"try-error")) propCov <- pc
-      }
-    }
-  }
-
-  for (samp in unique(as.character(strict_block_seq))) {
-    bB <- .fresh_build(build_fn, monitors = monitors, thin = thin)
-    confB <- bB$conf
-    union_nodes_s <- .sanitize_nodes(union_nodes, confB$model)
-    for (n in union_nodes_s) try(confB$removeSamplers(n), silent = TRUE)
-    .add_block_family(confB, union_nodes_s, samp, has_hmc, Sc = propCov)
-
-    resB <- .compile_and_run(paste0("nbot2_block_", gsub("[^A-Za-z0-9_]+","_", fam_label), "_", samp), bB, confB)
-    metB <- .fam_metrics(resB$dg, union_nodes_s)
-    .print_step("Block plan on families union", fam_label, union_nodes_s, samp,
-                resB$out$runtime_s, metB, base_dx, rb$runtime_s)
-
-    pdir <- file.path(out_dir, sprintf("block_union_%s_%s", gsub("[^A-Za-z0-9_]", "_", fam_label), samp))
-    if (!dir.exists(pdir)) dir.create(pdir, recursive = TRUE, showWarnings = FALSE)
-    .plot_rhat_bar(resB$dg, nodes = union_nodes_s, out_file = file.path(pdir, "rhat_bar.png"))
-    .plot_traces(resB$ml, nodes = union_nodes_s, out_file_prefix = file.path(pdir, "trace_"))
-
-    steps <- c(steps, list(list(level="families-block", families=fam_label, nodes=union_nodes_s,
-                                sampler=samp, res=resB, dir=pdir)))
-    .prompt_info(sprintf("Proceed to the next BLOCK sampler for union '%s'?", fam_label))
-  }
-
-  return(list(status="completed", mode=if (nbot==1L) "surgical_nbot1" else "surgical_nbot2",
-              baseline=rb, families=pick_fams, steps=steps))
-}
-#' Fast strategy testing for sampler plans (family-level, with optional full-model HMC/NUTS)
-#'
-#' @description
-#' Runs a fast, reproducible workflow to (i) obtain a **baseline** MCMC,
-#' (ii) optionally attempt **full-model HMC/NUTS** when feasible, and/or
-#' (iii) evaluate **surgical family-level strategies** (scalar and block plans)
-#' on one or two bottleneck families. The function is designed to minimize
-#' rebuild/compile overhead, auto-patch unsampled nodes, and produce
-#' diagnostics robustly for large hierarchical models.
-#'
-#' @details
-#' **Pipeline**
-#' 1. Fresh build via internal helpers (e.g., `.fresh_build()`), then a short **baseline**
-#'    run with \code{run_baseline_config()} to compute diagnostics (AE, CE, Rhat)
-#'    using \code{compute_diag_from_mcmc_vect()} when available (falls back to
-#'    \code{compute_diag_from_mcmc()}).
-#' 2. If \code{try_hmc = TRUE} and the model supports differentiability (no blocking
-#'    features such as hard truncations/simplex/non-diff ops) and \pkg{nimbleHMC}
-#'    is installed, the function can **attempt full-model NUTS** via
-#'    \code{configure_hmc_safely()} (with optional interactive confirmation).
-#' 3. Otherwise (or if HMC is declined/fails), it follows a **surgical plan**:
-#'    - Selects \code{nbot} bottleneck families by median CE (ESS/s) from the baseline
-#'      (or uses \code{force_families}/\code{force_nodes}/\code{force_union}).
-#'    - Applies **strict scalar sequences** (\code{strict_scalar_seq}) on family 1
-#'      (e.g., \code{c("NUTS","slice","RW")}).
-#'    - If \code{nbot >= 2}, applies **strict block sequences** (\code{strict_block_seq})
-#'      on the union of families 1 and 2 (optionally with a PD \code{propCov} built
-#'      from the baseline samples; capped by \code{block_max}).
-#'
-#' **Sampler assignment**
-#' - Scalar: \code{"NUTS"}, \code{"slice"}, \code{"RW"} (with respective control lists).
-#' - Block:  \code{"NUTS_block"}, \code{"AF_slice"}, \code{"RW_block"} (with control).
-#' - If \pkg{nimbleHMC} is missing, \code{"NUTS"} fallbacks to \code{"slice"} and
-#'   \code{"NUTS_block"} fallbacks to \code{"AF_slice"}.
-#'
-#' **Robustness**
-#' - Auto-adds safe samplers to **unsampled non-likelihood nodes** (slice) before compile.
-#' - Retries compile/run up to 3 times with clean unloads (\code{nimble::clearCompiled()}).
-#' - Ignores likelihood-like targets when scoring families (\code{logLik}, \code{log_lik},
-#'   \code{logdens}, \code{lpdf}) and internal nodes (\code{lifted_}, \code{logProb_}).
-#' - Handles \code{NA} in diagnostics gracefully.
-#'
-#' @param build_fn A model builder (function) or a pre-built list with at least
-#'   \code{$model} and \code{$conf}. If a list is provided, it is wrapped to behave
-#'   like a builder.
-#' @param monitors Character vector of monitors passed to runs (optional; forwarded).
-#' @param try_hmc Logical; if \code{TRUE}, attempt full-model NUTS via
-#'   \code{configure_hmc_safely()} when derivatives and \pkg{nimbleHMC} are available.
-#' @param nchains Integer (default 3L); number of chains for baseline and strategy runs.
-#' @param pilot_niter Integer; number of iterations for baseline and strategy pilots.
-#' @param pilot_burnin Integer; burn-in for pilots (also used as NUTS warmup).
-#' @param thin Integer; thinning applied to all runs.
-#' @param out_dir Output directory for diagnostics and plots (created if missing).
-#' @param nbot Integer; number of bottleneck families to consider (1 or 2 recommended).
-#' @param strict_scalar_seq Character vector of scalar sampler types to try in order,
-#'   e.g. \code{c("NUTS","slice","RW")}.
-#' @param strict_block_seq Character vector of block sampler types to try in order,
-#'   e.g. \code{c("NUTS_block","AF_slice","RW_block")}.
-#' @param force_families Optional character vector of family names to force selection
-#'   (overrides automatic picking by CE).
-#' @param force_nodes Optional named list mapping family -> explicit node vector
-#'   (e.g., \code{list(logit_theta = c("logit_theta[1]", ...))}).
-#' @param force_union Optional character vector of families to union for block steps.
-#' @param ask Logical; if \code{TRUE} and \code{interactive()}, prompts between steps.
-#' @param ask_before_hmc Logical; if \code{TRUE}, asks before attempting full-model HMC/NUTS.
-#' @param block_max Integer; maximum number of nodes in a block union (hard cap).
-#' @param slice_control,rw_control,rwblock_control,af_slice_control Named lists forwarded
-#'   to the respective sampler control arguments.
-#' @param slice_max_contractions Integer; passed to slice samplers when relevant.
-#'
-#' @return A list with elements:
-#' \describe{
-#'   \item{status}{Character; \code{"completed"} on success.}
-#'   \item{mode}{One of \code{"HMC_full"}, \code{"surgical_nbot1"}, \code{"surgical_nbot2"}.}
-#'   \item{baseline}{List with \code{runtime_s}, \code{samples}/\code{samples2}, and
-#'     \code{diag_tbl} (if computed).}
-#'   \item{families}{Character vector of selected bottleneck families.}
-#'   \item{steps}{List of per-step results; each contains \code{res$out}, \code{res$ml},
-#'     \code{res$dg} (diagnostics), and an output directory for plots.}
-#'   \item{hmc}{When \code{mode == "HMC_full"}, the object returned by
-#'     \code{configure_hmc_safely()} with \code{$diag_tbl} and \code{$res$runtime_s}.}
-#' }
-#'
-#' @section Diagnostics:
-#' Diagnostics are computed per target and summarized per family using
-#' \itemize{
-#'   \item AE = median ESS per iteration (AE_ESS_per_it),
-#'   \item CE = median ESS per second (ESS_per_sec),
-#'   \item \eqn{\hat{R}} = max Rhat per group.
-#' }
-#'
-#' @seealso
-#' \code{\link{configure_hmc_safely}},
-#' \code{\link{plot_strategies_from_test_result_fast}},
-#' \code{\link{run_baseline_config}},
-#' \code{\link{compute_diag_from_mcmc_vect}},
-#' \code{\link{compute_diag_from_mcmc}}
-#'
-#' @importFrom stats cov median
-#' @importFrom utils head
-#' @export
-test_strategy_family <- function(build_fn,
-                                      monitors            = NULL,   # optional, just passed through
-                                      try_hmc             = TRUE,   # only used for full-model path; surgical ignores
-                                      nchains             = 3L,
-                                      pilot_niter         = 4000L,
-                                      pilot_burnin        = 1000L,
-                                      thin                = 2L,
-                                      out_dir             = "outputs/diagnostics_family",
-                                      nbot                = 1L,
-                                      # strict sequences (user can override; order strictly enforced)
-                                      strict_scalar_seq   = c("NUTS","slice","RW"),
-                                      strict_block_seq    = c("NUTS_block","AF_slice","RW_block"),
-                                      # forcing
-                                      force_families      = NULL,   # e.g. c("logit_theta","N")
-                                      force_nodes         = NULL,   # e.g. list(logit_theta=c("logit_theta[1]",...))
-                                      force_union         = NULL,   # e.g. c("logit_theta","N")
-                                      # interaction
-                                      ask                 = TRUE,
-                                      ask_before_hmc      = TRUE,
-                                      # safety caps
-                                      block_max           = 20L,
-                                      # sampler controls
-                                      slice_control       = list(),
-                                      rw_control          = list(),
-                                      rwblock_control     = list(adaptScaleOnly = TRUE),
-                                      af_slice_control    = list(),
-                                      slice_max_contractions = 5000L) {
-
-  `%||%` <- function(x, y) if (is.null(x)) y else x
-  stopifnot(nbot >= 1L)
-  if (is.list(build_fn) && !is.null(build_fn$model)) { obj <- build_fn; build_fn <- function() obj }
-  stopifnot(is.function(build_fn))
-  if (!requireNamespace("nimble", quietly = TRUE)) stop("samOptiPro: 'nimble' is required.")
-  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
-
-  say     <- function(...) { msg <- try(sprintf(...), silent = TRUE); if(!inherits(msg,"try-error")) cat(msg,"\n") }
-  is_ll   <- function(x) grepl("^logLik(\\[.*\\])?$|log_?lik|logdens|lpdf", x, perl=TRUE, ignore.case=TRUE)
-  root_of <- function(x) sub("\\[.*", "", x)
-
-  .prompt_info <- function(txt) {
-    if (!isTRUE(ask) || !interactive()) return(invisible(NULL))
-    try(readline(paste0(txt, " (yes/no): ")), silent = TRUE); invisible(NULL)
-  }
-
-  # ---------- alias interne: diagnostics vectorisé avec fallback ----------
-  .compute_diag_auto <- function(ml, runtime_s) {
-    fn_vect <- get0("compute_diag_from_mcmc_vect",
-                    mode  = "function",
-                    envir = parent.frame(),
-                    inherits = TRUE)
-    if (!is.null(fn_vect)) {
-      res <- try(fn_vect(ml, runtime_s = runtime_s), silent = TRUE)
-      if (!inherits(res, "try-error")) return(res)
-    }
-    fn_std <- get0("compute_diag_from_mcmc",
-                   mode  = "function",
-                   envir = parent.frame(),
-                   inherits = TRUE)
-    if (is.null(fn_std)) {
-      stop("Neither 'compute_diag_from_mcmc_vect' nor 'compute_diag_from_mcmc' is available.")
-    }
-    fn_std(ml, runtime_s = runtime_s)
-  }
-
-  # ---------- mini-patch: sanitisation des cibles ----------
-  .sanitize_nodes <- function(nodes, model) {
-    if (is.null(nodes)) return(character(0))
-    nodes <- unique(stats::na.omit(as.character(nodes)))
-    if (!length(nodes)) return(character(0))
-    nodes <- nodes[nzchar(nodes)]
-    nodes <- nodes[!is_ll(nodes)]
-    nodes <- nodes[!grepl("^lifted_|^logProb_", nodes)]
-    avail <- model$getNodeNames(stochOnly = FALSE, includeData = FALSE)
-    intersect(nodes, avail)
-  }
-
-  # --------- compile/run with robust unload & retries ----------
-  .ensure_unsampled <- function(conf) {
-    uns <- try(conf$getUnsampledNodes(), silent = TRUE)
-    if (!inherits(uns, "try-error") && length(uns)) {
-      uns <- uns[!is_ll(uns)]
-      for (u in uns) conf$addSampler(u, type = "slice")
-    }
-  }
-
-  .compile_and_run <- function(step_tag, build_obj, conf) {
-    attempts <- 0L
-    last_err <- NULL
-    repeat {
-      attempts <- attempts + 1L
-      try(nimble::clearCompiled(), silent = TRUE)
-      gc()
-      res <- try({
-        .ensure_unsampled(conf)
-        cmcmc <- .compile_mcmc_with_build(conf, build_obj, reset = TRUE, show = FALSE)
-        out   <- .run_and_collect(cmcmc, niter = pilot_niter, nburnin = pilot_burnin,
-                                  thin = thin, nchains = nchains)
-        ml    <- as_mcmc_list_sop(out$samples, out$samples2, drop_loglik = FALSE, thin = thin)
-        dg    <- .compute_diag_auto(ml, runtime_s = out$runtime_s)
-        if (!is.null(cmcmc) && is.list(cmcmc) && "unloadDLL" %in% names(cmcmc)) {
-          try(cmcmc$unloadDLL(), silent = TRUE)
-        }
-        list(out=out, ml=ml, dg=dg)
-      }, silent = TRUE)
-
-      if (!inherits(res, "try-error")) return(res)
-
-      last_err <- tryCatch(conditionMessage(attr(res, "condition")), error=function(e) as.character(res))
-      cat(sprintf("[Retry %d @ %s] %s\n", attempts, step_tag, last_err))
-
-      build_obj <- .fresh_build(build_fn, monitors = monitors, thin = thin)
-      conf <- build_obj$conf
-
-      if (attempts >= 3L) stop(sprintf("Compilation failed after %d attempts at step '%s': %s",
-                                       attempts, step_tag, last_err))
-    }
-  }
-
-  # --------- sampler assigners (family-level) ----------
-  .add_scalar_family <- function(conf, nodes, type, has_hmc) {
-    nodes <- .sanitize_nodes(nodes, conf$model)
-    if (!length(nodes)) return(invisible())
-    if (identical(type, "NUTS")) {
-      if (isTRUE(has_hmc)) {
-        for (n in nodes) conf$addSampler(target = n, type = "NUTS")
-      } else {
-        cat("[Info] nimbleHMC not available -> falling back to slice (scalar).\n")
-        for (n in nodes) conf$addSampler(n, "slice", slice_control)
-      }
-      return(invisible())
-    }
-    if (identical(type, "slice")) { for (n in nodes) conf$addSampler(n, "slice", slice_control); return(invisible()) }
-    if (identical(type, "RW"))    { for (n in nodes) conf$addSampler(n, "RW",    rw_control);    return(invisible()) }
-    for (n in nodes) conf$addSampler(n, "slice", slice_control) # fallback
-  }
-
-  .add_block_family <- function(conf, nodes, type, has_hmc, Sc = NULL) {
-    nodes <- unique(nodes)
-    nodes <- .sanitize_nodes(nodes, conf$model)
-    if (!length(nodes)) return(invisible())
-
-    if (length(nodes) < 2L) {
-      if (type == "NUTS_block") .add_scalar_family(conf, nodes, "NUTS", has_hmc) else
-        if (type == "AF_slice")   for (n in nodes) conf$addSampler(n, "AF_slice", af_slice_control) else
-          if (type == "RW_block")   for (n in nodes) conf$addSampler(n, "RW", rw_control) else
-            for (n in nodes) conf$addSampler(n, "slice", slice_control)
-      return(invisible())
-    }
-    if (identical(type, "NUTS_block")) {
-      if (isTRUE(has_hmc)) conf$addSampler(target = nodes, type = "NUTS") else {
-        cat("[Info] nimbleHMC not available -> falling back to AF_slice (block).\n")
-        conf$addSampler(target = nodes, type = "AF_slice", control = af_slice_control)
-      }
-      return(invisible())
-    }
-    if (identical(type, "AF_slice")) {
-      ok <- TRUE
-      tryCatch({ conf$addSampler(target = nodes, type = "AF_slice", control = af_slice_control) },
-               error = function(e) ok <<- FALSE)
-      if (!ok) for (n in nodes) conf$addSampler(n, "slice", slice_control)
-      return(invisible())
-    }
-    if (identical(type, "RW_block")) {
-      ctrl <- rwblock_control; if (!is.null(Sc)) ctrl$propCov <- Sc
-      conf$addSampler(nodes, "RW_block", ctrl); return(invisible())
-    }
-    for (n in nodes) conf$addSampler(n, "slice", slice_control)
-  }
-
-  .fam_metrics <- function(dg, nodes) {
-    keep <- dg$target %in% nodes & !is_ll(dg$target)
-    list(AE = stats::median(dg$AE_ESS_per_it[keep], na.rm = TRUE),
-         CE = stats::median(dg$ESS_per_sec[keep],   na.rm = TRUE),
-         Rhat = if (any(keep)) suppressWarnings(max(dg$Rhat[keep], na.rm = TRUE)) else NA_real_)
-  }
-
-  .print_step <- function(title, fam_label, nodes, sampler, runtime, met, base_dx, base_rt) {
-    say("--- %s ---", title)
-    if (!is.null(fam_label)) say("Family: %s", fam_label)
-    say("Nodes: %s", paste(nodes, collapse=", "))
-    say("Sampler: %s", sampler)
-    say("Runtime_s: %.2f (baseline: %.2f)", runtime %||% NA_real_, base_rt %||% NA_real_)
-    say("AE median (ESS/iter): %.3g (baseline: %.3g)", met$AE %||% NA_real_,
-        stats::median(base_dx$AE_ESS_per_it, na.rm=TRUE))
-    say("CE median (ESS/s):    %.3g (baseline: %.3g)", met$CE %||% NA_real_,
-        stats::median(base_dx$ESS_per_sec,   na.rm=TRUE))
-    say("Rhat max:             %.3g (baseline max: %.3g)",
-        met$Rhat %||% NA_real_, suppressWarnings(max(base_dx$Rhat, na.rm=TRUE)))
-  }
-
-  # ---------- 0) Build + baseline ----------
-  bld <- .fresh_build(build_fn, monitors = monitors, thin = thin)
-  mdl <- bld$model
-  rb  <- run_baseline_config(build_fn, pilot_niter, pilot_burnin, thin, monitors, nchains)
-  base_ml <- as_mcmc_list_sop(rb$samples, rb$samples2, drop_loglik = FALSE, thin = thin)
-  base_dg <- .compute_diag_auto(base_ml, runtime_s = rb$runtime_s)
-  base_dx <- base_dg[!is_ll(base_dg$target), , drop = FALSE]
-  say("Baseline runtime_s: %.2f s", rb$runtime_s %||% NA_real_)
-  say("Baseline median AE(ESS/iter): %.3g", stats::median(base_dx$AE_ESS_per_it, na.rm = TRUE))
-  say("Baseline median CE(ESS/s):    %.3g", stats::median(base_dx$ESS_per_sec,   na.rm = TRUE))
-
-  # ---------- 1) Full-model HMC (optionnel, inchangé) ----------
-  dg_struct <- try(diagnose_model_structure(mdl), silent = TRUE)
-  suppressWarnings(has_hmc <- requireNamespace("nimbleHMC", quietly = TRUE))
-  deriv_ok <- .sop_supports_derivs(mdl)
-  blockers <- character(0)
-  if (!inherits(dg_struct,"try-error") && !is.null(dg_struct)) {
-    if (isTRUE(dg_struct$has_truncation))   blockers <- c(blockers, "truncation")
-    if (isTRUE(dg_struct$has_simplex))      blockers <- c(blockers, "simplex-constraint")
-    if (isTRUE(dg_struct$has_non_diff_fun)) blockers <- c(blockers, "non-diff-function")
-  }
-  nuts_ok_global <- isTRUE(try_hmc) && has_hmc && deriv_ok && (length(blockers) == 0L)
-
-  if (isTRUE(nuts_ok_global)) {
-    if (isTRUE(ask) && isTRUE(ask_before_hmc) && isTRUE(interactive())) {
-      cat(sprintf("Baseline ready. Runtime=%.2fs; median AE=%.3g; median CE=%.3g\n",
-                  rb$runtime_s %||% NA_real_,
-                  median(base_dx$AE_ESS_per_it, na.rm = TRUE),
-                  median(base_dx$ESS_per_sec,   na.rm = TRUE)))
-      ans <- try(readline("Proceed with full-model HMC/NUTS? (yes/no): "), silent = TRUE)
-      if (!inherits(ans, "try-error") && tolower(trimws(ans)) %in% c("no","n")) {
-        cat("User declined full-model HMC/NUTS. Switching to surgical family plan.\n")
-      } else {
-        hmc_try <- configure_hmc_safely(
-          build_fn = build_fn, niter = pilot_niter, nburnin = pilot_burnin,
-          thin = thin, monitors = monitors, nchains = nchains,
-          out_dir = file.path(out_dir, "HMC_full"))
-        if (isTRUE(hmc_try$ok)) {
-          dg <- hmc_try$diag_tbl
-          cat(sprintf("HMC runtime_s: %.3f\n", hmc_try$res$runtime_s %||% NA_real_))
-          cat(sprintf("HMC median AE: %.3g ; CE: %.3g ; max Rhat: %.3g\n",
-                      median(dg$AE_ESS_per_it, na.rm=TRUE),
-                      median(dg$ESS_per_sec,   na.rm=TRUE),
-                      if (all(is.na(dg$Rhat))) NA_real_ else max(dg$Rhat, na.rm=TRUE)))
-          return(list(mode="HMC_full",
-                      baseline=list(runtime_s=rb$runtime_s, samples=base_ml, diag_tbl=base_dg),
-                      hmc=hmc_try, messages="Full HMC completed."))
-        } else cat("[Warn] Full-model HMC failed -> continuing with surgical family plan.\n")
-      }
-    }
-  }
-
-  # ---------- 2) Families selection (respecting forcing) ----------
-  stoch_nodes <- mdl$getNodeNames(stochOnly = TRUE, includeData = FALSE)
-  stoch_nodes <- stoch_nodes[!is_ll(stoch_nodes)]
-  if (!"Family" %in% names(base_dx)) base_dx$Family <- root_of(base_dx$target)
-
-  fam_med <- stats::aggregate(ESS_per_sec ~ Family, data = base_dx, median)
-  fam_med <- fam_med[order(fam_med$ESS_per_sec, decreasing = FALSE), , drop = FALSE]
-
-  pick_fams <- character(0)
-  if (!is.null(force_families) && length(force_families)) {
-    pf <- unique(force_families)
-    present <- pf[pf %in% unique(base_dx$Family)]
-    pick_fams <- utils::head(present, nbot)
-    if (!length(pick_fams)) warning("force_families provided but none matched diagnostics; using automatic selection.")
-  }
-  if (!length(pick_fams)) {
-    for (fam in fam_med$Family) {
-      fam_nodes_all <- intersect(stoch_nodes[root_of(stoch_nodes) == fam], unique(base_dx$target))
-      if (length(fam_nodes_all)) pick_fams <- unique(c(pick_fams, fam))
-      if (length(pick_fams) >= nbot) break
-    }
-    pick_fams <- utils::head(pick_fams, nbot)
-  }
-  if (!length(pick_fams)) stop("No stochastic bottleneck families found.")
-  say("Selected bottleneck families (nbot=%d): %s", nbot, paste(pick_fams, collapse = ", "))
-
-  get_family_nodes <- function(fam) {
-    allf <- intersect(stoch_nodes[root_of(stoch_nodes) == fam], unique(base_dx$target))
-    forced <- force_nodes[[fam]] %||% NULL
-    if (!is.null(forced)) {
-      forced <- intersect(forced, allf)
-      if (!length(forced)) warning(sprintf("force_nodes for '%s' not found in diagnostics; using detected nodes.", fam))
-      return(if (length(forced)) forced else allf)
-    }
-    allf
-  }
-
-  steps <- list()
-
-  # ========================== CASE nbot = 1 ==========================
-  if (nbot == 1L) {
-    fam1 <- pick_fams[1]
-    fam1_nodes <- get_family_nodes(fam1)
-    for (samp in unique(as.character(strict_scalar_seq))) {
-      bS <- .fresh_build(build_fn, monitors = monitors, thin = thin)
-      confS <- bS$conf
-      fam1_nodes_s <- .sanitize_nodes(fam1_nodes, confS$model)
-      for (n in fam1_nodes_s) try(confS$removeSamplers(n), silent = TRUE)
-      .add_scalar_family(confS, fam1_nodes_s, samp, has_hmc)
-
-      resS <- .compile_and_run(paste0("nbot1_", fam1, "_", samp), bS, confS)
-      metS <- .fam_metrics(resS$dg, fam1_nodes_s)
-      .print_step("Scalar plan on family", fam1, fam1_nodes_s, samp,
-                  resS$out$runtime_s, metS, base_dx, rb$runtime_s)
-
-      pdir <- file.path(out_dir, sprintf("scalar_family_%s_%s", gsub("[^A-Za-z0-9_]", "_", fam1), samp))
-      if (!dir.exists(pdir)) dir.create(pdir, recursive = TRUE, showWarnings = FALSE)
-      .plot_rhat_bar(resS$dg, nodes = fam1_nodes_s, out_file = file.path(pdir, "rhat_bar.png"))
-      .plot_traces(resS$ml, nodes = fam1_nodes_s, out_file_prefix = file.path(pdir, "trace_"))
-
-      steps <- c(steps, list(list(level="family-scalar", family=fam1, nodes=fam1_nodes_s,
-                                  sampler=samp, res=resS, dir=pdir)))
-
-      .prompt_info(sprintf("Proceed to the next sampler for family '%s'?", fam1))
-    }
-    return(list(status="completed", mode="surgical_nbot1",
-                baseline=rb, families=pick_fams, steps=steps))
-  }
-
-  # ========================== CASE nbot >= 2 ==========================
-  # Step 1 -- Family 1 scalar strict
-  fam1 <- pick_fams[1]
-  fam1_nodes <- get_family_nodes(fam1)
-  for (samp in unique(as.character(strict_scalar_seq))) {
-    bS <- .fresh_build(build_fn, monitors = monitors, thin = thin)
-    confS <- bS$conf
-    fam1_nodes_s <- .sanitize_nodes(fam1_nodes, confS$model)
-    for (n in fam1_nodes_s) try(confS$removeSamplers(n), silent = TRUE)
-    .add_scalar_family(confS, fam1_nodes_s, samp, has_hmc)
-
-    resS <- .compile_and_run(paste0("nbot2_scalar_", fam1, "_", samp), bS, confS)
-    metS <- .fam_metrics(resS$dg, fam1_nodes_s)
-    .print_step("Scalar plan on family", fam1, fam1_nodes_s, samp,
-                resS$out$runtime_s, metS, base_dx, rb$runtime_s)
-
-    pdir <- file.path(out_dir, sprintf("scalar_family_%s_%s", gsub("[^A-Za-z0-9_]", "_", fam1), samp))
-    if (!dir.exists(pdir)) dir.create(pdir, recursive = TRUE, showWarnings = FALSE)
-    .plot_rhat_bar(resS$dg, nodes = fam1_nodes_s, out_file = file.path(pdir, "rhat_bar.png"))
-    .plot_traces(resS$ml, nodes = fam1_nodes_s, out_file_prefix = file.path(pdir, "trace_"))
-
-    steps <- c(steps, list(list(level="family-scalar", family=fam1, nodes=fam1_nodes_s,
-                                sampler=samp, res=resS, dir=pdir)))
-    .prompt_info(sprintf("Proceed to the next sampler for family '%s'?", fam1))
-  }
-
-  # Step 2 -- Block strict on union
-  fam2 <- pick_fams[2]
-  fam2_nodes <- get_family_nodes(fam2)
-  if (!is.null(force_union) && length(force_union) >= 2L) {
-    union_fams  <- unique(force_union)
-    union_nodes <- unique(unlist(lapply(union_fams, get_family_nodes)))
-    fam_label   <- paste(union_fams, collapse = " + ")
-  } else {
-    union_nodes <- unique(c(fam1_nodes, fam2_nodes))
-    fam_label   <- paste(fam1, "+", fam2)
-  }
-  if (length(union_nodes) > block_max) union_nodes <- utils::head(union_nodes, block_max)
-
-  # optional PD propCov from baseline
-  propCov <- NULL
-  if (length(union_nodes) >= 2L) {
-    M_full <- do.call(rbind, lapply(base_ml, function(m) {
-      X <- as.matrix(m); keep <- intersect(colnames(X), union_nodes); X[, keep, drop = FALSE]
-    }))
-    if (!is.null(M_full) && is.matrix(M_full) && ncol(M_full) >= 2L) {
-      S <- try(stats::cov(M_full, use = "pairwise.complete.obs"), silent = TRUE)
-      if (!inherits(S,"try-error")) {
-        pc <- try(.sop_make_propCov_PD(S), silent = TRUE)
-        if (!inherits(pc,"try-error")) propCov <- pc
-      }
-    }
-  }
-
-  for (samp in unique(as.character(strict_block_seq))) {
-    bB <- .fresh_build(build_fn, monitors = monitors, thin = thin)
-    confB <- bB$conf
-    union_nodes_s <- .sanitize_nodes(union_nodes, confB$model)
-    for (n in union_nodes_s) try(confB$removeSamplers(n), silent = TRUE)
-    .add_block_family(confB, union_nodes_s, samp, has_hmc, Sc = propCov)
-
-    resB <- .compile_and_run(paste0("nbot2_block_", gsub("[^A-Za-z0-9_]+","_", fam_label), "_", samp), bB, confB)
-    metB <- .fam_metrics(resB$dg, union_nodes_s)
-    .print_step("Block plan on families union", fam_label, union_nodes_s, samp,
-                resB$out$runtime_s, metB, base_dx, rb$runtime_s)
-
-    pdir <- file.path(out_dir, sprintf("block_union_%s_%s", gsub("[^A-Za-z0-9_]", "_", fam_label), samp))
-    if (!dir.exists(pdir)) dir.create(pdir, recursive = TRUE, showWarnings = FALSE)
-    .plot_rhat_bar(resB$dg, nodes = union_nodes_s, out_file = file.path(pdir, "rhat_bar.png"))
-    .plot_traces(resB$ml, nodes = union_nodes_s, out_file_prefix = file.path(pdir, "trace_"))
-
-    steps <- c(steps, list(list(level="families-block", families=fam_label, nodes=union_nodes_s,
-                                sampler=samp, res=resB, dir=pdir)))
-    .prompt_info(sprintf("Proceed to the next BLOCK sampler for union '%s'?", fam_label))
-  }
-
-  return(list(status="completed", mode=if (nbot==1L) "surgical_nbot1" else "surgical_nbot2",
-              baseline=rb, families=pick_fams, steps=steps))
-}
-# diagnostics.R -- unified diagnostic helper
 
 #' Unified MCMC diagnostics (vectorised when available)
 #'

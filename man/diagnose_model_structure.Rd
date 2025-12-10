@@ -16,7 +16,7 @@ diagnose_model_structure(
   sampler_times = NULL,
   sampler_times_unit = "seconds",
   auto_profile = TRUE,
-  profile_niter = 1000L,
+  profile_niter = 3000L,
   profile_burnin = 100L,
   profile_thin = 1L,
   profile_seed = NULL,
@@ -63,7 +63,7 @@ with \code{nimble::configureMCMC(model)$getSamplers()}.}
 (default \code{TRUE}).}
 
 \item{profile_niter}{Integer; iterations used by the auto-profiler
-(default \code{1000L}).}
+(default \code{3000L}).}
 
 \item{profile_burnin}{Integer; burn-in iterations for auto-profiler
 (kept for API compatibility; not used internally) (default \code{100L}).}
