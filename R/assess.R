@@ -162,6 +162,242 @@ assess_performance <- function(samples, runtime_s, rhat_thresh = 1.01) {
   list(summary = summary, per_param = per_param)
 }
 
+#' Assess MCMC performance metrics (ESS, R-hat, AE, CE) using vectorised backends
+#'
+#' Compute per-parameter and global performance diagnostics from an MCMC sample
+#' set using vectorised implementations of convergence metrics.
+#' Metrics include Effective Sample Size (ESS), Gelman–Rubin R-hat,
+#' Algorithmic Efficiency (AE = ESS / total draws), and Computational
+#' Efficiency (CE = ESS / runtime in seconds).
+#'
+#' @details
+#' The function first coerces the input to an \code{mcmc.list} object and then
+#' converts it to a \pkg{posterior} draws object to compute diagnostics in a
+#' vectorised manner.
+#'
+#' The following metrics are computed:
+#' \itemize{
+#'   \item \strong{ESS}: Effective Sample Size per parameter, computed using
+#'     \code{posterior::ess_bulk()} or \code{posterior::ess_tail()}.
+#'   \item \strong{Rhat}: Gelman–Rubin convergence diagnostic computed via
+#'     \code{posterior::rhat()} (requires at least two chains).
+#'   \item \strong{AE}: Algorithmic efficiency, defined as ESS divided by
+#'     the total number of retained post-burnin draws.
+#'   \item \strong{CE}: Computational efficiency, defined as ESS divided by
+#'     the total runtime in seconds.
+#' }
+#'
+#' Optionally, parameters with zero (or near-zero) variance across all chains
+#' can be excluded prior to diagnostic computation to avoid numerical failures
+#' in ESS estimation.
+#'
+#' @param samples A list of MCMC samples or any object that can be converted
+#'   by \code{as_mcmc_list()}.
+#' @param runtime_s Numeric scalar. Total runtime of the MCMC run (seconds).
+#' @param rhat_thresh Numeric scalar. Threshold used to flag R-hat values
+#'   indicating lack of convergence. Default is 1.01.
+#' @param ess_type Character string specifying which ESS definition to use.
+#'   Either \code{"bulk"} (default) or \code{"tail"}.
+#' @param drop_const Logical. Whether parameters with zero (or near-zero)
+#'   variance across all chains should be excluded prior to computing
+#'   diagnostics. Default is \code{TRUE}.
+#' @param tol_var Numeric scalar. Variance tolerance used to identify
+#'   constant or near-constant parameters. Default is 0.
+#'
+#' @return
+#' A named list containing:
+#' \describe{
+#'   \item{\code{summary}}{A one-row tibble summarizing global diagnostics.}
+#'   \item{\code{per_param}}{A tibble containing ESS, Rhat, AE, and CE
+#'     for each parameter.}
+#'   \item{\code{dropped_zero_var}}{A character vector listing parameters
+#'     excluded due to zero or near-zero variance.}
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' res <- run_baseline_config(build_M, niter = 2000, nburnin = 500, thin = 2)
+#' perf <- assess_performance_vect(
+#'   res$samples,
+#'   runtime_s = res$runtime_s,
+#'   ess_type = "bulk"
+#' )
+#' perf$summary
+#' }
+#'
+#' @seealso
+#' coda::effectiveSize,
+#' coda::gelman.diag,
+#' posterior::ess_bulk,
+#' posterior::ess_tail,
+#' posterior::rhat
+#'
+#' @export
+assess_performance_vect <- function(samples,
+                                    runtime_s,
+                                    rhat_thresh = 1.01,
+                                    ess_type = c("bulk", "tail"),
+                                    drop_const = TRUE,
+                                    tol_var = 0,
+                                    drop_na = TRUE) {
+  stopifnot(is.finite(runtime_s), runtime_s >= 0)
+  ess_type <- match.arg(ess_type)
+
+  if (!requireNamespace("posterior", quietly = TRUE)) {
+    stop("assess_performance_vect requires the 'posterior' package.")
+  }
+
+  # ---- Coerce to mcmc.list ----
+  ml <- as_mcmc_list(samples)
+  n_chains <- length(ml)
+  n_iter_by_chain <- vapply(ml, nrow, integer(1))
+  N_post <- sum(n_iter_by_chain)
+
+  dropped_na <- character(0)
+  dropped_zero_var <- character(0)
+
+  # ---- 1) Drop parameters with NA in any chain ----
+  if (drop_na) {
+    parnames <- colnames(ml[[1]])
+    has_na <- vapply(parnames, function(p) {
+      any(vapply(ml, function(ch) anyNA(ch[, p]), logical(1)))
+    }, logical(1))
+
+    dropped_na <- names(which(has_na))
+
+    if (length(dropped_na)) {
+      for (i in seq_along(ml)) {
+        mat <- as.matrix(ml[[i]])
+        keep <- setdiff(colnames(mat), dropped_na)
+        ml[[i]] <- coda::mcmc(
+          mat[, keep, drop = FALSE],
+          start = start(ml[[i]]),
+          thin  = thin(ml[[i]])
+        )
+      }
+      class(ml) <- "mcmc.list"
+    }
+  }
+
+  # ---- 2) Drop parameters with zero / near-zero variance in all chains ----
+  if (drop_const) {
+    parnames <- colnames(ml[[1]])
+    vmat <- sapply(ml, function(ch) {
+      apply(as.matrix(ch), 2, stats::var, na.rm = TRUE)
+    })
+    rownames(vmat) <- parnames
+
+    const_all <- apply(vmat, 1, function(v)
+      all(is.finite(v)) && all(v <= tol_var)
+    )
+
+    dropped_zero_var <- names(which(const_all))
+
+    if (length(dropped_zero_var)) {
+      for (i in seq_along(ml)) {
+        mat <- as.matrix(ml[[i]])
+        keep <- setdiff(colnames(mat), dropped_zero_var)
+        ml[[i]] <- coda::mcmc(
+          mat[, keep, drop = FALSE],
+          start = start(ml[[i]]),
+          thin  = thin(ml[[i]])
+        )
+      }
+      class(ml) <- "mcmc.list"
+    }
+  }
+
+  # ---- Safety check ----
+  if (ncol(ml[[1]]) == 0) {
+    stop(
+      "assess_performance_vect: no parameters left after filtering NA/constant parameters.\n",
+      "Dropped NA parameters: ", length(dropped_na), "\n",
+      "Dropped zero-variance parameters: ", length(dropped_zero_var)
+    )
+  }
+
+  # ---- Convert to posterior draws (vectorised backend) ----
+  dr <- posterior::as_draws_array(ml)
+
+  # ---- Vectorised ESS ----
+  ess_raw <- if (ess_type == "bulk") {
+    posterior::ess_bulk(dr)
+  } else {
+    posterior::ess_tail(dr)
+  }
+
+  ess <- as.numeric(ess_raw)
+  names(ess) <- names(ess_raw)
+
+  # ---- Vectorised R-hat ----
+  rhat_raw <- posterior::rhat(dr)
+  rhat_vec <- as.numeric(rhat_raw)
+  names(rhat_vec) <- names(rhat_raw)
+
+  # ---- Keep finite diagnostics only ----
+  ok <- is.finite(ess)
+  ess <- ess[ok]
+  rhat_vec <- rhat_vec[names(ess)]
+
+  if (!length(ess)) {
+    stop(
+      "assess_performance_vect: ESS could not be computed for any parameter.\n",
+      "Likely causes: NA values, extreme posteriors, or numerical pathologies."
+    )
+  }
+
+  # ---- Derived metrics ----
+  AE <- ess / max(1, N_post)
+  CE <- ess / max(1e-9, runtime_s)
+
+  per_param <- tibble::tibble(
+    parameter = names(ess),
+    ESS       = as.numeric(ess),
+    Rhat      = as.numeric(rhat_vec),
+    AE        = as.numeric(AE),
+    CE        = as.numeric(CE)
+  )
+
+  # ---- Global summary ----
+  ESS_total  <- sum(per_param$ESS, na.rm = TRUE)
+  ESS_per_s  <- ESS_total / max(1e-9, runtime_s)
+  AE_mean    <- mean(per_param$AE, na.rm = TRUE)
+  AE_median  <- stats::median(per_param$AE, na.rm = TRUE)
+  CE_mean    <- mean(per_param$CE, na.rm = TRUE)
+  CE_median  <- stats::median(per_param$CE, na.rm = TRUE)
+  n_params   <- nrow(per_param)
+  rhat_ok    <- if (n_chains >= 2)
+    mean(per_param$Rhat < rhat_thresh, na.rm = TRUE)
+  else NA_real_
+
+  summary <- tibble::tibble(
+    runtime_s     = runtime_s,
+    n_chains      = n_chains,
+    n_iter        = if (length(unique(n_iter_by_chain)) == 1L)
+      n_iter_by_chain[1] else NA_integer_,
+    n_draws_total = N_post,
+    n_params      = n_params,
+    ESS_total     = ESS_total,
+    ESS_per_s     = ESS_per_s,
+    AE_mean       = AE_mean,
+    AE_median     = AE_median,
+    CE_mean       = CE_mean,
+    CE_median     = CE_median,
+    prop_rhat_ok  = rhat_ok
+  )
+
+  per_param <- per_param[order(per_param$CE, decreasing = TRUE), ]
+
+  list(
+    summary = summary,
+    per_param = per_param,
+    dropped_na = dropped_na,
+    dropped_zero_var = dropped_zero_var,
+    ess_type = ess_type,
+    ess_engine = "posterior"
+  )
+}
+
 #' Identify per-parameter bottlenecks (low ESS/s, low ESS per draw, long time-to-target)
 #'
 #' This function ranks parameters according to three metrics:

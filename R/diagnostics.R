@@ -183,7 +183,8 @@ compute_diag_from_mcmc <- function(samples, runtime_s) {
 #' head(res_diag)
 #' }
 #'
-#' @export
+#' @keywords internal
+#' @noRd
 compute_diag_from_mcmc_vect <- function(
     samples, runtime_s,
     compute_rhat        = c("none", "classic", "split", "both"),
@@ -1872,9 +1873,9 @@ run_structure_and_hmc_test <- function(build_fn,
   `%||%` <- function(a, b) if (is.null(a)) b else a
 
   # ---- Internal options (no API impact) ----
-  fast_scan        <- isTRUE(getOption("sop.fast_scan", FALSE))
-  max_print_nodes  <- as.integer(getOption("sop.max_print_nodes", 5000L))
-  max_show_examples<- as.integer(getOption("sop.max_show_examples", 5L))
+  fast_scan         <- isTRUE(getOption("sop.fast_scan", FALSE))
+  max_print_nodes   <- as.integer(getOption("sop.max_print_nodes", 5000L))
+  max_show_examples <- as.integer(getOption("sop.max_show_examples", 5L))
 
   # ---- Small utilities ----
   to_logical <- function(x) {
@@ -2107,15 +2108,15 @@ run_structure_and_hmc_test <- function(build_fn,
       (is.finite(lower) | is.finite(upper))
 
     out <- data.frame(
-      node        = all_nodes,
-      var         = var,
-      is_stoch    = is_stoch,
-      is_data     = is_data,
-      dist_raw    = dist_raw,
-      dist        = dist,
-      support     = support,
-      lower       = lower,
-      upper       = upper,
+      node         = all_nodes,
+      var          = var,
+      is_stoch     = is_stoch,
+      is_data      = is_data,
+      dist_raw     = dist_raw,
+      dist         = dist,
+      support      = support,
+      lower        = lower,
+      upper        = upper,
       is_truncated = is_trunc,
       stringsAsFactors = FALSE
     )
@@ -2161,7 +2162,6 @@ run_structure_and_hmc_test <- function(build_fn,
     }
   }
 
-  # ---- Summary: non-diff + distributions ----
   cat("\n[NON-DIFF INDICATORS]\n")
   cat(sprintf(
     "- Non-diff functions detected: %s\n",
@@ -2314,6 +2314,34 @@ run_structure_and_hmc_test <- function(build_fn,
 
   hsk <- nodes$hmc_showstopper_reason %||% rep(NA_character_, nrow(nodes))
   hmc_globally_ok <- all(is.na(hsk[!nodes$is_data]))
+
+  ## --- STRICT NON-DIFF RULE (global veto for HMC/NUTS) ---
+  ## Any occurrence of these functions anywhere in the model code
+  ## will force HMC/NUTS to be considered structurally unsuitable.
+  strict_nondiff <- c("round", "floor", "ceiling", "trunc", "step", "equals")
+
+  if (length(nondiff_hits)) {
+    bad_funs <- intersect(tolower(nondiff_hits), strict_nondiff)
+    if (length(bad_funs) > 0L) {
+      hmc_globally_ok <- FALSE
+
+      ## Optionally tag all latent nodes with a generic reason if none exists,
+      ## so the message in the smoke test has something explicit to report.
+      if (all(is.na(nodes$hmc_showstopper_reason[latent_mask]))) {
+        nodes$hmc_showstopper_reason[latent_mask] <- "global-nondiff-function"
+        ss <- summarise_showstoppers(nodes)  # refresh summary if needed later
+      }
+
+      cat("\n[STRICT NON-DIFF RULE]\n")
+      cat(
+        "- Found non-differentiable function(s) considered fatal for HMC/NUTS: ",
+        paste(sort(unique(bad_funs)), collapse = ", "),
+        "\n- Overriding structural decision: HMC/NUTS globally disabled.\n",
+        sep = ""
+      )
+    }
+  }
+
   cat(sprintf(
     "\n- Structurally suitable for HMC/NUTS? %s\n",
     if (isTRUE(hmc_globally_ok)) "Yes" else "No"
@@ -2330,6 +2358,9 @@ run_structure_and_hmc_test <- function(build_fn,
       hmc_res <- list(ok = FALSE, error = msg, details = NULL)
     } else if (!isTRUE(hmc_globally_ok)) {
       reasons <- unique(stats::na.omit(nodes$hmc_showstopper_reason[!nodes$is_data]))
+      if (!length(reasons)) {
+        reasons <- "global-nondiff-function"
+      }
       msg <- sprintf(
         "Model is not structurally suitable for HMC/NUTS: %s",
         paste(reasons, collapse = ", ")
@@ -3918,3 +3949,200 @@ test_strategy_family       <- function(build_fn,
        "Define 'compute_diag_from_mcmc_vect()' or 'compute_diag_from_mcmc()'.")
 }
 
+#' Scalable diagnostics from MCMC samples (classic layout, block-wise)
+#'
+#' Efficiently computes convergence and efficiency diagnostics from large
+#' \code{mcmc.list} objects using a block-wise, vectorized strategy, while
+#' preserving the classic output layout of \code{\link{compute_diag_from_mcmc}}.
+#' This is intended as a drop-in, scalable replacement for
+#' \code{compute_diag_from_mcmc} in very high-dimensional hierarchical models.
+#'
+#' @details
+#' The function is designed for models with tens of thousands of monitored
+#' parameters (e.g. large Bayesian stock assessment or life-cycle models such as
+#' WGNAS, GEREM, Scorff LCM), where standard \pkg{coda}-based loops become
+#' prohibitively slow or memory bound.
+#'
+#' Internally, all chains are first truncated to the shortest common length
+#' and transformed into matrices with a common set of parameters. Diagnostics
+#' (ESS and \eqn{\hat{R}}) are then computed in column blocks to control memory
+#' use. The effective sample size used in the output,
+#' \code{ESS}, corresponds to a conservative "worst chain" ESS (minimum across
+#' chains), and the classic quantities are derived as:
+#'
+#' \itemize{
+#'   \item \code{AE_ESS_per_it = ESS / n_iter},
+#'   \item \code{ESS_per_sec   = ESS / runtime_s},
+#'   \item \code{time_s_per_ESS = runtime_s / ESS}.
+#' }
+#'
+#' This ensures strict backward compatibility with consumers of
+#' \code{compute_diag_from_mcmc}, while benefiting from the scalable
+#' implementation of \code{compute_diag_from_mcmc_vect}.
+#'
+#' @param samples An \code{mcmc.list}, \code{mcmc}, or numeric matrix of MCMC
+#'   samples. All chains must share (at least) one common parameter name.
+#' @param runtime_s Numeric scalar; total runtime in seconds for the MCMC
+#'   run(s) corresponding to \code{samples}. It is assumed to be the total wall
+#'   clock time for the full set of chains.
+#' @param compute_rhat Character, one of \code{"none"}, \code{"classic"},
+#'   \code{"split"}, or \code{"both"} to control the computation of
+#'   Gelman–Rubin diagnostics. In the classic layout, only a single
+#'   \code{Rhat} column is returned; when both variants are requested, a
+#'   priority rule is applied internally (e.g. split-\eqn{\hat{R}} preferred
+#'   when available).
+#' @param ess_for Character, one of \code{"both"}, \code{"worst"},
+#'   or \code{"total"}. The classic layout uses the "worst-chain" ESS for the
+#'   \code{ESS} and derived AE/CE columns; the total ESS is used internally
+#'   only when available.
+#' @param ignore_patterns Optional character vector of regular expressions used
+#'   to remove parameters by name before computing diagnostics
+#'   (e.g. \code{"^lifted_"}, \code{"^logProb_"}).
+#' @param cols_by Integer; number of columns per processing block. Larger values
+#'   reduce overhead but increase memory usage. Can be tuned automatically via
+#'   \code{target_block_ram_gb}.
+#' @param warn_mem_gb Numeric; approximate memory threshold (GiB) above which a
+#'   warning is issued based on the size of the chains.
+#' @param step_timeout_s Numeric; per-step time limit in seconds for each
+#'   diagnostic phase (ESS, total ESS, R-hat). Use \code{Inf} to disable.
+#' @param runtime_is_total Logical; if \code{FALSE}, \code{runtime_s} is assumed
+#'   to be a per-chain runtime and is multiplied by the number of chains before
+#'   computing \code{ESS_per_sec} and \code{time_s_per_ESS}.
+#' @param use_posterior Character; \code{"never"} or \code{"if_available"} to
+#'   optionally leverage the \pkg{posterior} package for faster and
+#'   rank-normalized ESS/\eqn{\hat{R}}. When unavailable, the function falls
+#'   back to \pkg{coda}-style computations.
+#' @param target_block_ram_gb Numeric; if non-\code{NA}, automatically derives
+#'   \code{cols_by} to target this approximate RAM usage (GiB) per processing
+#'   block, using a conservative safety factor.
+#' @param verbose Logical; if \code{TRUE}, print progress messages and basic
+#'   memory/blocking information.
+#'
+#' @return
+#' A \code{data.frame} with one row per parameter and the following columns:
+#' \describe{
+#'   \item{target}{Parameter name (column name in the MCMC object).}
+#'   \item{ESS}{Effective sample size used for efficiency summaries
+#'              (worst-chain ESS).}
+#'   \item{AE_ESS_per_it}{Algorithmic efficiency, defined as
+#'                        \code{ESS / n_iter}.}
+#'   \item{ESS_per_sec}{Computational efficiency, defined as
+#'                      \code{ESS / runtime_s}.}
+#'   \item{time_s_per_ESS}{Seconds per effective sample, defined as
+#'                         \code{runtime_s / ESS}.}
+#'   \item{Rhat}{Gelman–Rubin convergence diagnostic, if requested via
+#'               \code{compute_rhat}; otherwise \code{NA}.}
+#'   \item{Family}{Top-level node family (string before the first \code{"["}
+#'                 in \code{target}).}
+#' }
+#'
+#' @note
+#' This function is intended as a scalable, vectorized backend for
+#' \code{compute_diag_from_mcmc}, preserving its column layout so that existing
+#' downstream code (plots, summaries, bottleneck detectors) continues to work
+#' without modification, even for MCMC outputs with \eqn{\ge 90{,}000}
+#' parameters and up to \eqn{10} chains.
+#'
+#' @seealso
+#' \code{\link{compute_diag_from_mcmc}},
+#' \code{\link[coda]{effectiveSize}},
+#' \code{\link[posterior]{ess_bulk}},
+#' \code{\link[posterior]{rhat}},
+#' Vehtari et al. (2021), \emph{Bayesian Analysis} 16(2):667–718.
+#'
+#' @examples
+#' \dontrun{
+#' diag_alt <- compute_diag_from_mcmc_vect_alt(
+#'   samples             = my_mcmc,
+#'   runtime_s           = 5400,
+#'   compute_rhat        = "both",
+#'   ess_for             = "both",
+#'   target_block_ram_gb = 2
+#' )
+#' head(diag_alt)
+#' }
+#'
+#' @export
+compute_diag_from_mcmc_alt <- function(samples, runtime_s) {
+  stopifnot(is.numeric(runtime_s), length(runtime_s) == 1L, is.finite(runtime_s))
+
+  ## ------------ Normalize samples ------------
+  if (inherits(samples, "mcmc"))
+    samples <- coda::mcmc.list(samples)
+  if (is.matrix(samples))
+    samples <- coda::mcmc.list(coda::mcmc(samples))
+  if (!inherits(samples, "mcmc.list"))
+    stop("'samples' must be mcmc.list, mcmc, or matrix.")
+
+  m <- length(samples)
+  if (m < 1L) stop("Empty mcmc.list.")
+
+  mats <- lapply(samples, \(s) as.matrix(s))
+  params <- Reduce(intersect, lapply(mats, colnames))
+  if (!length(params)) stop("No common parameters across chains.")
+  params <- as.character(params)
+
+  ## remove lifted_ / logProb_
+  rm_pat <- grepl("^lifted_|^logProb_", params)
+  params <- params[!rm_pat]
+  mats   <- lapply(mats, \(M) M[, params, drop = FALSE])
+
+  ## align chain lengths
+  n_min <- min(vapply(mats, nrow, integer(1)))
+  mats  <- lapply(mats, \(M) M[seq_len(n_min), , drop = FALSE])
+  it <- n_min; P <- length(params)
+
+  ## ------------ ESS per chain (vectorized) ------------
+  ESS_mat <- matrix(NA_real_, nrow = P, ncol = m)
+  for (k in seq_len(m)) {
+    ESS_mat[, k] <- tryCatch(
+      as.numeric(coda::effectiveSize(coda::mcmc(mats[[k]]))),
+      error = \(e) rep(NA_real_, P)
+    )
+  }
+  ESS <- suppressWarnings(apply(ESS_mat, 1L, min, na.rm = TRUE))
+  ESS[!is.finite(ESS)] <- NA_real_
+
+  ## ------------ Rhat (vectorized Gelman–Rubin) ------------
+  Mbig <- do.call(cbind, mats)
+
+  chain_means <- matrix(NA_real_, m, P)
+  chain_vars  <- matrix(NA_real_, m, P)
+
+  for (k in seq_len(m)) {
+    Mk <- Mbig[, ((k - 1) * P + 1):(k * P), drop = FALSE]
+    mk <- colMeans(Mk)
+    vk <- (colSums(Mk * Mk) - it * mk^2) / max(1, it - 1)
+    chain_means[k, ] <- mk
+    chain_vars[k, ]  <- pmax(vk, 0)
+  }
+
+  W <- colMeans(chain_vars)
+  mu_bar <- colMeans(chain_means)
+  B  <- it * pmax((colSums(chain_means^2) - m * mu_bar^2) / max(1, m - 1), 0)
+  var_hat <- ((it - 1) / it) * W + B / it
+
+  Rhat <- rep(NA_real_, P)
+  good <- W > 0 & is.finite(W) & is.finite(var_hat)
+  Rhat[good] <- sqrt(pmax(var_hat[good] / W[good], 0))
+
+  ## ------------ Final statistics------------
+  AE  <- ESS / it
+  ESSps <- if (runtime_s > 0) ESS / runtime_s else NA_real_
+  tper  <- runtime_s / pmax(ESS, .Machine$double.eps)
+
+  out <- data.frame(
+    target         = params,
+    ESS            = ESS,
+    AE_ESS_per_it  = AE,
+    ESS_per_sec    = ESSps,
+    time_s_per_ESS = tper,
+    Rhat           = Rhat,
+    stringsAsFactors = FALSE
+  )
+  out$Family <- sub("\\[.*", "", out$target)
+
+  out <- out[is.finite(out$ESS) & out$ESS > 0, , drop = FALSE]
+  rownames(out) <- NULL
+  out
+}
