@@ -1,0 +1,540 @@
+---
+title: "Conservation limits under different forecast scenario for West Greenland and Faroes TAC"
+author: "WGNAS 2021 - Life Cycle Model Output"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  word_document:
+    reference_docx: template.docx
+---
+
+```{r global_options,include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE,fig.width=5,fig.height=3,bg="transparent")
+```
+
+```{r}
+# Manual table of contents, sorry if you want to change things
+list_content = c("Faroes TAC scenario",
+                 "------CL (total, 1SW, 2SW) after 3 years",
+                 "------------Summed CL over complex",
+                 "------------Joint CL over complex",
+                 "------------Total CL per country", 
+								 "------------1SW CL per country",
+								 "------------2SW CL per country",
+								 "------Prop. Eggs spawned by 2SW after 3 years",
+								 "------------Complex-level",
+								 "------------Country-level",
+                 "------CL & Prop. Eggs spawned by 2SW over time",
+                 glue::glue(
+                 	"------------{country17Full}"
+                 	),
+                 "West Greenland TAC scenario",
+                 "------CL (total, 1SW, 2SW) after 3 years",
+								 "------------Summed CL over complex",
+                 "------------Joint CL over complex",
+                 "------------Total CL per country", 
+								 "------------1SW CL per country",
+								 "------------2SW CL per country",
+                 "------Prop. Eggs spawned by 2SW after 3 years",
+								 "------------Complex-level",
+								 "------------Country-level",
+                 "------CL & Prop. Eggs spawned by 2SW over time",
+                 glue::glue(
+                 	"------------{country17Full}"
+                 	))
+list_page = 1+c(2,2,2,4,6,8,10,12,12,12,14,
+              14:30,
+              31,31,31,33,35,37,39,41,41,41, 43,
+              43:59)
+content_df <- data.frame("Content" = list_content,
+                         "Page" = list_page)
+nlines <- nrow(content_df)
+flextable::flextable(content_df[1:(nlines/2),], cwidth = 3, cheight = 0.2) %>%
+  flextable::theme_zebra() %>%
+  # flextable::fontsize(., size = 11) %>% 
+  flextable::padding(., padding.top = 0, padding.bottom = 0) %>% 
+  flextable::width(j = 1, width = 5) %>% 
+  flextable::width(j = 2, width = 0.75)
+
+```
+
+\newpage
+
+```{r}
+flextable::flextable(content_df[(nlines/2+1):nlines,], cwidth = 3, cheight = 0.2) %>%
+  flextable::theme_zebra() %>%
+  # flextable::fontsize(., size = 11) %>% 
+  flextable::padding(., padding.top = 0, padding.bottom = 0) %>% 
+  flextable::width(j = 1, width = 5)%>% 
+  flextable::width(j = 2, width = 0.75)
+```
+
+
+\newpage
+
+# Faroes TAC scenario
+
+
+## Prob. to reach summed CL in `r year_assess_CL` (`r assess_CL` years forecast)
+
+### Total Conservation limit
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/forecast_glob_com_pCL_summed_far.rds")
+grid.arrange(g)
+```
+
+\newpage
+
+### 1SW Conservation limit
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/forecast_glob_com_pCL1_summed_far.rds")
+grid.arrange(g)
+```
+
+### 2SW Conservation limit
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/forecast_glob_com_pCL2_summed_far.rds")
+grid.arrange(g)
+```
+
+## Prob. to reach CL simultaneously in `r year_assess_CL` (`r assess_CL` years forecast)
+
+### Total Conservation limit
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/forecast_glob_com_pCL_joint_far.rds")
+grid.arrange(g)
+```
+
+\newpage
+
+### 1SW Conservation limit
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/forecast_glob_com_pCL1_joint_far.rds")
+grid.arrange(g)
+```
+
+### 2SW Conservation limit
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/forecast_glob_com_pCL2_joint_far.rds")
+grid.arrange(g)
+```
+
+\newpage
+
+## Probability to reach CL in `r year_assess_CL` (`r assess_CL` years forecast)
+
+
+### Total Conservation limit per country
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/forecast_glob_cou_pCL_far.rds")
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "North America")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[1:6], limits = country17[1:6])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+```{r,results = 'asis'}
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "Northern Europe")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[13:17], limits = country17[13:17])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+```{r,results = 'asis'}
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "Southern Europe")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[7:12], limits = country17[7:12])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+
+
+\newpage
+
+### 1SW Conservation limit per country
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/forecast_glob_cou_pCL1_far.rds")
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "North America")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[1:6], limits = country17[1:6])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+```{r,results = 'asis'}
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "Northern Europe")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[13:17], limits = country17[13:17])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+```{r,results = 'asis'}
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "Southern Europe")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[7:12], limits = country17[7:12])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+\newpage
+
+### 2SW Conservation limit per country
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/forecast_glob_cou_pCL2_far.rds")
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "North America")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[1:6], limits = country17[1:6])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+```{r,results = 'asis'}
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "Northern Europe")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[13:17], limits = country17[13:17])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+```{r,results = 'asis'}
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "Southern Europe")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[7:12], limits = country17[7:12])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+
+\newpage
+
+## Proportion of eggs spawned by 2SW in `r year_assess_CL` (`r assess_CL` years forecast)
+
+### Complex-level
+
+```{r,results = 'asis'}
+g <- readRDS('../../temp_docx/forecast_glob_com_p2sw_far.rds')
+grid.arrange(g)
+```
+
+### Country-level
+
+```{r}
+g <- readRDS('../../temp_docx/forecast_glob_cou_p2sw_far.rds')
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "North America")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[1:6], limits = country17[1:6])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+```{r,results = 'asis'}
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "Northern Europe")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[13:17], limits = country17[13:17])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+```{r,results = 'asis'}
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "Southern Europe")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[7:12], limits = country17[7:12])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+\newpage
+
+## CL & Proportion eggs spawned by 2SW over time (TAC in Faroes)
+
+```{r, results = 'asis',fig.width=6,fig.height=3.5}
+  thispalette <- rev(colorRampPalette(brewer.pal(4,"RdYlBu"))((length(scenario_name)+1)/2))
+  this_scenario <- 1
+outFAR <- NULL
+for(thiscountry in 1:length(country17)){
+      outFAR = c(outFAR, knitr::knit_child("7_Summary_country_CL_FAR_child.Rmd", quiet = TRUE))
+}
+cat(outFAR, sep = '\n')
+
+```
+
+# West Greenland TAC scenario
+
+
+## Prob. to reach summed CL in `r year_assess_CL` (`r assess_CL` years forecast)
+
+### Total Conservation limit
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/forecast_glob_com_pCL_summed_wg.rds")
+grid.arrange(g)
+```
+
+\newpage
+
+### 1SW Conservation limit
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/forecast_glob_com_pCL1_summed_wg.rds")
+grid.arrange(g)
+```
+
+### 2SW Conservation limit
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/forecast_glob_com_pCL2_summed_wg.rds")
+grid.arrange(g)
+```
+
+## Prob. to reach CL simultaneously in `r year_assess_CL` (`r assess_CL` years forecast)
+
+### Total Conservation limit
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/forecast_glob_com_pCL_joint_wg.rds")
+grid.arrange(g)
+```
+
+\newpage
+
+### 1SW Conservation limit
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/forecast_glob_com_pCL1_joint_wg.rds")
+grid.arrange(g)
+```
+
+### 2SW Conservation limit
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/forecast_glob_com_pCL2_joint_wg.rds")
+grid.arrange(g)
+```
+
+\newpage
+
+## Probability to reach CL in `r year_assess_CL` (`r assess_CL` years forecast)
+
+### Total Conservation limit per country
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/forecast_glob_cou_pCL_wg.rds")
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "North America")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[1:6], limits = country17[1:6])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+```{r,results = 'asis'}
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "Northern Europe")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[13:17], limits = country17[13:17])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+```{r,results = 'asis'}
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "Southern Europe")
+
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[7:12], limits = country17[7:12])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+\newpage
+
+### 1SW Conservation limit per country
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/forecast_glob_cou_pCL1_wg.rds")
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "North America")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[1:6], limits = country17[1:6])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+```{r,results = 'asis'}
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "Northern Europe")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[13:17], limits = country17[13:17])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+```{r,results = 'asis'}
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "Southern Europe")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[7:12], limits = country17[7:12])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+\newpage
+
+### 2SW Conservation limit per country
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/forecast_glob_cou_pCL2_wg.rds")
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "North America")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[1:6], limits = country17[1:6])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+```{r,results = 'asis'}
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "Northern Europe")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[13:17], limits = country17[13:17])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+```{r,results = 'asis'}
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "Southern Europe")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[7:12], limits = country17[7:12])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+\newpage
+
+
+## Proportion of eggs spawned by 2SW in `r year_assess_CL` (`r assess_CL` years forecast)
+
+### Complex-level
+
+```{r,results = 'asis'}
+g <- readRDS('../../temp_docx/forecast_glob_com_p2sw_wg.rds')
+grid.arrange(g)
+```
+
+### Country-level
+
+```{r}
+g <- readRDS('../../temp_docx/forecast_glob_cou_p2sw_wg.rds')
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "North America")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[1:6], limits = country17[1:6])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+```{r,results = 'asis'}
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "Northern Europe")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[13:17], limits = country17[13:17])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+```{r,results = 'asis'}
+gtmp <- g
+gtmp$data <- filter(gtmp$data, complex == "Southern Europe")
+gtmp <-
+  gtmp +  
+  scale_fill_manual(values = colors17[7:12], limits = country17[7:12])+
+  guides(fill=guide_legend(NULL,ncol=1))
+
+grid.arrange(gtmp)
+```
+
+\newpage
+
+## CL & Proportion eggs spawned by 2SW over time (TAC in WG)
+
+```{r, results = 'asis',fig.width=6,fig.height=3.5}
+  thispalette <- rev(colorRampPalette(brewer.pal(4,"RdYlBu"))((length(scenario_name)+1)/2))
+  this_scenario <- 1
+outWG <- NULL
+for(thiscountry in 1:length(country17)){
+      outWG = c(outWG, knitr::knit_child("7_Summary_country_CL_WG_child.Rmd", quiet = TRUE))
+}
+cat(outWG, sep = '\n')
+
+```

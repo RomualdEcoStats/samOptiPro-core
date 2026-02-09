@@ -1,0 +1,10 @@
+
+
+## `r regions25Full[thisSU]`
+
+```{r, dpi = 300}
+g <- readRDS(paste0("../../temp_docx/forecast_reg_su_sc_",regions25[thisSU],".rds"))
+grid.arrange(g)
+```
+
+\newpage

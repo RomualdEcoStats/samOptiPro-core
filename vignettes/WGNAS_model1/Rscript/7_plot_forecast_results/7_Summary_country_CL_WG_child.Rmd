@@ -1,0 +1,21 @@
+
+
+### `r country17Full[thiscountry]`
+
+```{r, dpi = 300,fig.width=6,fig.height=3.5}
+g <- readRDS(paste0("../../temp_docx/forecast_reg_cou_wg_cl_",country17Full[thiscountry],".rds"))
+grid.arrange(g+ 
+               guides(colour = guide_legend("TAC in West Greenland (T)", ncol = 2))+
+               theme(legend.position = "right"))
+```
+
+
+```{r, dpi = 300,fig.width=6,fig.height=3.5}
+g <- readRDS(paste0("../../temp_docx/forecast_reg_cou_wg_prop2sw_",country17Full[thiscountry],".rds"))
+g$data <- filter(g$data, year >= 1970+year_end)
+grid.arrange(g+ 
+               guides(colour = guide_legend("TAC in West Greenland (T)", ncol = 2))+
+               theme(legend.position = "right"))
+```
+
+\newpage

@@ -1,0 +1,10 @@
+
+
+# `r country17Full[thiscountry]`
+
+```{r, dpi = 300}
+g <- readRDS(paste0("../../temp_docx/forecast_reg_cou_far_ts_",country17Full[thiscountry],".rds"))
+grid.arrange(g)
+```
+
+\newpage

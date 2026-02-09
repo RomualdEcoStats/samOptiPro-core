@@ -1,0 +1,131 @@
+---
+title: "Hindcast summary - Survival and Maturation"
+author: "WGNAS 2021 - Life Cycle Model Output"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  word_document:
+    reference_docx: template.docx
+---
+
+```{r global_options,include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE,fig.width=5,fig.height=3,bg="transparent", dpi = 400)
+```
+
+```{r}
+# Manual table of contents, sorry if you want to change things
+list_content = c("Post-smolt survival",
+                 "------Complex Scale",
+                 "------North America",
+                 "------Northern Europe",
+                 "------Southern Europe",
+                 "------Correlation Matrix",
+                 "------Within and between complex correlations",
+                 "Probability of maturing as 1SW",
+                 "------Complex Scale",
+                 "------North America",
+                 "------Northern Europe",
+                 "------Southern Europe",
+                 "------Correlation Matrix",
+                 "------Within and between complex correlations")
+list_page = c(2,2,2,3,3,4,5,6,6,6,7,7,8,9)
+content_df <- data.frame("Content" = list_content,
+                         "Page" = list_page)
+nlines <- nrow(content_df)
+flextable::flextable(content_df, cwidth = c(4,2), cheight = 0.2) %>%
+  flextable::theme_zebra() %>%
+  # flextable::fontsize(., size = 11) %>% 
+  flextable::padding(., padding.top = 0, padding.bottom = 0)
+
+```
+
+\newpage
+
+# Post-smolt Survival
+
+## Complex scale
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_survival_summary_logit.rds")
+grid.arrange(g)
+```
+
+## Post-smolt survival - North America
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_survival_su_North America.rds")
+grid.arrange(g)
+```
+
+## Post-smolt survival - Northern Europe
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_survival_su_Northern Europe.rds")
+grid.arrange(g)
+```
+
+## Post-smolt survival - Southern Europe
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_survival_su_Southern Europe.rds")
+grid.arrange(g)
+```
+
+## Post-smolt survival - Correlation Matrix (logit scale)
+
+```{r,results = 'asis',fig.width = 6, fig.height = 6}
+g <- readRDS("../../temp_docx/hindcast_survival_matrix.rds")
+grid.arrange(g)
+```
+
+## Post-smolt survival - between and within complex correlation (logit scale)
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_survival_boxplot.rds")
+grid.arrange(g)
+```
+
+\newpage
+
+# Prob. of maturing as 1SW
+
+## Complex scale
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_maturation_summary_logit.rds")
+grid.arrange(g)
+```
+
+## Prob. of maturing as 1SW - North America
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_maturation_su_North America.rds")
+grid.arrange(g)
+```
+
+## Prob. of maturing as 1SW - Northern Europe
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_maturation_su_Northern Europe.rds")
+grid.arrange(g)
+```
+
+## Prob. of maturing as 1SW - Southern Europe
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_maturation_su_Southern Europe.rds")
+grid.arrange(g)
+```
+
+## Prob. of maturing as 1SW - Correlation Matrix (logit scale)
+
+```{r,results = 'asis',fig.width = 6, fig.height = 6}
+g <- readRDS("../../temp_docx/hindcast_maturation_matrix.rds")
+grid.arrange(g)
+```
+
+## Prob. of maturing as 1SW - between and within complex correlation (logit scale)
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_maturation_boxplot.rds")
+grid.arrange(g)
+```

@@ -1,0 +1,12 @@
+LCM version 09 November 2024
+Etienne Rivot
+
+Run + post-treatment checked OK
+
+Read the comments and instruction in the main script "_run.R"
+
+Todo
+Script for retro dignostics
+Loop to run the different configurations X years pelled out) is not written yet.
+The main script _run_RETRO allows for running one configuration and must be run "by hand" as many times as needed with 1, 2, ...,5 years pelled out
+Results must then be saved in the ./Rscript_Figure_Table_WGNAS/retro_diagnostics folder where the script Retro_diagnostics.R will calculate he Mohn's Rho diagnostics. 

@@ -1,0 +1,168 @@
+---
+title: "Hindcast summary - Return & Homewater catches observation & fit"
+author: "WGNAS 2022 - Life Cycle Model Output"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  word_document:
+    reference_docx: template.docx
+---
+
+```{r global_options,include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE,fig.width=8,fig.height=9,bg="transparent", dpi = 400)
+```
+
+
+```{r}
+# Manual table of contents, sorry if you want to change things
+list_content = c("Returns",
+								 "......Total",
+                 "......North America",
+                 "............1SW",
+                 "............2SW",
+                 "......Northern Europe",
+                 "............1SW",
+                 "............2SW",
+                 "......Southern Europe",
+                 "............1SW",
+                 "............2SW",
+                 "Homewater Catches",
+                 "......North America",
+                 "............1SW",
+                 "............2SW",
+                 "......Northern Europe",
+                 "............1SW",
+                 "............2SW",
+                 "......Southern Europe",
+                 "............1SW",
+                 "............2SW")
+list_page = c(2,3,3,3,4,5,5,6,7,7,8,9,9,9,10,11,11,12,13,13,14)
+content_df <- data.frame("Content" = list_content,
+                         "Page" = list_page)
+nlines <- nrow(content_df)
+flextable::flextable(content_df, cwidth = c(4,2), cheight = 0.2) %>%
+  flextable::theme_zebra() %>%
+  # flextable::fontsize(., size = 11) %>% 
+  flextable::padding(., padding.top = 0, padding.bottom = 0)
+
+```
+
+\newpage
+
+# Returns
+
+## Total
+
+
+```{r,results = 'asis',fig.width=6,fig.height=4}
+g <- readRDS("../../temp_docx/cumulative_return_plot.rds")
+grid.arrange(g)
+```
+
+\newpage
+
+## North America
+
+### Returns 1SW
+
+```{r,results = 'asis',fig.width=8,fig.height=8}
+g <- readRDS("../../temp_docx/hindcast_returns_N6_NAC.rds")
+# g <- readRDS("temp_docx/hindcast_returns_N6_NAC.rds")
+grid.arrange(g)
+```
+
+### Returns 2SW
+
+```{r,results = 'asis',fig.width=8,fig.height=8}
+g <- readRDS("../../temp_docx/hindcast_returns_N9_NAC.rds")
+grid.arrange(g)
+```
+
+
+
+## Northern Europe
+
+### Returns 1SW
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_returns_N6_NNEC.rds")
+grid.arrange(g)
+```
+
+### Returns 2SW
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_returns_N9_NNEC.rds")
+grid.arrange(g)
+```
+
+## Southern Europe
+
+### Returns 1SW
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_returns_N6_SNEC.rds")
+grid.arrange(g)
+```
+
+### Returns 2SW
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_returns_N9_SNEC.rds")
+grid.arrange(g)
+```
+
+\newpage
+
+# Homewater catches 
+
+## North America
+
+### Homewater catches 1SW
+
+```{r,results = 'asis',fig.width=8,fig.height=8}
+g <- readRDS("../../temp_docx/hindcast_hw_catches_1sw_NAC.rds")
+
+grid.arrange(g)
+```
+
+### Homewater catches 2SW
+
+```{r,results = 'asis',fig.width=8,fig.height=9}
+g <- readRDS("../../temp_docx/hindcast_hw_catches_2sw_NAC.rds")
+grid.arrange(g)
+```
+
+## Northern Europe
+
+### Homewater catches 1SW
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_hw_catches_1sw_NNEC.rds")
+grid.arrange(g)
+```
+
+### Homewater catches 2SW
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_hw_catches_2sw_NNEC.rds")
+grid.arrange(g)
+```
+
+## Southern Europe
+
+### Homewater catches 1SW
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_hw_catches_1sw_SNEC.rds")
+grid.arrange(g)
+```
+
+### Homewater catches 2SW
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_hw_catches_2sw_SNEC.rds")
+grid.arrange(g)
+```
+
+
+

@@ -1,0 +1,308 @@
+---
+title: "Hindcast summary - Marine Mixed Fisheries"
+author: "WGNAS 2022 - Life Cycle Model Output"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  word_document:
+    reference_docx: template.docx
+---
+
+```{r global_options,include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE,fig.width=6,fig.height=3.25,bg="transparent", dpi = 400)
+```
+
+```{r}
+# Manual table of contents, sorry if you want to change things
+list_content = c("NAC Fisheries",
+                 "------North-Eastern Newfoundland",
+                 "------------1SW mature",
+                 "------------1SW non-mature",
+                 "------------2SW",
+                 "------Labrador origin fishes in Labrador catches",
+                 "------------1SW mature",
+                 "------------2SW",
+                 "------Non-Labrador origin fishes in Labrador catches, South-Western Newfoundland, Saint Pierre et Miquelon",
+                 "------------1SW mature",
+                 "------------2SW",
+                 "Faroes Fisheries",
+                 "------1SW mature",
+                 "------------Total Catches",
+                 "------------Proportions",
+                 # "------------Proportions vs Rel. PFA",
+                 "------1SW non mature",
+                 "------------Total Catches",
+                 "------------Proportions",
+                 # "------------Proportions vs Rel. PFA",
+                 "------2SW",
+                 "------------Total Catches",
+                 "------------Proportions",
+                 # "------------Proportions vs Rel. PFA",
+                 "West Greenland Fisheries",
+                 "------Total Catches",
+                 "------NAC/NEAC proportion",
+                 "------Within NAC proportion",
+                 # "------Within NAC proportions vs Rel. PFA",
+                 "------Within NEAC proportion")#,
+                 # "------Within NEAC proportions vs Rel. PFA")
+list_page = c(3, 3, 3, 4, 4, 5, 5, 5, 6, 6, 6,
+              7, 7, 7, 8, 9, 9, 10, 11, 11, 12,
+              13, 13, 13, 14, 15)
+
+content_df <- data.frame("Content" = list_content,
+                         "Page" = list_page)
+nlines <- nrow(content_df)
+flextable::flextable(content_df, cwidth = c(4,2), cheight = 0.2) %>%
+  flextable::theme_zebra() %>%
+  # flextable::fontsize(., size = 11) %>% 
+  flextable::padding(., padding.top = 0, padding.bottom = 0)
+
+```
+
+\newpage
+
+
+```{r}
+# Manual table of contents, sorry if you want to change things
+list_content = c("SU Harvest Rates",
+                 "---- North America",
+                 "---- Southern Europe",
+                 "---- Northern Europe")
+list_page = c(16,16,19,23)
+
+content_df <- data.frame("Content" = list_content,
+                         "Page" = list_page)
+nlines <- nrow(content_df)
+flextable::flextable(content_df, cwidth = c(4,2), cheight = 0.2) %>%
+  flextable::theme_zebra() %>%
+  # flextable::fontsize(., size = 11) %>% 
+  flextable::padding(., padding.top = 0, padding.bottom = 0)
+
+```
+
+\newpage
+
+# NAC Fisheries
+
+## Catches in North-Eastern Newfoundland
+
+### 1SW mature
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_tot_C5_NAC_1.rds")
+grid.arrange(g)
+```
+
+\newpage
+
+### 1SW non mature
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_tot_C8_NAC_1.rds")
+grid.arrange(g)
+```
+
+### 2SW
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_tot_C8_NAC_3.rds")
+grid.arrange(g)
+```
+
+\newpage
+
+## Labrador origin fishes in Labrador catches
+
+### 1SW mature
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_tot_C5_NAC_2_lab.rds")
+grid.arrange(g)
+```
+
+### 2SW
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_tot_C8_NAC_4_lab.rds")
+grid.arrange(g)
+```
+
+## Non-labrador origin fishes in Labrador catches, South-Western Newfoundland, Saint Pierre et Miquelon
+
+### 1SW mature
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_tot_C5_NAC_2_other.rds")
+grid.arrange(g)
+```
+
+### 2SW
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_tot_C8_NAC_4_other.rds")
+grid.arrange(g)
+```
+
+
+# Faroes Fisheries 
+
+## 1SW mature
+
+### Total Catches
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_tot_C5_NEC_1.rds")
+grid.arrange(g)
+```
+
+\newpage
+
+### Proportions
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_catchprop_NEC_C5_NEC_1_docx.rds")
+grid.arrange(g)
+```
+
+<!-- ### Proportions vs relative mature PFA -->
+
+<!-- ```{r,results = 'asis'} -->
+<!-- g <- readRDS("../../temp_docx/PFA_vs_genetic_prop_FAR_N5.rds") -->
+<!-- grid.arrange(g) -->
+<!-- ``` -->
+
+\newpage
+
+## 1SW non mature
+
+### Total Catches
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_tot_C8_NEC_1.rds")
+grid.arrange(g)
+```
+
+\newpage
+
+### Proportions
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_catchprop_NEC_C8_NEC_1_docx.rds")
+grid.arrange(g)
+```
+
+<!-- ### Proportions vs relative non mature PFA -->
+
+<!-- ```{r,results = 'asis'} -->
+<!-- g <- readRDS("../../temp_docx/PFA_vs_genetic_prop_FAR_N8.rds") -->
+<!-- grid.arrange(g) -->
+<!-- ``` -->
+
+
+\newpage
+
+## 2SW
+
+### Total Catches
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_tot_C8_NEC_3.rds")
+grid.arrange(g)
+```
+
+\newpage
+
+### Proportions
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_catchprop_NEC_C8_NEC_3_docx.rds")
+grid.arrange(g)
+```
+
+<!-- ### Proportions vs relative non mature PFA -->
+
+<!-- ```{r,results = 'asis'} -->
+<!-- g <- readRDS("../../temp_docx/PFA_vs_genetic_prop_FAR_N8_2.rds") -->
+<!-- grid.arrange(g) -->
+<!-- ``` -->
+
+
+\newpage
+
+# West Greenland Fisheries
+
+## Total Catches
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_tot_C8_2.rds")
+grid.arrange(g)
+```
+
+## NAC/NEAC proportion
+
+```{r,results = 'asis',fig.width=5,fig.height=2.5}
+g <- readRDS("../../temp_docx/hindcast_catchprop_NECNAC_C8_2_docx.rds")
+grid.arrange(g)
+```
+
+\newpage
+
+## Within NEC proportion
+
+```{r,results = 'asis'}
+g <- readRDS("../../temp_docx/hindcast_catchprop_NEC_C8_2_docx.rds")
+grid.arrange(g)
+```
+
+<!-- ## Within NAC proportion vs relative non mature PFA -->
+
+<!-- ```{r,results = 'asis'} -->
+<!-- g <- readRDS("../../temp_docx/PFA_vs_genetic_prop_NAC_GLD.rds") -->
+<!-- grid.arrange(g) -->
+<!-- ``` -->
+
+<!-- ## Within NEAC proportion -->
+
+<!-- ```{r,results = 'asis'} -->
+<!-- g <- readRDS("../../temp_docx/hindcast_catchprop_C8_2_NEC_docx.rds") -->
+<!-- grid.arrange(g) -->
+<!-- ``` -->
+
+<!-- ## Within NEAC proportion vs relative non mature PFA -->
+
+<!-- ```{r,results = 'asis'} -->
+<!-- g <- readRDS("../../temp_docx/PFA_vs_genetic_prop_NEC_GLD.rds") -->
+<!-- grid.arrange(g) -->
+<!-- ``` -->
+
+# Harvest Rate
+
+## North America
+
+```{r, results = 'asis'}
+for(thisSU in regions25Full[1:6]){
+  cat("\n\n### ",thisSU,"\n\n")
+  g <- readRDS(paste0("../../temp_docx/expl_rate_SU_",thisSU,".rds"))
+  grid.arrange(g)
+}
+```
+
+## Southern Europe
+
+```{r, results = 'asis'}
+for(thisSU in regions25Full[7:14]){
+  cat("\n\n### ",thisSU,"\n\n")
+  g <- readRDS(paste0("../../temp_docx/expl_rate_SU_",thisSU,".rds"))
+  grid.arrange(g)
+}
+```
+
+## Northern Europe
+
+```{r, results = 'asis'}
+for(thisSU in regions25Full[15:25]){
+  cat("\n\n### ",thisSU,"\n\n")
+  g <- readRDS(paste0("../../temp_docx/expl_rate_SU_",thisSU,".rds"))
+  # g <- readRDS(paste0("temp_docx/expl_rate_SU_",thisSU,".rds"))
+  grid.arrange(g)
+}
+```

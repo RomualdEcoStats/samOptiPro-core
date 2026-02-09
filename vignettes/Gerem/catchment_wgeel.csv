@@ -1,0 +1,15 @@
+ser_nameshort;type;wso_id;zone;from_wgeel;scale_bound_shape1;scale_bound_shape2;min_bound;max_bound
+AdCPG;relative;;FR_Adou;TRUE;;;;
+AdTCG;catch;;FR_Adou;TRUE;1.01;1.01;0.001;0.99
+GiCPG;relative;;FR_Garo;TRUE;;;;
+GiTCG;catch;;FR_Garo;TRUE;1.01;1.01;0.001;0.99
+GiScG;relative;;FR_Garo;TRUE;;;;
+LoiG;relative;;FR_Loir;TRUE;;;;
+SevNG;relative;;FR_Loir;TRUE;;;;
+AdGERMA;absolute;{291194};FR_Adou;FALSE;;;;
+GiGEMAC;absolute;{291126,291125} ;FR_Garo;FALSE;;;;
+SeGEMAC;absolute;{295574};FR_Garo;FALSE;;;;
+ChGEMAC;absolute;{291364};FR_Garo;FALSE;;;;
+LoGERMA;absolute;{291111};FR_Loir;FALSE;;;;
+SousGY;trap;;FR_Adou;TRUE;4;10;0.0001;0.5
+VilG;absolute;;FR_Bret;TRUE;;;;
