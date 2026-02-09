@@ -56,7 +56,8 @@ Suggests:
     patchwork,
     scales,
     tidyr,
-    reshape2
+    reshape2,
+    methods
 VignetteBuilder: knitr
 URL: https://github.com/RomualdEcoStats/samOptiPro-core
 BugReports: https://github.com/RomualdEcoStats/samOptiPro-core/issues

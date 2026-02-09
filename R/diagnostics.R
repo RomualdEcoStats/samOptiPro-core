@@ -614,17 +614,47 @@ configure_hmc_safely_bis <- function(build_fn,
 
   .head6 <- function(x) paste(utils::head(x, 6), collapse = ", ")
 
+  ## --- NEW: conservative monitor normalization & strict sanitization ---
+  .normalize_monitors_conservative <- function(model, mons) {
+    mons <- .as_char_vec(mons)
+    if (!length(mons)) return(character(0))
+
+    mv <- suppressWarnings(try(model$getVarNames(),  silent = TRUE))
+    mn <- suppressWarnings(try(model$getNodeNames(), silent = TRUE))
+
+    pool <- character(0)
+    if (!inherits(mv, "try-error") && length(mv)) pool <- c(pool, mv)
+    if (!inherits(mn, "try-error") && length(mn)) pool <- c(pool, mn)
+    pool <- unique(pool)
+
+    out <- character(0)
+    for (m in mons) {
+      if (m %in% pool) { out <- c(out, m); next }
+      # Only convert foo_12 -> foo[12] if the bracket form exists in the model
+      m2 <- sub("^(.*)_([0-9]+)$", "\\1[\\2]", m)
+      if (!identical(m2, m) && m2 %in% pool) out <- c(out, m2)
+    }
+    unique(out)
+  }
+
+  .sanitize_monitors_strict <- function(model, mons) {
+    mons <- .as_char_vec(mons)
+    if (!length(mons)) return(character(0))
+    mons <- mons[!grepl("^lifted_|^logProb_", mons)]
+    mons <- mons[!.is_ll(mons)]
+    mons <- unique(mons)
+    # IMPORTANT: no expandNodeNames, no eval(parse())
+    .normalize_monitors_conservative(model, mons)
+  }
+
   ## ---------- Checks / options ----------
   nuts_mode <- match.arg(nuts_mode)
   stopifnot(is.function(build_fn))
-
   stopifnot(all(c(niter, thin, nchains) >= 1L))
   stopifnot(nburnin >= 0L)
   stopifnot(niter > nburnin)
 
-  if (!requireNamespace("nimble", quietly = TRUE)) {
-    stop("Package 'nimble' is required.")
-  }
+  if (!requireNamespace("nimble", quietly = TRUE)) stop("Package 'nimble' is required.")
   if (!requireNamespace("nimbleHMC", quietly = TRUE) && nuts_mode != "none") {
     stop("Package 'nimbleHMC' is required to configure NUTS/HMC.")
   }
@@ -633,9 +663,7 @@ configure_hmc_safely_bis <- function(build_fn,
     showCompilerOutput = isTRUE(show_compiler_output),
     numCompilerCores   = as.integer(max(1L, compiler_cores))
   )
-  if (!is.null(project_name) && nzchar(project_name)) {
-    options(nimbleProjectName = project_name)
-  }
+  if (!is.null(project_name) && nzchar(project_name)) options(nimbleProjectName = project_name)
 
   if (!is.null(out_dir)) {
     .mkdir(out_dir)
@@ -645,9 +673,7 @@ configure_hmc_safely_bis <- function(build_fn,
   ## ---------- Build ----------
   if (exists(".fresh_build", mode = "function")) {
     b <- .fresh_build(build_fn, monitors = monitors, thin = thin)
-    if (!all(c("model", "conf") %in% names(b))) {
-      stop("`.fresh_build()` must return at least `model` and `conf`.")
-    }
+    if (!all(c("model", "conf") %in% names(b))) stop("`.fresh_build()` must return at least `model` and `conf`.")
   } else {
     base <- build_fn()
     if (!(is.list(base) && all(c("model", "conf") %in% names(base)))) {
@@ -658,26 +684,37 @@ configure_hmc_safely_bis <- function(build_fn,
   model <- b$model
   conf  <- b$conf
 
+  ## ---------- STRICT monitor handling (robust to missing vars like logN6) ----------
+  monitors_req <- .as_char_vec(monitors)
+  monitors_ok  <- .sanitize_monitors_strict(model, monitors_req)
+
+  if (length(monitors_req)) {
+    .log(sprintf("[monitors] requested=%d kept=%d (head kept: %s)",
+                 length(monitors_req), length(monitors_ok), .head6(monitors_ok)))
+    dropped <- setdiff(unique(monitors_req), unique(c(monitors_ok, sub("\\[(\\d+)\\]$", "_\\1", monitors_ok))))
+    if (length(dropped)) {
+      .log(sprintf("[monitors] dropped=%d (head dropped: %s)",
+                   length(dropped), .head6(dropped)))
+    }
+  }
+
   ## ---------- HMC/NUTS configuration ----------
+  # KEY FIX: never pass monitors to configureHMC() (nimbleHMC is strict and will error).
   if (identical(nuts_mode, "all")) {
     conf <- tryCatch({
       nimbleHMC::configureHMC(
         model,
-        monitors    = monitors,
+        monitors    = NULL,                 # << FIX
         enableWAIC  = isTRUE(enable_WAIC),
         buildDerivs = isTRUE(buildDerivs)
       )
     }, error = function(e) {
-      stop(sprintf("[HMC/all] configureHMC(model, ...) failed: %s",
-                   conditionMessage(e)))
+      stop(sprintf("[HMC/all] configureHMC(model, ...) failed: %s", conditionMessage(e)))
     })
   } else if (identical(nuts_mode, "subset")) {
     nodes <- .safe_scalar_targets(model, nuts_nodes)
-    if (!length(nodes)) {
-      stop("[HMC/subset] No valid `nuts_nodes` after sanitization/expansion (empty or non-scalar).")
-    }
-    .log(sprintf("[HMC] subset: %d targets (head: %s)",
-                 length(nodes), .head6(nodes)))
+    if (!length(nodes)) stop("[HMC/subset] No valid `nuts_nodes` after sanitization/expansion (empty or non-scalar).")
+    .log(sprintf("[HMC] subset: %d targets (head: %s)", length(nodes), .head6(nodes)))
     conf <- tryCatch({
       nimbleHMC::configureHMC(
         conf, model,
@@ -685,8 +722,7 @@ configure_hmc_safely_bis <- function(build_fn,
         buildDerivs = isTRUE(buildDerivs)
       )
     }, error = function(e) {
-      stop(sprintf("[HMC/subset] configureHMC(conf, model, nodes = ...) failed: %s",
-                   conditionMessage(e)))
+      stop(sprintf("[HMC/subset] configureHMC(conf, model, nodes = ...) failed: %s", conditionMessage(e)))
     })
   } else if (identical(nuts_mode, "auto")) {
     conf <- tryCatch({
@@ -695,11 +731,15 @@ configure_hmc_safely_bis <- function(build_fn,
         buildDerivs = isTRUE(buildDerivs)
       )
     }, error = function(e) {
-      stop(sprintf("[HMC/auto] configureHMC(conf, model) failed: %s",
-                   conditionMessage(e)))
+      stop(sprintf("[HMC/auto] configureHMC(conf, model) failed: %s", conditionMessage(e)))
     })
   } else {
     .log("[HMC] mode = 'none': leaving MCMC configuration unchanged.")
+  }
+
+  ## Add monitors AFTER HMC config (strictly valid ones only)
+  if (length(monitors_ok)) {
+    invisible(try(conf$addMonitors(monitors_ok), silent = TRUE))
   }
 
   ## ---------- Safety net: unsampled nodes ----------
@@ -710,9 +750,7 @@ configure_hmc_safely_bis <- function(build_fn,
     if (length(uns)) {
       .log(sprintf("[safety] add slice on %d unsampled nodes (head: %s)",
                    length(uns), .head6(uns)))
-      for (u in uns) {
-        conf$addSampler(u, type = "slice")
-      }
+      for (u in uns) conf$addSampler(u, type = "slice")
     }
   }
 
@@ -744,15 +782,29 @@ configure_hmc_safely_bis <- function(build_fn,
 
   ## ---------- Run MCMC ----------
   t0 <- proc.time()
-  samples <- nimble::runMCMC(
-    cmcmc,
-    niter            = as.integer(niter),
-    nburnin          = as.integer(nburnin),
-    thin             = as.integer(thin),
-    nchains          = as.integer(nchains),
-    inits            = inits,
-    samplesAsCodaMCMC = TRUE
-  )
+
+  # Avoid passing inits=NULL explicitly (some setups behave badly)
+  if (is.null(inits)) {
+    samples <- nimble::runMCMC(
+      cmcmc,
+      niter             = as.integer(niter),
+      nburnin           = as.integer(nburnin),
+      thin              = as.integer(thin),
+      nchains           = as.integer(nchains),
+      samplesAsCodaMCMC = TRUE
+    )
+  } else {
+    samples <- nimble::runMCMC(
+      cmcmc,
+      niter             = as.integer(niter),
+      nburnin           = as.integer(nburnin),
+      thin              = as.integer(thin),
+      nchains           = as.integer(nchains),
+      inits             = inits,
+      samplesAsCodaMCMC = TRUE
+    )
+  }
+
   runtime_s <- as.numeric((proc.time() - t0)[["elapsed"]])
   .log(sprintf("[run] done in %.1f s  (niter = %d, burnin = %d, thin = %d, chains = %d)",
                runtime_s, niter, nburnin, thin, nchains))
@@ -785,6 +837,673 @@ configure_hmc_safely_bis <- function(build_fn,
     build      = b
   ))
 }
+#' Configure and run HMC/NUTS safely in true parallel (one chain per worker)
+#'
+#' Parallel counterpart of \code{configure_hmc_safely_bis}, implementing *true*
+#' parallelism by running **one MCMC chain per PSOCK worker**
+#' (\code{parallel::makeCluster}). Each chain is executed in an isolated R
+#' session, and results are aggregated on the master into a single
+#' \code{coda::mcmc.list}.
+#'
+#' @details
+#' Relative to the sequential implementation, this function:
+#' \itemize{
+#'   \item launches a dedicated PSOCK worker for each chain, ensuring full
+#'         memory and RNG isolation (no forking),
+#'   \item initializes each worker by attaching \pkg{nimble} (and
+#'         \pkg{nimbleHMC} when available) and defining internal helpers that
+#'         compiled or lifted NIMBLE code may call unqualified,
+#'   \item runs \code{nimble::runMCMC(..., nchains = 1L)} independently on each
+#'         worker and combines chains on the master,
+#'   \item reports \code{runtime_s} as the **maximum elapsed time across
+#'         chains**, corresponding to the effective wall-clock time of the
+#'         parallel execution,
+#'   \item returns compiled objects (\code{conf}, \code{cmcmc}, \code{build})
+#'         from the first chain only, avoiding the transfer of large compiled
+#'         objects from all workers.
+#' }
+#'
+#' In contrast to mixed or fallback strategies, this function performs a
+#' *strict* HMC/NUTS configuration: no per-node fallback (e.g.
+#' \code{addSampler(type = "slice")}) is attempted. Any failure during HMC
+#' configuration or execution results in an error.
+#'
+#' @param build_fn Function; model builder used to construct the NIMBLE model
+#'   and base MCMC configuration (e.g. \code{build_M}). If
+#'   \code{.fresh_build()} is available on workers, it is called as
+#'   \code{.fresh_build(build_fn, monitors, thin)}; otherwise,
+#'   \code{build_fn()} must return a list with at least \code{model} and
+#'   \code{conf}. If \code{build_fn} accepts a \code{chain_id} argument, it is
+#'   passed automatically.
+#' @param niter Integer; total number of MCMC iterations per chain.
+#' @param nburnin Integer (>= 0); number of burn-in iterations.
+#' @param thin Integer (>= 1); thinning interval.
+#' @param nchains Integer (>= 1); number of chains (one PSOCK worker per chain).
+#' @param monitors Character vector or \code{NULL}; nodes to monitor, passed to
+#'   model building and/or HMC configuration.
+#' @param inits \code{NULL} or a list of per-chain initial values. If provided,
+#'   its length must match \code{nchains}; each element is passed to the
+#'   corresponding worker.
+#' @param enable_WAIC Logical; whether to enable WAIC computation (if supported).
+#' @param show_compiler_output Logical; forwarded to
+#'   \code{nimbleOptions(showCompilerOutput = ...)} on each worker.
+#' @param log_dir Character; directory for worker-level logs (if enabled).
+#' @param seed Integer; base RNG seed. Chain \code{i} uses \code{seed + i - 1}.
+#'
+#' @return A list with components:
+#' \itemize{
+#'   \item \code{conf}: final MCMC configuration (from chain 1),
+#'   \item \code{cmcmc}: compiled MCMC object (from chain 1),
+#'   \item \code{samples}: combined \code{coda::mcmc.list} (one chain per worker),
+#'   \item \code{runtime_s}: wall-clock time in seconds (maximum over chains),
+#'   \item \code{build}: build object returned by \code{build_fn} or
+#'         \code{.fresh_build()} (from chain 1).
+#' }
+#'
+#' @export
+configure_hmc_safely_parallel <- function(
+    build_fn,
+    niter,
+    nburnin,
+    thin,
+    nchains,
+    monitors,
+    inits = NULL,
+    enable_WAIC = FALSE,
+    show_compiler_output = FALSE,
+    log_dir = "log",
+    seed = 1L
+) {
+  stopifnot(is.function(build_fn))
+
+  nchains <- as.integer(nchains)
+  niter   <- as.integer(niter)
+  nburnin <- as.integer(nburnin)
+  thin    <- as.integer(thin)
+
+  stopifnot(nchains >= 1L, niter >= 1L, nburnin >= 0L, thin >= 1L, niter > nburnin)
+
+  if (!requireNamespace("parallel", quietly = TRUE)) stop("Package 'parallel' required.")
+  if (!requireNamespace("nimble",   quietly = TRUE)) stop("Package 'nimble' required.")
+  if (!requireNamespace("nimbleHMC",quietly = TRUE)) stop("Package 'nimbleHMC' required.")
+  if (!requireNamespace("coda",     quietly = TRUE)) stop("Package 'coda' required.")
+  if (!requireNamespace("methods",  quietly = TRUE)) stop("Package 'methods' required.")
+
+  if (!dir.exists(log_dir)) dir.create(log_dir, recursive = TRUE, showWarnings = FALSE)
+
+  cl <- parallel::makeCluster(nchains, type = "PSOCK")
+  on.exit(try(parallel::stopCluster(cl), silent = TRUE), add = TRUE)
+
+  parallel::clusterSetRNGStream(cl, iseed = as.integer(seed))
+
+  parallel::clusterEvalQ(cl, {
+    suppressPackageStartupMessages(library(nimble))
+    suppressPackageStartupMessages(library(nimbleHMC))
+    suppressPackageStartupMessages(library(coda))
+    suppressPackageStartupMessages(library(methods))
+    NULL
+  })
+
+  parallel::clusterExport(
+    cl,
+    varlist = c("build_fn", "niter", "nburnin", "thin", "monitors",
+                "enable_WAIC", "show_compiler_output", "log_dir", "seed"),
+    envir = environment()
+  )
+
+  # --- robust detector for Nimble model objects (RC classes) ---
+  is_nimble_model_like <- function(x) {
+    if (is.null(x)) return(FALSE)
+
+    cls <- class(x)
+
+    if (any(cls %in% c("nimbleModel", "nimbleModelBaseClass", "modelBaseClass"))) return(TRUE)
+    if (methods::is(x, "modelBaseClass")) return(TRUE)
+
+    if (any(grepl("_modelClass_UID_", cls, fixed = TRUE))) return(TRUE)
+    if (any(grepl("modelClass_UID", cls, fixed = TRUE))) return(TRUE)
+
+    if (is.environment(x) && all(c("getNodeNames", "calculate", "simulate") %in% ls(x))) return(TRUE)
+
+    FALSE
+  }
+
+  fmt_list_classes <- function(b) {
+    if (!is.list(b)) return(paste(class(b), collapse = ", "))
+    nms <- names(b)
+    if (is.null(nms)) nms <- rep("", length(b))
+    parts <- mapply(function(nm, el) {
+      if (nm == "") nm <- "<unnamed>"
+      paste0(nm, ":", paste(class(el), collapse = "|"))
+    }, nms, b, SIMPLIFY = TRUE, USE.NAMES = FALSE)
+    paste(parts, collapse = "; ")
+  }
+
+  worker_run_one_chain <- function(chain_id) {
+    chain_id <- as.integer(chain_id)
+
+    ## Explicit per-chain RNG (stability + independence)
+    set.seed(as.integer(seed) + chain_id - 1L)
+
+    logfile <- file.path(log_dir, sprintf("build_model_chain%d.log", chain_id))
+    con <- file(logfile, open = "wt")
+    on.exit(try(close(con), silent = TRUE), add = TRUE)
+
+    sink(con)
+    sink(con, type = "message")
+    on.exit({
+      try(sink(type = "message"), silent = TRUE)
+      try(sink(), silent = TRUE)
+    }, add = TRUE)
+
+    cat(sprintf("=== Chain %d ===\n", chain_id))
+
+    # Step 1 - Build
+    cat("Step 1 - build_fn(chain_id)\n")
+    b <- tryCatch(build_fn(chain_id = chain_id), error = function(e) e)
+    if (inherits(b, "error")) {
+      stop(sprintf("build_fn failed on chain %d: %s", chain_id, conditionMessage(b)))
+    }
+
+    model  <- NULL
+    cmodel <- NULL
+
+    # Accept: nimble model directly
+    if (is_nimble_model_like(b)) {
+      model <- b
+
+      # Accept: list(model = nimble model)
+    } else if (is.list(b) && !is.null(b$model) && is_nimble_model_like(b$model)) {
+      model <- b$model
+
+      # Accept: list(cmodel = CompiledNimbleModel)
+    } else if (is.list(b) && !is.null(b$cmodel) && inherits(b$cmodel, "CompiledNimbleModel")) {
+      cmodel <- b$cmodel
+      model  <- cmodel$project
+      if (!is_nimble_model_like(model)) {
+        stop(sprintf("On chain %d: b$cmodel$project is not a nimble model-like object. Got: %s",
+                     chain_id, paste(class(model), collapse = ", ")))
+      }
+
+    } else {
+      stop(sprintf(
+        "build_fn returned an unsupported object on chain %d.\nReturned: %s\nList detail: %s",
+        chain_id,
+        paste(class(b), collapse = ", "),
+        fmt_list_classes(b)
+      ))
+    }
+
+    # Step 2 - Compile model (ensure we always have a compiled project)
+    cat("Step 2 - compileNimble(model) [ensure compiled project]\n")
+    if (is.null(cmodel)) {
+      cmodel <- nimble::compileNimble(model, showCompilerOutput = isTRUE(show_compiler_output))
+    }
+
+    # Step 3 - configureHMC (on R model)
+    cat("Step 3 - nimbleHMC::configureHMC(model)\n")
+    conf <- nimbleHMC::configureHMC(
+      model,
+      monitors   = monitors,
+      enableWAIC = isTRUE(enable_WAIC)
+    )
+
+    # Step 4 - buildMCMC
+    cat("Step 4 - buildMCMC(conf)\n")
+    mcmc <- nimble::buildMCMC(conf)
+
+    # Step 5 - compile MCMC with compiled project (ALWAYS compiled)
+    cat("Step 5 - compileNimble(mcmc, project=cmodel)\n")
+    cmcmc <- nimble::compileNimble(
+      mcmc,
+      project = cmodel,
+      resetFunctions = FALSE,
+      showCompilerOutput = isTRUE(show_compiler_output)
+    )
+
+    # Step 6 - run (useful runtime)
+    cat("Step 6 - runMCMC\n")
+    t0 <- proc.time()
+    sam <- nimble::runMCMC(
+      cmcmc,
+      niter   = niter,
+      nburnin = nburnin,
+      thin    = thin,
+      nchains = 1L,
+      samplesAsCodaMCMC = TRUE
+    )
+    runtime_s <- as.numeric((proc.time() - t0)[["elapsed"]])
+
+    if (inherits(sam, "mcmc.list")) sam <- sam[[1]]
+
+    list(
+      chain_id  = chain_id,
+      samples   = sam,
+      runtime_s = runtime_s,
+      conf      = if (chain_id == 1L) conf else NULL,
+      logfile   = logfile
+    )
+  }
+
+  parallel::clusterExport(
+    cl,
+    varlist = c("worker_run_one_chain", "is_nimble_model_like", "fmt_list_classes"),
+    envir = environment()
+  )
+
+  res <- parallel::parLapply(cl, seq_len(nchains), worker_run_one_chain)
+  res <- res[order(vapply(res, `[[`, integer(1), "chain_id"))]
+
+  samples  <- coda::mcmc.list(lapply(res, `[[`, "samples"))
+  runtimes <- vapply(res, `[[`, numeric(1), "runtime_s")
+
+  invisible(list(
+    conf      = res[[1]]$conf,
+    samples   = samples,
+    runtime_s = max(runtimes, na.rm = TRUE),
+    runtime_s_by_chain = runtimes,
+    logfiles  = vapply(res, `[[`, character(1), "logfile")
+  ))
+}
+
+#' Configure + run HMC/NUTS in parallel (large-model safe, PSOCK)
+#'
+#' @description
+#' Parallel wrapper around `nimbleHMC::configureHMC()` aligned with the worker strategy of
+#' `run_baseline_config_parallel_bis`: each worker resolves `build_fn`, builds the *R* model,
+#' compiles the project (compiled model), configures HMC, builds & compiles the MCMC, then runs
+#' and returns samples + timing.
+#'
+#' Important technical points (to avoid “repetitions” and post-run hangs):
+#' - The model is compiled once per worker (`cmodel`), then the MCMC is compiled against that compiled project.
+#' - No monitor mutation after MCMC build (monitors are passed only via `configureHMC()`).
+#' - Returning `conf` objects can fail due to serialization (external pointers). This function supports
+#'   safe modes via `opts$conf_return`.
+#'
+#' @param build_fn Function OR single string (function name). The builder is resolved on workers
+#'   using namespace/globalEnv/object fallback (same philosophy as baseline_bis).
+#'   It must return either a nimble model, or a list with at least `$model` (and optionally `$cmodel`).
+#' @param niter,nburnin,thin MCMC run controls.
+#' @param nchains Number of chains.
+#' @param monitors Character vector of monitors passed to `configureHMC()`.
+#' @param inits Optional list of inits (length = nchains) or a single init list. If provided, the worker
+#'   will try calling the builder with `inits=` (fallback to builder without it if not supported).
+#' @param enable_WAIC Logical passed to `configureHMC()`.
+#' @param show_compiler_output Logical passed to Nimble compilation.
+#' @param seed Integer seed.
+#' @param n_cores Number of PSOCK workers (defaults to nchains).
+#' @param samplesAsCodaMCMC Logical; if TRUE returns `coda::mcmc.list`.
+#' @param opts Advanced options (same family as baseline_bis):
+#'   - cluster_type ("PSOCK"), outfile (""), worker_libpaths, worker_packages
+#'   - build_fn_text, build_fn_name, build_fn_ns
+#'   - build_fn_object, builder_env_names
+#'   - resetFunctions (default FALSE recommended here), gc_worker (TRUE)
+#'   - mcmc_time (TRUE), progressBar (FALSE)
+#'   - conf_return: "none" | "chain1" | "by_chain" | "rds"
+#'     * "chain1"/"by_chain": attempts to return `conf_hmc` directly (may fail serialization on some setups)
+#'     * "rds": saves conf to disk on worker and returns paths (recommended if you need conf)
+#'   - conf_dir: directory used when conf_return="rds" (default tempdir()).
+#'
+#' @return list with:
+#'   - samples (list of matrices or coda::mcmc.list)
+#'   - runtime_s (wall time over the whole parallel run)
+#'   - runtime_by_chain
+#'   - sampler_times (if available)
+#'   - conf (optional, depending on opts$conf_return)
+#'   - conf_by_chain (optional)
+#'   - conf_paths (optional when conf_return="rds")
+#' @export
+configure_hmc_safely_parallel_bis <- function(
+    build_fn,
+    niter,
+    nburnin,
+    thin,
+    nchains,
+    monitors,
+    inits = NULL,
+    enable_WAIC = FALSE,
+    show_compiler_output = FALSE,
+    seed = 1L,
+    n_cores = nchains,
+    samplesAsCodaMCMC = TRUE,
+    opts = NULL
+) {
+  stopifnot(is.function(build_fn) || (is.character(build_fn) && length(build_fn) == 1L))
+  stopifnot(is.numeric(niter), length(niter) == 1L, niter >= 1)
+  stopifnot(is.numeric(nburnin), length(nburnin) == 1L, nburnin >= 0)
+  stopifnot(is.numeric(thin), length(thin) == 1L, thin >= 1)
+  stopifnot(is.numeric(seed), length(seed) == 1L)
+
+  nchains <- as.integer(nchains)
+  n_cores <- as.integer(n_cores)
+  niter   <- as.integer(niter)
+  nburnin <- as.integer(nburnin)
+  thin    <- as.integer(thin)
+
+  stopifnot(nchains >= 1L, n_cores >= 1L, niter > nburnin)
+
+  if (!requireNamespace("parallel", quietly = TRUE)) stop("parallel required")
+  if (!requireNamespace("nimble", quietly = TRUE))   stop("nimble required")
+  if (!requireNamespace("nimbleHMC", quietly = TRUE))stop("nimbleHMC required")
+  if (isTRUE(samplesAsCodaMCMC) && !requireNamespace("coda", quietly = TRUE)) stop("coda required")
+
+  `%||%` <- function(x, y) if (is.null(x)) y else x
+  opts <- if (is.null(opts)) list() else opts
+
+  ## ---- Builder resolution strategy (same logic as baseline_bis) ----
+  build_fn_name <- NULL
+  build_fn_ns   <- NULL
+  build_fn_text <- opts$build_fn_text %||% NULL
+
+  build_fn_object   <- opts$build_fn_object %||% NULL
+  builder_env_names <- opts$builder_env_names %||% NULL
+  builder_env_list  <- NULL
+
+  if (is.character(build_fn)) {
+    build_fn_name <- build_fn
+    build_fn <- NULL
+  } else if (is.function(build_fn)) {
+    if (!is.null(opts$build_fn_name)) build_fn_name <- as.character(opts$build_fn_name)
+  }
+
+  if (!is.null(opts$build_fn_ns))   build_fn_ns   <- as.character(opts$build_fn_ns)
+  if (!is.null(opts$build_fn_name)) build_fn_name <- as.character(opts$build_fn_name)
+
+  if (!is.null(build_fn_text)) {
+    stopifnot(is.character(build_fn_text), length(build_fn_text) >= 1L)
+    if (is.null(build_fn_name) || !nzchar(build_fn_name)) {
+      stop("opts$build_fn_text provided but build_fn_name is NULL. Provide build_fn as a name or set opts$build_fn_name.")
+    }
+    if (!is.null(build_fn_object) && is.function(build_fn_object)) {
+      e  <- environment(build_fn_object)
+      nm <- ls(envir = e, all.names = TRUE)
+      if (!is.null(builder_env_names)) {
+        stopifnot(is.character(builder_env_names))
+        nm <- intersect(nm, builder_env_names)
+      }
+      builder_env_list <- if (length(nm)) mget(nm, envir = e, inherits = FALSE) else list()
+    }
+  }
+
+  ## ---- Cluster options ----
+  cluster_type <- opts$cluster_type %||% "PSOCK"
+  outfile      <- opts$outfile %||% ""
+
+  resetFunctions <- isTRUE(opts$resetFunctions %||% FALSE)  # IMPORTANT: default FALSE to avoid needless recompiles
+  gc_worker      <- isTRUE(opts$gc_worker %||% TRUE)
+
+  mcmc_time   <- isTRUE(opts$mcmc_time %||% TRUE)
+  progressBar <- isTRUE(opts$progressBar %||% FALSE)
+
+  worker_libpaths <- opts$worker_libpaths %||% NULL
+  worker_packages <- opts$worker_packages %||% character(0)
+
+  conf_return <- opts$conf_return %||% "chain1"  # "none"|"chain1"|"by_chain"|"rds"
+  conf_dir    <- opts$conf_dir %||% tempdir()
+
+  stopifnot(conf_return %in% c("none", "chain1", "by_chain", "rds"))
+
+  ## ---- Start cluster ----
+  cl <- parallel::makeCluster(n_cores, type = cluster_type, outfile = outfile)
+  on.exit(try(parallel::stopCluster(cl), silent = TRUE), add = TRUE)
+
+  ## ---- Load required packages on workers ----
+  parallel::clusterEvalQ(cl, {
+    suppressPackageStartupMessages(library(nimble))
+    suppressPackageStartupMessages(library(nimbleHMC))
+    if (requireNamespace("coda", quietly = TRUE)) suppressPackageStartupMessages(library(coda))
+    NULL
+  })
+
+  ## ---- Set .libPaths + load user packages on workers ----
+  parallel::clusterExport(cl, varlist = c("worker_libpaths", "worker_packages"), envir = environment())
+  parallel::clusterEvalQ(cl, {
+    if (!is.null(worker_libpaths) && length(worker_libpaths)) {
+      .libPaths(unique(c(worker_libpaths, .libPaths())))
+    }
+    if (length(worker_packages)) {
+      for (p in worker_packages) suppressPackageStartupMessages(library(p, character.only = TRUE))
+    }
+    NULL
+  })
+
+  ## ---- Inject captured env of builder (fix hindcast_/Const_nimble_ etc.) ----
+  parallel::clusterExport(cl, varlist = c("builder_env_list"), envir = environment())
+  parallel::clusterEvalQ(cl, {
+    if (!is.null(builder_env_list) && length(builder_env_list)) {
+      for (nm in names(builder_env_list)) assign(nm, builder_env_list[[nm]], envir = .GlobalEnv)
+    }
+    NULL
+  })
+
+  ## ---- Inject builder code on workers if requested ----
+  parallel::clusterExport(cl, varlist = c("build_fn_text", "build_fn_name"), envir = environment())
+  parallel::clusterEvalQ(cl, {
+    if (!is.null(build_fn_text)) {
+      val <- try(eval(parse(text = build_fn_text), envir = .GlobalEnv), silent = TRUE)
+      if (!inherits(val, "try-error")) {
+        if (!exists(build_fn_name, envir = .GlobalEnv, inherits = FALSE) && is.function(val)) {
+          assign(build_fn_name, val, envir = .GlobalEnv)
+        }
+      }
+      if (!exists(build_fn_name, envir = .GlobalEnv, inherits = FALSE)) {
+        stop("build_fn_text evaluated but did not create a function named '", build_fn_name, "' on worker.")
+      }
+    }
+    NULL
+  })
+
+  ## ---- Export scalars/options ----
+  parallel::clusterExport(
+    cl,
+    varlist = c(
+      "niter", "nburnin", "thin", "monitors", "seed",
+      "enable_WAIC", "show_compiler_output",
+      "samplesAsCodaMCMC",
+      "build_fn_name", "build_fn_ns",
+      "resetFunctions", "gc_worker",
+      "mcmc_time", "progressBar",
+      "inits",
+      "conf_return", "conf_dir"
+    ),
+    envir = environment()
+  )
+  if (is.null(build_fn_name)) parallel::clusterExport(cl, varlist = "build_fn", envir = environment())
+
+  ## ---- Worker ----
+  worker_fun <- function(chain_id) {
+    chain_id <- as.integer(chain_id)
+    set.seed(as.integer(seed) + chain_id - 1L)
+
+    bf <- NULL
+
+    # 1) Namespace resolution
+    if (!is.null(build_fn_name) && !is.null(build_fn_ns)) {
+      ns <- try(asNamespace(build_fn_ns), silent = TRUE)
+      if (!inherits(ns, "try-error") && exists(build_fn_name, envir = ns, inherits = TRUE)) {
+        bf <- get(build_fn_name, envir = ns, inherits = TRUE)
+      }
+    }
+
+    # 2) GlobalEnv resolution (injected)
+    if (is.null(bf) && !is.null(build_fn_name) &&
+        exists(build_fn_name, envir = .GlobalEnv, inherits = FALSE)) {
+      bf <- get(build_fn_name, envir = .GlobalEnv, inherits = FALSE)
+    }
+
+    # 3) Exported function object fallback
+    if (is.null(bf) && is.null(build_fn_name)) bf <- build_fn
+
+    if (is.null(bf) || !is.function(bf)) {
+      stop("Cannot resolve build_fn on worker. Tried: ",
+           if (!is.null(build_fn_ns)) paste0(build_fn_ns, " namespace, then ") else "",
+           ".GlobalEnv, then exported function object.")
+    }
+
+    ## Prepare chain-specific inits (if any)
+    init_i <- NULL
+    if (!is.null(inits)) {
+      if (is.list(inits) && length(inits) == 1L && !is.null(names(inits))) {
+        init_i <- inits
+      } else if (is.list(inits) && length(inits) == nchains) {
+        init_i <- inits[[chain_id]]
+      } else if (is.list(inits)) {
+        init_i <- inits
+      }
+    }
+
+    ## Call builder: try (chain_id, export_global, inits) then fallbacks
+    parts <- tryCatch(
+      bf(chain_id = chain_id, export_global = FALSE, inits = init_i),
+      error = function(e1) {
+        tryCatch(
+          bf(chain_id = chain_id, export_global = FALSE),
+          error = function(e2) {
+            tryCatch(
+              bf(chain_id = chain_id),
+              error = function(e3) e3
+            )
+          }
+        )
+      }
+    )
+    if (inherits(parts, "error")) {
+      stop(sprintf("build_fn failed on chain %d: %s", chain_id, conditionMessage(parts)))
+    }
+
+    ## Normalize builder output
+    if (inherits(parts, "nimbleModel") || inherits(parts, "modelBaseClass")) {
+      parts <- list(model = parts)
+    }
+    if (!is.list(parts) || is.null(parts$model)) {
+      stop("build_fn must return a nimble model (or list(model=...)).")
+    }
+
+    ## Compile model ONCE per worker (prefer provided cmodel)
+    cmodel <- NULL
+    if (!is.null(parts$cmodel) && inherits(parts$cmodel, "CompiledNimbleModel")) {
+      cmodel <- parts$cmodel
+    } else {
+      cmodel <- nimble::compileNimble(
+        parts$model,
+        showCompilerOutput = isTRUE(show_compiler_output)
+      )
+    }
+
+    ## HMC config per worker (plein pot)
+    conf_hmc <- nimbleHMC::configureHMC(
+      parts$model,
+      monitors   = monitors,
+      enableWAIC = isTRUE(enable_WAIC)
+    )
+
+    ## Build + compile MCMC (compile against compiled project)
+    Rmcmc <- nimble::buildMCMC(conf_hmc)
+    Cmcmc <- nimble::compileNimble(
+      Rmcmc,
+      project = cmodel,
+      resetFunctions = isTRUE(resetFunctions),
+      showCompilerOutput = isTRUE(show_compiler_output)
+    )
+
+    ## Run (useful runtime only)
+    t0 <- Sys.time()
+    smp <- nimble::runMCMC(
+      Cmcmc,
+      niter   = as.integer(niter),
+      nburnin = as.integer(nburnin),
+      thin    = as.integer(thin),
+      nchains = 1L,
+      samplesAsCodaMCMC = isTRUE(samplesAsCodaMCMC),
+      summary = FALSE,
+      WAIC    = FALSE
+    )
+    dt <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
+
+    ## Times (optional)
+    st <- NULL
+    if (isTRUE(mcmc_time) && is.function(Cmcmc$getTimes)) {
+      st <- try(Cmcmc$getTimes(), silent = TRUE)
+      if (inherits(st, "try-error")) st <- NULL
+    }
+
+    ## Conf return policy (avoid serialization issues)
+    conf_out <- NULL
+    conf_path <- NULL
+
+    if (!identical(conf_return, "none")) {
+      if (identical(conf_return, "rds")) {
+        dir.create(conf_dir, showWarnings = FALSE, recursive = TRUE)
+        conf_path <- file.path(conf_dir, sprintf("conf_hmc_chain%02d.rds", chain_id))
+        ok <- try(saveRDS(conf_hmc, conf_path), silent = TRUE)
+        if (inherits(ok, "try-error")) {
+          conf_path <- NULL
+        }
+      } else if (identical(conf_return, "by_chain")) {
+        conf_out <- conf_hmc
+      } else if (identical(conf_return, "chain1") && chain_id == 1L) {
+        conf_out <- conf_hmc
+      }
+    }
+
+    if (gc_worker) {
+      rm(parts, init_i, cmodel, conf_hmc, Rmcmc, Cmcmc)
+      gc(); gc()
+    }
+
+    list(
+      chain_id      = chain_id,
+      samples       = smp,
+      runtime_s     = dt,
+      sampler_times = st,
+      conf          = conf_out,
+      conf_path     = conf_path
+    )
+  }
+
+  parallel::clusterExport(cl, varlist = "worker_fun", envir = environment())
+
+  ## ---- Run ----
+  time_start <- Sys.time()
+  ans <- parallel::parLapply(cl, X = seq_len(nchains), fun = worker_fun)
+  time_end  <- Sys.time()
+
+  ans <- ans[order(vapply(ans, `[[`, integer(1), "chain_id"))]
+
+  runtime_s <- as.numeric(difftime(time_end, time_start, units = "secs"))
+
+  out <- list(
+    samples          = lapply(ans, `[[`, "samples"),
+    runtime_s        = runtime_s,
+    runtime_by_chain = vapply(ans, `[[`, numeric(1), "runtime_s"),
+    sampler_times    = lapply(ans, `[[`, "sampler_times")
+  )
+
+  ## conf outputs (robust)
+  conf_by_chain <- lapply(ans, `[[`, "conf")
+  conf_paths    <- vapply(ans, `[[`, character(1), "conf_path")
+  conf_paths[conf_paths == ""] <- NA_character_
+
+  if (identical(conf_return, "by_chain")) {
+    out$conf_by_chain <- conf_by_chain
+  } else if (identical(conf_return, "chain1")) {
+    out$conf <- conf_by_chain[[1]]
+  } else if (identical(conf_return, "rds")) {
+    out$conf_paths <- conf_paths
+    # convenience: chain1 path
+    out$conf_path_chain1 <- conf_paths[1]
+  }
+
+  if (isTRUE(samplesAsCodaMCMC)) {
+    out$samples <- coda::mcmc.list(lapply(out$samples, function(x) {
+      if (inherits(x, "mcmc.list")) x[[1]] else coda::as.mcmc(x)
+    }))
+  }
+
+  out
+}
+
+
 #' Diagnose model structure, dependencies, and sampler time (parameter and family levels)
 #'
 #' Inspect a NIMBLE model to extract the universe of nodes, classify stochastic
@@ -945,6 +1664,55 @@ diagnose_model_structure <- function(model,
     if (is.null(.ignore_re)) rep(FALSE, length(x)) else grepl(.ignore_re, x, perl = TRUE)
   }
 
+  # ---- PATCH 1: robust sampler target expansion (handles `x[]`, bare `x`, etc.) ----
+  .expand_targets <- function(tgt, base_nodes) {
+    tgt <- tgt %||% character(0)
+    if (!length(tgt)) return(character(0))
+
+    out <- character(0)
+
+    for (u in tgt) {
+      if (is.na(u) || !nzchar(u)) next
+
+      # Case A: explicit `var[]` or `var[...]`
+      if (grepl("\\[\\]$", u) || grepl("\\[.*\\]$", u)) {
+        ex <- try(model$expandNodeNames(u), silent = TRUE)
+        if (!inherits(ex, "try-error") && length(ex)) {
+          out <- c(out, ex)
+          next
+        }
+        # if expand fails, fall back below
+      }
+
+      # Case B: bare variable name (no indices) -> expand by matching base_nodes
+      if (!grepl("\\[", u)) {
+        # Match `u[...` preferentially; if scalar node exists exactly, keep it too
+        pat <- paste0("^", gsub("([][{}()+*^$.|\\\\?])", "\\\\\\1", u), "\\[")
+        m <- grep(pat, base_nodes, value = TRUE)
+        if (length(m)) out <- c(out, m)
+        if (u %in% base_nodes) out <- c(out, u)
+        next
+      }
+
+      # Case C: already indexed but expand failed -> keep as-is (may still be a node name)
+      out <- c(out, u)
+    }
+
+    unique(out)
+  }
+
+  # ---- PATCH 2: robust coercion of sampler_times (fixes length=1 list / attributes, etc.) ----
+  .coerce_sampler_times <- function(x) {
+    if (is.null(x)) return(NULL)
+    # allow list length-1 numeric, or other atomic coercible vectors
+    if (is.list(x)) {
+      if (length(x) == 1L) x <- x[[1L]] else x <- unlist(x, use.names = FALSE)
+    }
+    x <- suppressWarnings(as.numeric(x))
+    if (!is.numeric(x)) return(NULL)
+    x
+  }
+
   ## 1) Nodes
   all_nodes_raw <- .timed("Get all node names", model$getNodeNames(includeData = include_data))
   removed_nodes <- unique(c(removed_nodes %||% character(0)))
@@ -1072,6 +1840,10 @@ diagnose_model_structure <- function(model,
     for (i in seq_along(smp_list)) {
       s   <- smp_list[[i]]
       tgt <- s$target %||% character(0)
+
+      # ---- PATCH 1 applied here ----
+      tgt <- .expand_targets(tgt, base_nodes)
+
       if (length(tgt)) {
         tgt <- tgt[!.is_ignored(tgt)]
         tgt <- intersect(tgt, base_nodes)
@@ -1102,6 +1874,9 @@ diagnose_model_structure <- function(model,
 
   ## 7) Sampler profiling
   per_param_times <- data.frame(parameter = character(0), sampler_time = numeric(0))
+
+  # ---- PATCH 2 applied early ----
+  sampler_times <- .coerce_sampler_times(sampler_times)
 
   if (isTRUE(auto_profile) && is.null(sampler_times)) {
     .timed("Auto-profile samplers (internal MCMC run)", {
@@ -1142,9 +1917,9 @@ diagnose_model_structure <- function(model,
         if (inherits(st, "try-error") || is.null(st)) {
           warning("Internal profiling failed; sampler_times remains NULL.")
         } else {
-          st <- as.numeric(st)
-          if (length(st) == 0L) {
-            warning("Internal profiling returned length 0; sampler_times remains NULL.")
+          st <- .coerce_sampler_times(st)
+          if (is.null(st) || length(st) == 0L) {
+            warning("Internal profiling returned non-numeric or length 0; sampler_times remains NULL.")
           } else {
             sampler_times <- st
             if (!quiet) {
@@ -1357,6 +2132,16 @@ diagnose_model_structure <- function(model,
   plot_dependencies <- plot_sampler_time <- plot_combined <- NULL
   plot_dependencies_family <- plot_sampler_time_family <- plot_combined_family <- NULL
 
+  # ---- PATCH 3: make `np` actually control the fraction of nodes/families shown in plots ----
+  .subset_top_frac <- function(df, value_col, frac) {
+    if (is.null(df) || !nrow(df)) return(df)
+    if (!is.finite(frac) || frac <= 0 || frac > 1) frac <- 0.10
+    k <- max(1L, min(nrow(df), ceiling(nrow(df) * frac)))
+    o <- order(df[[value_col]], decreasing = TRUE)
+    df2 <- df[o[seq_len(k)], , drop = FALSE]
+    df2
+  }
+
   if (isTRUE(make_plots)) {
     .timed("Make plots", {
       if (!requireNamespace("ggplot2", quietly = TRUE)) {
@@ -1373,10 +2158,24 @@ diagnose_model_structure <- function(model,
             axis.text.x      = ggplot2::element_text(angle = 90, vjust = 0.5, hjust = 1)
           )
 
+        # apply np only to plotted data (not to returned tables)
+        deps_df_plot    <- .subset_top_frac(deps_df,    "total_dependencies", np)
+        sampler_df_plot <- .subset_top_frac(sampler_df, "sampler_time",       np)
+
+        # keep factor ordering consistent in the plotted subsets
+        if (nrow(deps_df_plot)) {
+          lev <- as.character(deps_df_plot$parameter)
+          deps_df_plot$parameter <- factor(lev, levels = lev)
+        }
+        if (nrow(sampler_df_plot)) {
+          lev <- as.character(sampler_df_plot$parameter)
+          sampler_df_plot$parameter <- factor(lev, levels = lev)
+        }
+
         if (!isTRUE(only_family_plots)) {
-          if (nrow(deps_df) > 0L) {
+          if (nrow(deps_df_plot) > 0L) {
             plot_dependencies <- ggplot2::ggplot(
-              deps_df,
+              deps_df_plot,
               ggplot2::aes(x = parameter, y = total_dependencies, fill = "Total dependencies")
             ) +
               ggplot2::geom_col(width = 1) +
@@ -1387,16 +2186,16 @@ diagnose_model_structure <- function(model,
                 values = c("Total dependencies" = "orange")
               ) +
               ggplot2::labs(
-                title = "Number of dependencies per node",
+                title = sprintf("Number of dependencies per node (top %.0f%%)", 100 * np),
                 x     = "Node",
                 y     = "Number of dependencies"
               ) +
               base_theme
           }
-          if (nrow(sampler_df) > 0L) {
+          if (nrow(sampler_df_plot) > 0L) {
             time_label <- sprintf("Time in samplers (%s)", sampler_times_unit)
             plot_sampler_time <- ggplot2::ggplot(
-              sampler_df,
+              sampler_df_plot,
               ggplot2::aes(x = parameter, y = sampler_time, fill = time_label)
             ) +
               ggplot2::geom_col(width = 1) +
@@ -1407,7 +2206,7 @@ diagnose_model_structure <- function(model,
                 values = stats::setNames("blue", time_label)
               ) +
               ggplot2::labs(
-                title = "Time spent in samplers per node",
+                title = sprintf("Time spent in samplers per node (top %.0f%%)", 100 * np),
                 x     = "Node",
                 y     = time_label
               ) +
@@ -1427,10 +2226,22 @@ diagnose_model_structure <- function(model,
         }
 
         if (isTRUE(by_family)) {
-          if (nrow(fam_deps_df) > 0L) {
+          fam_deps_plot <- .subset_top_frac(fam_deps_df, "deps_stat", np)
+          fam_time_plot <- .subset_top_frac(fam_time_df, "time_stat", np)
+
+          if (nrow(fam_deps_plot)) {
+            lev <- as.character(fam_deps_plot$family)
+            fam_deps_plot$family <- factor(lev, levels = lev)
+          }
+          if (nrow(fam_time_plot)) {
+            lev <- as.character(fam_time_plot$family)
+            fam_time_plot$family <- factor(lev, levels = lev)
+          }
+
+          if (nrow(fam_deps_plot) > 0L) {
             lab_dep <- sprintf("Number of dependencies (%s by family)", family_stat)
             plot_dependencies_family <- ggplot2::ggplot(
-              fam_deps_df,
+              fam_deps_plot,
               ggplot2::aes(x = family, y = deps_stat, fill = "Deps by family")
             ) +
               ggplot2::geom_col(width = 1) +
@@ -1441,7 +2252,7 @@ diagnose_model_structure <- function(model,
                 values = c("Deps by family" = "orange")
               ) +
               ggplot2::labs(
-                title = lab_dep,
+                title = sprintf("%s (top %.0f%%)", lab_dep, 100 * np),
                 x     = "Family",
                 y     = family_stat
               ) +
@@ -1450,14 +2261,14 @@ diagnose_model_structure <- function(model,
                 axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)
               )
           }
-          if (nrow(fam_time_df) > 0L) {
+          if (nrow(fam_time_plot) > 0L) {
             lab_tim <- sprintf(
               "Time in samplers (%s by family, %s)",
               family_stat,
               if (time_normalize == "per_node") "per node" else "raw"
             )
             plot_sampler_time_family <- ggplot2::ggplot(
-              fam_time_df,
+              fam_time_plot,
               ggplot2::aes(x = family, y = time_stat, fill = "Time by family")
             ) +
               ggplot2::geom_col(width = 1) +
@@ -1468,7 +2279,7 @@ diagnose_model_structure <- function(model,
                 values = c("Time by family" = "blue")
               ) +
               ggplot2::labs(
-                title = lab_tim,
+                title = sprintf("%s (top %.0f%%)", lab_tim, 100 * np),
                 x     = "Family",
                 y     = sprintf("Time (%s)", sampler_times_unit)
               ) +
@@ -1915,7 +2726,6 @@ run_structure_and_hmc_test <- function(build_fn,
   )
   simplex_dists  <- c("ddirichlet")
 
-  # log-normal has natural support (0, +Inf) but is not a user truncation
   bounded_support_dists <- c(
     "dbeta","dunif","dtriangle","dhalfnorm","dhalfcauchy","dlnorm"
   )
@@ -1973,7 +2783,7 @@ run_structure_and_hmc_test <- function(build_fn,
   cat(sprintf("- # stochastic nodes   : %d\n", n_stoch))
   cat(sprintf("- # deterministic nodes: %d\n", n_det))
 
-  # ---- Non-diff function detection ----
+  # ---- Non-diff function detection (IMPROVED: precise + report-ready) ----
   .sop_detect_nondiff_functions <- function(model,
                                             nondiff_candidates = c(
                                               "round","floor","ceiling","trunc",
@@ -1983,40 +2793,112 @@ run_structure_and_hmc_test <- function(build_fn,
                                             include_data = FALSE,
                                             fast_scan = FALSE,
                                             max_print_nodes = 5000L) {
-    out <- character(0)
-    code_txt <- ""
 
+    # 1) code "present in code" (override preferred)
+    code_txt_full <- ""
     if (is.character(code_text_override) && length(code_text_override)) {
-      code_txt <- paste(code_text_override, collapse = "\n")
+      code_txt_full <- paste(code_text_override, collapse = "\n")
     } else {
       code_try <- try({
-        code_txt <- paste(deparse(model$modelDef$code, width.cutoff = 500), collapse = "\n")
+        code_txt_full <- paste(deparse(model$modelDef$code, width.cutoff = 500), collapse = "\n")
       }, silent = TRUE)
 
-      if (inherits(code_try, "try-error") || is.null(code_txt) || !nzchar(code_txt)) {
+      if (inherits(code_try, "try-error") || is.null(code_txt_full) || !nzchar(code_txt_full)) {
         n_all <- length(try(model$getNodeNames(includeData = include_data), silent = TRUE))
         if (!fast_scan && is.finite(n_all) && n_all <= max_print_nodes) {
-          code_txt <- tryCatch(
+          code_txt_full <- tryCatch(
             paste(utils::capture.output(print(model)), collapse = "\n"),
             error = function(e) ""
           )
         } else {
-          code_txt <- ""
+          code_txt_full <- ""
         }
       }
     }
 
-    if (nzchar(code_txt)) {
-      pat <- paste0("\\b(", paste(nondiff_candidates, collapse="|"), ")\\s*\\(")
-      hit <- gregexpr(pat, code_txt, perl = TRUE, ignore.case = TRUE)
-      if (length(hit) && hit[[1]][1] != -1) {
-        out <- nondiff_candidates
+    # 2) code "active graph given constants" (best-effort: modelDef/print(model))
+    code_txt_active <- ""
+    code_act_try <- try({
+      code_txt_active <- paste(deparse(model$modelDef$code, width.cutoff = 500), collapse = "\n")
+    }, silent = TRUE)
+    if (inherits(code_act_try, "try-error") || is.null(code_txt_active) || !nzchar(code_txt_active)) {
+      # print(model) is also "active" but sometimes heavy
+      n_all2 <- length(try(model$getNodeNames(includeData = include_data), silent = TRUE))
+      if (!fast_scan && is.finite(n_all2) && n_all2 <= max_print_nodes) {
+        code_txt_active <- tryCatch(
+          paste(utils::capture.output(print(model)), collapse = "\n"),
+          error = function(e) ""
+        )
+      } else {
+        code_txt_active <- ""
       }
     }
 
+    # Helper: extract hits precisely (not "all candidates if any")
+    extract_hits <- function(txt, funs) {
+      if (!nzchar(txt)) return(character(0))
+      pat <- paste0("\\b(", paste(funs, collapse="|"), ")\\s*\\(")
+      m <- gregexpr(pat, txt, perl = TRUE, ignore.case = TRUE)
+      if (!length(m) || m[[1]][1] == -1) return(character(0))
+      raw <- regmatches(txt, m)[[1]]
+      # raw like "round(" -> normalize to function name
+      found <- tolower(sub("\\s*\\($", "", raw))
+      # keep only allowed names (case-insensitive mapping)
+      found <- intersect(found, tolower(funs))
+      found
+    }
+
+    hits_full   <- extract_hits(code_txt_full,   nondiff_candidates)
+    hits_active <- extract_hits(code_txt_active, nondiff_candidates)
+
+    # Occurrence counts
+    count_occ <- function(txt, fun) {
+      if (!nzchar(txt)) return(0L)
+      pat <- paste0("\\b", fun, "\\s*\\(")
+      mm  <- gregexpr(pat, txt, perl = TRUE, ignore.case = TRUE)[[1]]
+      if (length(mm) && mm[1] != -1) length(mm) else 0L
+    }
+
+    # Examples (1–3 lines)
+    get_examples <- function(txt, fun, k = 3L) {
+      if (!nzchar(txt)) return(character(0))
+      lines <- strsplit(txt, "\n", fixed = TRUE)[[1]]
+      idx <- grep(paste0("\\b", fun, "\\s*\\("), lines, perl = TRUE, ignore.case = TRUE)
+      if (!length(idx)) return(character(0))
+      ex <- trimws(lines[idx])
+      ex <- ex[nzchar(ex)]
+      utils::head(ex, k)
+    }
+
+    # Structured summary table per function (present/count/examples)
+    funs_all <- sort(unique(tolower(nondiff_candidates)))
+    df <- data.frame(
+      fun = funs_all,
+      n_present_in_code  = vapply(funs_all, function(f) count_occ(code_txt_full, f),   integer(1)),
+      n_present_in_active = vapply(funs_all, function(f) count_occ(code_txt_active, f), integer(1)),
+      stringsAsFactors = FALSE
+    )
+    df$present_in_code <- df$n_present_in_code > 0L
+    df$present_in_active_graph_given_constants <- df$n_present_in_active > 0L
+    # conservative: unknown constants -> if present in code at all
+    df$present_in_active_graph_unknown_constants <- df$present_in_code
+
+    df$examples_in_code <- vapply(funs_all, function(f) {
+      ex <- get_examples(code_txt_full, f, k = 3L)
+      paste(ex, collapse = " | ")
+    }, character(1))
+
+    df$examples_in_active <- vapply(funs_all, function(f) {
+      ex <- get_examples(code_txt_active, f, k = 3L)
+      paste(ex, collapse = " | ")
+    }, character(1))
+
     list(
-      hits     = intersect(tolower(out), tolower(nondiff_candidates)),
-      code_txt = code_txt
+      hits_full        = sort(unique(hits_full)),
+      hits_active      = sort(unique(hits_active)),
+      code_txt_full    = code_txt_full,
+      code_txt_active  = code_txt_active,
+      per_fun          = df
     )
   }
 
@@ -2027,8 +2909,11 @@ run_structure_and_hmc_test <- function(build_fn,
     fast_scan = fast_scan,
     max_print_nodes = max_print_nodes
   )
-  nondiff_hits     <- nd$hits
-  code_txt_scanned <- nd$code_txt
+
+  nondiff_hits_full   <- nd$hits_full
+  nondiff_hits_active <- nd$hits_active
+  code_txt_scanned    <- nd$code_txt_full   # keep your existing variable name (full scan)
+  code_txt_active     <- nd$code_txt_active
 
   # ---- BUGS-style truncation "T(a,b)" via text scan ----
   truncation_detected_bugst <- nzchar(code_txt_scanned) &&
@@ -2162,11 +3047,126 @@ run_structure_and_hmc_test <- function(build_fn,
     }
   }
 
+  # ---- NONDIFF REPORT (A/B/C) ------------------------------------------
+  # severity: "fatal only if depends on latent" else benign
+  # heuristic for "depends on latent": the function appears in code and the
+  # variables involved have downstream stochastic non-data deps.
+  .sop_build_nondiff_report <- function(nodes_df, nd_obj, model) {
+    # Extract vars from example lines (very conservative tokenization)
+    extract_vars_from_examples <- function(ex_txt) {
+      if (!nzchar(ex_txt)) return(character(0))
+      # capture A or A[i,j] like tokens
+      toks <- unlist(regmatches(
+        ex_txt,
+        gregexpr("\\b[A-Za-z_][A-Za-z0-9_]*(\\[[^\\]]+\\])?", ex_txt, perl = TRUE)
+      ))
+      if (!length(toks)) return(character(0))
+      unique(sub("\\[.*\\]$", "", toks))
+    }
+
+    per <- nd_obj$per_fun
+    per <- per[per$present_in_code | per$present_in_active_graph_given_constants, , drop = FALSE]
+    if (!nrow(per)) {
+      return(list(
+        fatal_nondiff_detected = FALSE,
+        fatal_functions_detected = character(0),
+        fatal_occurrences = data.frame(),
+        present_in_code = character(0),
+        present_in_active_graph_given_constants = character(0),
+        present_in_active_graph_unknown_constants = character(0)
+      ))
+    }
+
+    latent_nodes <- nodes_df$node[nodes_df$is_stoch & !nodes_df$is_data]
+    latent_nodes <- unique(as.character(latent_nodes))
+
+    # For each fun, attempt to find if it can reach latent nodes
+    out_rows <- lapply(seq_len(nrow(per)), function(i) {
+      fun <- per$fun[i]
+
+      # choose best available examples (active > code)
+      exA <- per$examples_in_active[i]
+      exC <- per$examples_in_code[i]
+      ex_use <- if (nzchar(exA)) exA else exC
+
+      seed_vars <- intersect(extract_vars_from_examples(ex_use), unique(nodes_df$var))
+
+      # downstream latent deps from seed vars
+      affected_latents <- character(0)
+      if (length(seed_vars)) {
+        affected_latents <- unique(unlist(lapply(seed_vars, function(v) {
+          tryCatch(model$getDependencies(
+            target = v,
+            upstream = FALSE,
+            downstream = TRUE,
+            includeData = FALSE,
+            stochOnly = TRUE
+          ), error = function(e) character(0))
+        })))
+        affected_latents <- intersect(affected_latents, latent_nodes)
+      }
+
+      severity <- if (length(affected_latents)) "fatal only if depends on latent" else "benign"
+
+      # small examples: node names if found
+      node_examples <- paste(utils::head(affected_latents, 3L), collapse = ", ")
+
+      data.frame(
+        fun = fun,
+        n = as.integer(if (per$present_in_active_graph_given_constants[i]) per$n_present_in_active[i] else per$n_present_in_code[i]),
+        nodes_or_examples = if (nzchar(node_examples)) node_examples else utils::head(strsplit(ex_use, "\\|", fixed = FALSE)[[1]], 3L) |> paste(collapse=" | "),
+        context = if (per$present_in_active_graph_given_constants[i]) "active_graph_given_constants" else "present_in_code",
+        present_in_code = isTRUE(per$present_in_code[i]),
+        present_in_active_graph_given_constants = isTRUE(per$present_in_active_graph_given_constants[i]),
+        present_in_active_graph_unknown_constants = isTRUE(per$present_in_active_graph_unknown_constants[i]),
+        severity = severity,
+        stringsAsFactors = FALSE
+      )
+    })
+
+    occ <- do.call(rbind, out_rows)
+    rownames(occ) <- NULL
+
+    # fatal set = strict nondiff list intersection but only those that are present
+    strict_nondiff <- c("round","floor","ceiling","trunc","step","equals")
+    present_funs <- unique(occ$fun)
+    fatal_funs_present <- intersect(strict_nondiff, present_funs)
+
+    list(
+      # A) résumé
+      fatal_nondiff_detected = length(fatal_funs_present) > 0L,
+      fatal_functions_detected = sort(unique(fatal_funs_present)),
+      fatal_occurrences = occ[occ$fun %in% fatal_funs_present, , drop = FALSE],
+
+      # B) preuves minimales (occ contient n + nodes/examples + context + severity)
+
+      # C) présence vs chemin actif
+      present_in_code = sort(unique(occ$fun[occ$present_in_code])),
+      present_in_active_graph_given_constants = sort(unique(occ$fun[occ$present_in_active_graph_given_constants])),
+      present_in_active_graph_unknown_constants = sort(unique(occ$fun[occ$present_in_active_graph_unknown_constants]))
+    )
+  }
+
+  nondiff_report <- .sop_build_nondiff_report(nodes, nd, m)
+
   cat("\n[NON-DIFF INDICATORS]\n")
   cat(sprintf(
-    "- Non-diff functions detected: %s\n",
-    if (length(nondiff_hits)) paste(sort(unique(nondiff_hits)), collapse = ",") else "None"
+    "- Non-diff functions detected (present_in_code): %s\n",
+    if (length(nondiff_report$present_in_code)) paste(nondiff_report$present_in_code, collapse = ",") else "None"
   ))
+  cat(sprintf(
+    "- Non-diff functions detected (active_graph_given_constants): %s\n",
+    if (length(nondiff_report$present_in_active_graph_given_constants)) paste(nondiff_report$present_in_active_graph_given_constants, collapse = ",") else "None"
+  ))
+
+  if (isTRUE(nondiff_report$fatal_nondiff_detected)) {
+    cat(sprintf(
+      "- Fatal (strict) non-diff functions detected: %s\n",
+      paste(nondiff_report$fatal_functions_detected, collapse = ", ")
+    ))
+  } else {
+    cat("- Fatal (strict) non-diff functions detected: None\n")
+  }
 
   if (nzchar(code_txt_scanned)) {
     dists_in_code_raw <- unique(tolower(unlist(regmatches(
@@ -2201,10 +3201,12 @@ run_structure_and_hmc_test <- function(build_fn,
   ))
 
   # ---- Tagging non-diff-deterministic-op ----
+  # (kept as-is conceptually; only updated to use the improved scans)
+  nondiff_hits <- nondiff_report$present_in_code  # keep compatibility notionally
   if (length(nondiff_hits)) {
     nodes$hmc_showstopper_reason <- nodes$hmc_showstopper_reason %||% NA_character_
 
-    if (nzchar(code_txt_scanned) && any(nondiff_hits == "round")) {
+    if (nzchar(code_txt_scanned) && any(tolower(nondiff_hits) == "round")) {
       code_lines  <- strsplit(code_txt_scanned, "\n", fixed = TRUE)[[1]]
       round_lines <- grep("\\bround\\s*\\(", code_lines, value = TRUE, perl = TRUE)
 
@@ -2316,20 +3318,16 @@ run_structure_and_hmc_test <- function(build_fn,
   hmc_globally_ok <- all(is.na(hsk[!nodes$is_data]))
 
   ## --- STRICT NON-DIFF RULE (global veto for HMC/NUTS) ---
-  ## Any occurrence of these functions anywhere in the model code
-  ## will force HMC/NUTS to be considered structurally unsuitable.
   strict_nondiff <- c("round", "floor", "ceiling", "trunc", "step", "equals")
 
-  if (length(nondiff_hits)) {
-    bad_funs <- intersect(tolower(nondiff_hits), strict_nondiff)
+  if (isTRUE(nondiff_report$fatal_nondiff_detected)) {
+    bad_funs <- nondiff_report$fatal_functions_detected
     if (length(bad_funs) > 0L) {
       hmc_globally_ok <- FALSE
 
-      ## Optionally tag all latent nodes with a generic reason if none exists,
-      ## so the message in the smoke test has something explicit to report.
       if (all(is.na(nodes$hmc_showstopper_reason[latent_mask]))) {
         nodes$hmc_showstopper_reason[latent_mask] <- "global-nondiff-function"
-        ss <- summarise_showstoppers(nodes)  # refresh summary if needed later
+        ss <- summarise_showstoppers(nodes)
       }
 
       cat("\n[STRICT NON-DIFF RULE]\n")
@@ -2402,7 +3400,6 @@ run_structure_and_hmc_test <- function(build_fn,
             }
           }, error = function(e) {
             okH <- FALSE
-            # intentionally generic message (no localisation propagation)
             err_m <- "configureHMC failed (internal error: model/sampler configuration not supported; see ?nimbleHMC::configureHMC)."
           })
 
@@ -2458,13 +3455,18 @@ run_structure_and_hmc_test <- function(build_fn,
   invisible(list(
     diag = list(
       nodes = nodes,
+
+      # ---- NEW: pro report (A/B/C) ----
+      nondiff_report = nondiff_report,
+
       nondiff_signals = list(
-        functions_found      = sort(unique(nondiff_hits)),
+        functions_found      = sort(unique(nondiff_report$present_in_code)),
         distributions_found  = sort(unique(dists_in_code)),
         truncation_bugst     = truncation_detected_bugst,
         bounded_latent_trunc = bounded_latent_trunc
       ),
       code_scan       = code_txt_scanned,
+      code_scan_active = code_txt_active,
       hmc_globally_ok = hmc_globally_ok
     ),
     hmc  = hmc_res
@@ -3244,32 +4246,32 @@ test_strategy <- function(build_fn,
 #'
 #' @export
 test_strategy_family       <- function(build_fn,
-                                        monitors            = NULL,   # optional, just passed through
-                                        try_hmc             = TRUE,   # only used for full-model path; surgical ignores
-                                        nchains             = 3L,
-                                        pilot_niter         = 10000L,
-                                        pilot_burnin        = 3000L,
-                                        thin                = 2L,
-                                        out_dir             = "outputs/diagnostics_family",
-                                        nbot                = 1L,
-                                        # strict sequences (user can override; order strictly enforced)
-                                        strict_scalar_seq   = c("NUTS","slice","RW"),
-                                        strict_block_seq    = c("NUTS_block","AF_slice","RW_block"),
-                                        # forcing
-                                        force_families      = NULL,   # e.g. c("logit_theta","N")
-                                        force_nodes         = NULL,   # e.g. list(logit_theta=c("logit_theta[1]",...))
-                                        force_union         = NULL,   # e.g. c("logit_theta","N")
-                                        # interaction
-                                        ask                 = TRUE,
-                                        ask_before_hmc      = TRUE,
-                                        # safety caps
-                                        block_max           = 20L,
-                                        # sampler controls
-                                        slice_control       = list(),
-                                        rw_control          = list(),
-                                        rwblock_control     = list(adaptScaleOnly = TRUE),
-                                        af_slice_control    = list(),
-                                        slice_max_contractions = 5000L) {
+                                       monitors            = NULL,   # optional, just passed through
+                                       try_hmc             = TRUE,   # only used for full-model path; surgical ignores
+                                       nchains             = 3L,
+                                       pilot_niter         = 10000L,
+                                       pilot_burnin        = 3000L,
+                                       thin                = 2L,
+                                       out_dir             = "outputs/diagnostics_family",
+                                       nbot                = 1L,
+                                       # strict sequences (user can override; order strictly enforced)
+                                       strict_scalar_seq   = c("NUTS","slice","RW"),
+                                       strict_block_seq    = c("NUTS_block","AF_slice","RW_block"),
+                                       # forcing
+                                       force_families      = NULL,   # e.g. c("logit_theta","N")
+                                       force_nodes         = NULL,   # e.g. list(logit_theta=c("logit_theta[1]",...))
+                                       force_union         = NULL,   # e.g. c("logit_theta","N")
+                                       # interaction
+                                       ask                 = TRUE,
+                                       ask_before_hmc      = TRUE,
+                                       # safety caps
+                                       block_max           = 20L,
+                                       # sampler controls
+                                       slice_control       = list(),
+                                       rw_control          = list(),
+                                       rwblock_control     = list(adaptScaleOnly = TRUE),
+                                       af_slice_control    = list(),
+                                       slice_max_contractions = 5000L) {
 
   `%||%` <- function(x, y) if (is.null(x)) y else x
   stopifnot(nbot >= 1L)
@@ -3537,7 +4539,9 @@ test_strategy_family       <- function(build_fn,
       stats::median(base_dx$ESS_per_sec,   na.rm = TRUE))
 
   # ---------- 1) Full-model HMC (optional, same spirit as test_strategy) ----------
-  dg_struct <- try(diagnose_model_structure(mdl), silent = TRUE)
+  ## IMPORTANT: disable diagnose_model_structure() here to avoid profiling/diagnose side-effects.
+  dg_struct <- NULL
+
   suppressWarnings(has_hmc <- requireNamespace("nimbleHMC", quietly = TRUE))
   deriv_ok <- .sop_supports_derivs(mdl)
   blockers <- character(0)
@@ -3893,6 +4897,489 @@ test_strategy_family       <- function(build_fn,
     steps    = steps
   ))
 }
+#' Run a fully customizable NIMBLE MCMC configuration in parallel (baseline / onlySlice / overrides)
+#'
+#' General-purpose parallel backend to run multiple independent NIMBLE MCMC chains while
+#' programmatically controlling the sampler configuration:
+#' a global "base policy" (e.g. baseline samplers or \code{onlySlice=TRUE}) plus optional
+#' targeted overrides on specific nodes or node families (e.g. force \code{NUTS} on \code{beta},
+#' set \code{RW_block} on \code{logq[1:5]}, etc.). This is designed for robust, model-agnostic
+#' experimentation in diagnostic-driven workflows.
+#'
+#' Key features:
+#' \itemize{
+#'   \item \strong{Base policy}:
+#'     \describe{
+#'       \item{\code{"baseline"}}{Use \code{conf} returned by \code{build_fn} (e.g. default RW/dirichlet/posterior_predictive).}
+#'       \item{\code{"onlySlice"}}{Rebuild MCMC configuration with \code{nimble::configureMCMC(..., onlySlice=TRUE)}.}
+#'       \item{\code{"none"}}{Start from a configuration with all samplers removed, then add only what is requested via overrides (advanced).}
+#'     }
+#'   \item \strong{Targeted overrides}:
+#'     \describe{
+#'       \item{\code{override_nodes}}{List of rules applied to explicit node targets.}
+#'       \item{\code{override_families}}{List of rules applied to all stochastic nodes sharing the same root (family).}
+#'     }
+#'     Rules are lists with at least \code{type} and \code{target} (for nodes) or \code{family} (for families),
+#'     and optional \code{control}. Supported sampler \code{type} values include \code{"slice"}, \code{"RW"},
+#'     \code{"RW_block"}, \code{"AF_slice"}, \code{"NUTS"}, \code{"NUTS_block"} (the latter require \pkg{nimbleHMC}).
+#'   \item \strong{Unsampled-node safety}: if \code{ensure_unsampled=TRUE}, any remaining unsampled stochastic nodes
+#'     receive a \code{slice} sampler to avoid invalid configurations.
+#'   \item \strong{Parallel backends}: \code{"PSOCK"} (portable) or \code{"FORK"} (Unix); \code{"AUTO"} selects
+#'     \code{"FORK"} on Unix and \code{"PSOCK"} otherwise.
+#'   \item \strong{GEREM-style stability option}: \code{mcmc_project} controls whether the compiled MCMC is built
+#'     against the compiled model (\code{"cmodel"}) or the uncompiled \code{nimbleModel} (\code{"model"}). Some
+#'     legacy scripts and certain models may be more stable with \code{mcmc_project="model"}.
+#' }
+#'
+#' Requirements / contract:
+#' \itemize{
+#'   \item \code{build_fn} must return a list containing at least \code{$model} (a \code{nimbleModel} object).
+#'   \item For \code{base_policy="baseline"}, \code{build_fn} must also provide \code{$conf} (a \code{MCMCconf}).
+#'   \item If \code{$cmodel} is not returned, it is compiled internally (per chain).
+#'   \item For true parallel execution, \code{build_fn} should accept \code{chain_id} (and optionally \code{export_global})
+#'     so each worker can build an independent chain with distinct initial values.
+#' }
+#'
+#' Returned object:
+#' \itemize{
+#'   \item \code{samples}: an \code{mcmc.list} when possible (otherwise a list of per-chain samples)
+#'   \item \code{runtime_s}: the maximum wall time across chains for the \code{runMCMC} phase
+#'   \item \code{conf}: \code{NULL} in parallel mode (unambiguous); a single \code{conf} object in sequential mode
+#'   \item \code{conf_by_chain}: list of per-chain \code{MCMCconf} objects (also stored as an attribute)
+#' }
+#'
+#' @param build_fn Function that builds one chain. Preferably supports
+#'   \code{build_fn(chain_id = 1L, export_global = FALSE)} and returns at least \code{model},
+#'   and optionally \code{cmodel} and \code{conf}.
+#' @param niter Integer; total number of MCMC iterations.
+#' @param nburnin Integer; burn-in iterations to discard.
+#' @param thin Integer; thinning interval (keep 1 draw every \code{thin} iterations).
+#' @param monitors Character vector of monitor roots; passed to configuration (or added when possible).
+#' @param nchains Integer; number of independent chains.
+#' @param seed Integer; base RNG seed; chain \code{i} uses \code{seed + i - 1}.
+#' @param n_cores Integer; number of workers (default = \code{nchains}).
+#' @param extra_export Character vector of additional global object names to export to PSOCK workers.
+#' @param parallel_backend One of \code{"PSOCK"}, \code{"FORK"}, or \code{"AUTO"}.
+#' @param worker_log Logical; if TRUE (PSOCK), writes worker output to a temporary log and appends tail on errors.
+#'
+#' @param base_policy One of \code{"baseline"}, \code{"onlySlice"}, \code{"none"}.
+#' @param useConjugacy Logical; forwarded to \code{nimble::configureMCMC} when building a fresh config.
+#' @param override_nodes Optional list of override rules for explicit targets. Each element is a list with fields:
+#'   \code{target} (character vector of node names), \code{type} (sampler type), optional \code{control} (list).
+#' @param override_families Optional list of override rules for families. Each element is a list with fields:
+#'   \code{family} (root name), \code{type}, optional \code{control}.
+#' @param family_roots Optional named list mapping family root -> explicit node vector, used to override default family expansion.
+#' @param ensure_unsampled Logical; if TRUE, add \code{slice} to any remaining unsampled nodes after applying overrides.
+#'
+#' @param allow_hmc Logical; if TRUE, enables \pkg{nimbleHMC} integration when overrides request \code{NUTS/HMC}.
+#' @param mcmc_project One of \code{"cmodel"} or \code{"model"}; controls the \code{project=} argument used when
+#'   compiling the MCMC. Use \code{"model"} to match some legacy patterns (e.g. GEREM historical scripts).
+#' @param buildDerivs Optional (reserved for future compatibility); currently ignored because the model is built in \code{build_fn}.
+#'
+#' @return A list with \code{samples}, \code{runtime_s}, \code{conf}, and \code{conf_by_chain}.
+#' @export
+run_custom_mcmc_parallel <- function(build_fn,
+                                     niter,
+                                     nburnin  = floor(0.25 * niter),
+                                     thin     = 1L,
+                                     monitors = NULL,
+                                     nchains  = 1L,
+                                     seed     = 1L,
+                                     n_cores  = nchains,
+                                     extra_export = character(0),
+                                     parallel_backend = c("PSOCK", "FORK", "AUTO"),
+                                     worker_log = TRUE,
+                                     ## ---- customisation ----
+                                     base_policy = c("baseline", "onlySlice", "none"),
+                                     useConjugacy = FALSE,
+                                     override_nodes = NULL,
+                                     override_families = NULL,
+                                     family_roots = NULL,          # optional explicit family->nodes map
+                                     ensure_unsampled = TRUE,
+                                     ## ---- HMC availability ----
+                                     allow_hmc = TRUE,
+                                     ## ---- NEW: compilation project choice for MCMC ----
+                                     mcmc_project = c("cmodel", "model"),
+                                     ## ---- optional: pass buildDerivs preference (only used when base_policy=onlySlice) ----
+                                     buildDerivs = NULL) {
+
+  stopifnot(is.function(build_fn))
+  niter    <- as.integer(niter)
+  nburnin  <- as.integer(nburnin)
+  thin     <- as.integer(thin)
+  nchains  <- as.integer(nchains)
+  n_cores  <- as.integer(n_cores)
+  seed     <- as.integer(seed)
+
+  stopifnot(niter >= 1L, nburnin >= 0L, thin >= 1L, nchains >= 1L, n_cores >= 1L)
+
+  base_policy   <- match.arg(base_policy)
+  backend       <- match.arg(parallel_backend)
+  mcmc_project  <- match.arg(mcmc_project)
+
+  if (backend == "AUTO") backend <- if (.Platform$OS.type == "unix") "FORK" else "PSOCK"
+
+  supports_chain_id <- ("chain_id" %in% names(formals(build_fn)))
+  has_nimbleHMC <- isTRUE(allow_hmc) && requireNamespace("nimbleHMC", quietly = TRUE)
+
+  root_of <- function(x) sub("\\[.*", "", x)
+
+  .build_one <- function(chain_id) {
+    if (supports_chain_id) {
+      built <- build_fn(chain_id = chain_id, export_global = FALSE)
+    } else {
+      built <- build_fn()
+    }
+    if (!is.list(built) || is.null(built$model)) stop("build_fn must return at least $model.")
+    built
+  }
+
+  .safe_set_monitors <- function(conf, monitors) {
+    if (is.null(monitors) || !length(monitors)) return(invisible(NULL))
+    try(conf$setMonitors(monitors), silent = TRUE)
+    try({
+      old <- conf$getMonitors()
+      if (length(old)) conf$removeMonitors(old)
+      conf$addMonitors(monitors)
+    }, silent = TRUE)
+    invisible(NULL)
+  }
+
+  .remove_all_samplers <- function(conf) {
+    tg <- try(conf$getSamplerTargets(), silent = TRUE)
+    if (!inherits(tg, "try-error") && length(tg)) {
+      tgnodes <- unique(unlist(tg, use.names = FALSE))
+      if (length(tgnodes)) try(conf$removeSamplers(tgnodes), silent = TRUE)
+    }
+    smp <- try(conf$getSamplers(), silent = TRUE)
+    if (!inherits(smp, "try-error") && length(smp)) {
+      if (is.list(smp) && !is.data.frame(smp)) {
+        nm <- vapply(smp, function(x) {
+          if (!is.null(x$name)) return(as.character(x$name))
+          if (!is.null(x[["name"]])) return(as.character(x[["name"]]))
+          NA_character_
+        }, character(1))
+        nm <- nm[!is.na(nm)]
+        for (s in nm) try(conf$removeSampler(s), silent = TRUE)
+      } else if (is.data.frame(smp) && "name" %in% names(smp)) {
+        for (s in as.character(smp$name)) try(conf$removeSampler(s), silent = TRUE)
+      }
+    }
+    invisible(NULL)
+  }
+
+  .apply_one_sampler <- function(conf, target, type, control = NULL) {
+    try(conf$removeSamplers(target), silent = TRUE)
+
+    if (identical(type, "NUTS") || identical(type, "HMC")) {
+      if (!has_nimbleHMC) stop("nimbleHMC not available but NUTS/HMC requested.")
+      conf$addSampler(target = target, type = "NUTS", control = control)
+      return(invisible(NULL))
+    }
+
+    if (identical(type, "NUTS_block")) {
+      if (!has_nimbleHMC) stop("nimbleHMC not available but NUTS_block requested.")
+      conf$addSampler(target = target, type = "NUTS", control = control)
+      return(invisible(NULL))
+    }
+
+    if (identical(type, "RW_block")) {
+      conf$addSampler(target = target, type = "RW_block", control = control)
+      return(invisible(NULL))
+    }
+
+    if (identical(type, "AF_slice")) {
+      conf$addSampler(target = target, type = "AF_slice", control = control)
+      return(invisible(NULL))
+    }
+
+    if (identical(type, "RW")) {
+      conf$addSampler(target = target, type = "RW", control = control)
+      return(invisible(NULL))
+    }
+
+    conf$addSampler(target = target, type = "slice", control = control)
+    invisible(NULL)
+  }
+
+  .expand_family_targets <- function(model, fam) {
+    if (!is.null(family_roots) && is.list(family_roots) && !is.null(family_roots[[fam]])) {
+      return(unique(family_roots[[fam]]))
+    }
+    st <- model$getNodeNames(stochOnly = TRUE, includeData = FALSE)
+    st[root_of(st) == fam]
+  }
+
+  .ensure_unsampled <- function(conf) {
+    uns <- try(conf$getUnsampledNodes(), silent = TRUE)
+    if (!inherits(uns, "try-error") && length(uns)) {
+      for (u in uns) try(conf$addSampler(u, type = "slice"), silent = TRUE)
+    }
+    invisible(NULL)
+  }
+
+  .configure_base <- function(built) {
+    m <- built$model
+
+    if (identical(base_policy, "baseline")) {
+      if (is.null(built$conf)) stop("base_policy='baseline' requires build_fn to return $conf.")
+      conf <- built$conf
+      .safe_set_monitors(conf, monitors)
+      return(conf)
+    }
+
+    if (identical(base_policy, "onlySlice")) {
+      # note: buildDerivs here only impacts model building; the model is already built by build_fn.
+      # We keep it as an API knob (harmless) but do not rebuild model here.
+      conf <- nimble::configureMCMC(
+        m,
+        monitors     = monitors,
+        useConjugacy = isTRUE(useConjugacy),
+        onlySlice    = TRUE
+      )
+      return(conf)
+    }
+
+    conf <- nimble::configureMCMC(
+      m,
+      monitors     = monitors,
+      useConjugacy = isTRUE(useConjugacy)
+    )
+    .remove_all_samplers(conf)
+    conf
+  }
+
+  .apply_overrides <- function(conf, built) {
+    m <- built$model
+
+    requested_hmc <- FALSE
+    if (is.list(override_nodes)) {
+      for (rr in override_nodes) {
+        if (is.list(rr) && !is.null(rr$type) && rr$type %in% c("NUTS","HMC","NUTS_block")) requested_hmc <- TRUE
+      }
+    }
+    if (is.list(override_families)) {
+      for (rr in override_families) {
+        if (is.list(rr) && !is.null(rr$type) && rr$type %in% c("NUTS","HMC","NUTS_block")) requested_hmc <- TRUE
+      }
+    }
+
+    if (requested_hmc) {
+      if (!has_nimbleHMC) stop("Overrides request NUTS/HMC but nimbleHMC is not available.")
+      nimbleHMC::configureHMC(conf, model = m)
+    }
+
+    if (is.list(override_families)) {
+      for (rule in override_families) {
+        if (!is.list(rule) || is.null(rule$family) || is.null(rule$type)) next
+        fam  <- as.character(rule$family)
+        type <- as.character(rule$type)
+        ctrl <- rule$control
+        tg <- .expand_family_targets(m, fam)
+        if (!length(tg)) next
+
+        if (type %in% c("RW_block","AF_slice","NUTS_block")) {
+          .apply_one_sampler(conf, target = tg, type = type, control = ctrl)
+        } else {
+          for (t in tg) .apply_one_sampler(conf, target = t, type = type, control = ctrl)
+        }
+      }
+    }
+
+    if (is.list(override_nodes)) {
+      for (rule in override_nodes) {
+        if (!is.list(rule) || is.null(rule$target) || is.null(rule$type)) next
+        type <- as.character(rule$type)
+        ctrl <- rule$control
+        tg   <- rule$target
+
+        if (is.character(tg) && length(tg) > 1L && type %in% c("RW_block","AF_slice","NUTS_block")) {
+          .apply_one_sampler(conf, target = tg, type = type, control = ctrl)
+        } else if (is.character(tg) && length(tg) >= 1L) {
+          for (t in tg) .apply_one_sampler(conf, target = t, type = type, control = ctrl)
+        }
+      }
+    }
+
+    if (isTRUE(ensure_unsampled)) .ensure_unsampled(conf)
+    conf
+  }
+
+  .compile_and_run_one <- function(chain_id) {
+    chain_id <- as.integer(chain_id)
+    set.seed(seed + chain_id - 1L)
+
+    built <- .build_one(chain_id)
+    m     <- built$model
+
+    conf <- .configure_base(built)
+    conf <- .apply_overrides(conf, built)
+
+    # compile model if not provided
+    Cm <- if (!is.null(built$cmodel)) {
+      built$cmodel
+    } else {
+      nimble::compileNimble(m, showCompilerOutput = FALSE)
+    }
+
+    mcmc  <- nimble::buildMCMC(conf)
+
+    # ---- NEW: choose compilation project for the MCMC ----
+    # Some models (e.g. GEREM historical scripts) may be more stable with:
+    #   compileNimble(mcmc, project = modelR)
+    # rather than project = compiled model.
+    project_obj <- if (identical(mcmc_project, "model")) m else Cm
+
+    Cmc <- nimble::compileNimble(mcmc, project = project_obj, resetFunctions = TRUE)
+
+    t0 <- proc.time()
+    smp <- nimble::runMCMC(
+      Cmc,
+      niter             = niter,
+      nburnin           = nburnin,
+      thin              = thin,
+      setSeed           = seed + chain_id - 1L,
+      nchains           = 1L,
+      samplesAsCodaMCMC = TRUE,
+      summary           = FALSE,
+      WAIC              = FALSE
+    )
+    rt <- as.numeric((proc.time() - t0)[["elapsed"]])
+
+    list(ok = TRUE, chain_id = chain_id, samples = smp, runtime_s = rt, conf = conf)
+  }
+
+  ## -------------------- sequential fallback --------------------
+  if (nchains == 1L || !supports_chain_id) {
+    out <- tryCatch(.compile_and_run_one(1L),
+                    error = function(e) list(ok = FALSE, chain_id = 1L, message = conditionMessage(e)))
+    if (isFALSE(out$ok)) stop(out$message)
+    return(list(samples = out$samples, runtime_s = out$runtime_s, conf = out$conf))
+  }
+
+  ## -------------------- parallel: FORK --------------------
+  if (backend == "FORK") {
+    if (.Platform$OS.type != "unix") stop("FORK backend is only available on Unix-alikes.")
+    if (!requireNamespace("parallel", quietly = TRUE)) stop("parallel required")
+
+    ans <- parallel::mclapply(
+      X = seq_len(nchains),
+      FUN = function(ch) tryCatch(.compile_and_run_one(ch),
+                                  error = function(e) list(ok = FALSE, chain_id = as.integer(ch), message = conditionMessage(e))),
+      mc.cores       = n_cores,
+      mc.preschedule = FALSE
+    )
+
+    if (any(vapply(ans, is.null, logical(1)))) stop("FORK hard-crash detected (NULL worker result).")
+
+    errs <- Filter(function(x) is.list(x) && isFALSE(x$ok), ans)
+    if (length(errs)) {
+      msg <- paste(vapply(errs, function(x) sprintf("Chain %d: %s", x$chain_id, x$message), character(1)),
+                   collapse = "\n")
+      stop("FORK worker error(s):\n", msg)
+    }
+
+    samples_by_chain <- lapply(ans, `[[`, "samples")
+    runtimes         <- vapply(ans, `[[`, numeric(1), "runtime_s")
+    conf_by_chain    <- lapply(ans, `[[`, "conf")
+
+    samples_out <- try(coda::mcmc.list(samples_by_chain), silent = TRUE)
+    if (inherits(samples_out, "try-error")) samples_out <- samples_by_chain
+
+    res <- list(samples = samples_out, runtime_s = max(runtimes), conf = NULL)
+    attr(res, "conf_by_chain") <- conf_by_chain
+    res$conf_by_chain <- conf_by_chain
+    return(res)
+  }
+
+  ## -------------------- parallel: PSOCK --------------------
+  if (!requireNamespace("parallel", quietly = TRUE)) stop("parallel required")
+
+  log_file <- NULL
+  if (isTRUE(worker_log)) log_file <- tempfile(pattern = "psock_custom_mcmc_", fileext = ".log")
+
+  cl <- parallel::makeCluster(n_cores, type = "PSOCK",
+                              outfile = if (isTRUE(worker_log)) log_file else NULL)
+  on.exit(try(parallel::stopCluster(cl), silent = TRUE), add = TRUE)
+
+  parallel::clusterEvalQ(cl, {
+    suppressPackageStartupMessages(library(nimble))
+    suppressPackageStartupMessages(library(coda))
+    if (requireNamespace("nimbleHMC", quietly = TRUE)) suppressPackageStartupMessages(library(nimbleHMC))
+    options(warn = 1)
+    NULL
+  })
+
+  export_env <- environment()
+
+  parallel::clusterExport(
+    cl,
+    varlist = unique(c(
+      "build_fn", "niter", "nburnin", "thin", "monitors",
+      "nchains", "seed", "supports_chain_id",
+      "base_policy", "useConjugacy",
+      "override_nodes", "override_families", "family_roots",
+      "ensure_unsampled", "allow_hmc", "has_nimbleHMC",
+      "mcmc_project",
+      "root_of",
+      ".build_one", ".safe_set_monitors", ".remove_all_samplers",
+      ".apply_one_sampler", ".expand_family_targets",
+      ".ensure_unsampled", ".configure_base", ".apply_overrides",
+      ".compile_and_run_one",
+      extra_export
+    )),
+    envir = export_env
+  )
+
+  parallel::clusterSetRNGStream(cl, iseed = seed)
+
+  ok <- TRUE
+  err_msg <- NULL
+  ans <- tryCatch(
+    parallel::parLapply(cl, X = seq_len(nchains), fun = function(ch) {
+      tryCatch(.compile_and_run_one(ch),
+               error = function(e) list(ok = FALSE, chain_id = as.integer(ch), message = conditionMessage(e)))
+    }),
+    error = function(e) {
+      ok <<- FALSE
+      err_msg <<- conditionMessage(e)
+      NULL
+    }
+  )
+
+  if (!ok || is.null(ans)) {
+    if (isTRUE(worker_log) && !is.null(log_file) && file.exists(log_file)) {
+      ll <- readLines(log_file, warn = FALSE)
+      stop("PSOCK crashed (", err_msg, "). Worker log tail:\n\n",
+           paste(tail(ll, 200), collapse = "\n"))
+    }
+    stop("PSOCK crashed (", err_msg, ").")
+  }
+
+  errs <- Filter(function(x) is.list(x) && isFALSE(x$ok), ans)
+  if (length(errs)) {
+    msg <- paste(vapply(errs, function(x) sprintf("Chain %d: %s", x$chain_id, x$message), character(1)),
+                 collapse = "\n")
+    if (isTRUE(worker_log) && !is.null(log_file) && file.exists(log_file)) {
+      ll <- readLines(log_file, warn = FALSE)
+      stop("PSOCK worker error(s):\n", msg, "\n\nWorker log tail:\n\n",
+           paste(tail(ll, 200), collapse = "\n"))
+    }
+    stop("PSOCK worker error(s):\n", msg)
+  }
+
+  samples_by_chain <- lapply(ans, `[[`, "samples")
+  runtimes         <- vapply(ans, `[[`, numeric(1), "runtime_s")
+  conf_by_chain    <- lapply(ans, `[[`, "conf")
+
+  samples_out <- try(coda::mcmc.list(samples_by_chain), silent = TRUE)
+  if (inherits(samples_out, "try-error")) samples_out <- samples_by_chain
+
+  res <- list(samples = samples_out, runtime_s = max(runtimes), conf = NULL)
+  attr(res, "conf_by_chain") <- conf_by_chain
+  res$conf_by_chain <- conf_by_chain
+  res
+}
 
 
 #' Unified MCMC diagnostics (vectorised when available)
@@ -3949,118 +5436,54 @@ test_strategy_family       <- function(build_fn,
        "Define 'compute_diag_from_mcmc_vect()' or 'compute_diag_from_mcmc()'.")
 }
 
-#' Scalable diagnostics from MCMC samples (classic layout, block-wise)
+#' Scalable diagnostics for large MCMC objects (classic layout, block-wise)
 #'
-#' Efficiently computes convergence and efficiency diagnostics from large
-#' \code{mcmc.list} objects using a block-wise, vectorized strategy, while
-#' preserving the classic output layout of \code{\link{compute_diag_from_mcmc}}.
-#' This is intended as a drop-in, scalable replacement for
-#' \code{compute_diag_from_mcmc} in very high-dimensional hierarchical models.
+#' Compute convergence and efficiency diagnostics from high-dimensional MCMC
+#' outputs (\code{mcmc.list}, \code{mcmc}, or numeric matrices) using a
+#' block-wise, vectorized backend while preserving the *classic* return layout
+#' of \code{\link{compute_diag_from_mcmc}}.
 #'
 #' @details
-#' The function is designed for models with tens of thousands of monitored
-#' parameters (e.g. large Bayesian stock assessment or life-cycle models such as
-#' WGNAS, GEREM, Scorff LCM), where standard \pkg{coda}-based loops become
-#' prohibitively slow or memory bound.
+#' This function targets models with tens of thousands of monitored parameters
+#' (e.g., large hierarchical stock-assessment or life-cycle models such as
+#' WGNAS, GEREM, and Scorff LCM), for which naive per-parameter loops can become
+#' slow or memory-bound.
 #'
-#' Internally, all chains are first truncated to the shortest common length
-#' and transformed into matrices with a common set of parameters. Diagnostics
-#' (ESS and \eqn{\hat{R}}) are then computed in column blocks to control memory
-#' use. The effective sample size used in the output,
-#' \code{ESS}, corresponds to a conservative "worst chain" ESS (minimum across
-#' chains), and the classic quantities are derived as:
-#'
+#' Chains are first harmonized by truncating to the shortest common length and
+#' aligning to a common set of parameter names. Diagnostics are then computed
+#' in column blocks to control memory usage. The \code{ESS} column in the output
+#' corresponds to a conservative *worst-chain* ESS (minimum across chains), and
+#' the classic efficiency metrics are derived as:
 #' \itemize{
 #'   \item \code{AE_ESS_per_it = ESS / n_iter},
 #'   \item \code{ESS_per_sec   = ESS / runtime_s},
 #'   \item \code{time_s_per_ESS = runtime_s / ESS}.
 #' }
 #'
-#' This ensures strict backward compatibility with consumers of
-#' \code{compute_diag_from_mcmc}, while benefiting from the scalable
-#' implementation of \code{compute_diag_from_mcmc_vect}.
+#' The goal is backward compatibility with downstream consumers of
+#' \code{compute_diag_from_mcmc} (plots, summaries, bottleneck detectors),
+#' while scaling to very large parameter vectors via a vectorized backend.
 #'
-#' @param samples An \code{mcmc.list}, \code{mcmc}, or numeric matrix of MCMC
-#'   samples. All chains must share (at least) one common parameter name.
-#' @param runtime_s Numeric scalar; total runtime in seconds for the MCMC
-#'   run(s) corresponding to \code{samples}. It is assumed to be the total wall
-#'   clock time for the full set of chains.
-#' @param compute_rhat Character, one of \code{"none"}, \code{"classic"},
-#'   \code{"split"}, or \code{"both"} to control the computation of
-#'   Gelman–Rubin diagnostics. In the classic layout, only a single
-#'   \code{Rhat} column is returned; when both variants are requested, a
-#'   priority rule is applied internally (e.g. split-\eqn{\hat{R}} preferred
-#'   when available).
-#' @param ess_for Character, one of \code{"both"}, \code{"worst"},
-#'   or \code{"total"}. The classic layout uses the "worst-chain" ESS for the
-#'   \code{ESS} and derived AE/CE columns; the total ESS is used internally
-#'   only when available.
-#' @param ignore_patterns Optional character vector of regular expressions used
-#'   to remove parameters by name before computing diagnostics
-#'   (e.g. \code{"^lifted_"}, \code{"^logProb_"}).
-#' @param cols_by Integer; number of columns per processing block. Larger values
-#'   reduce overhead but increase memory usage. Can be tuned automatically via
-#'   \code{target_block_ram_gb}.
-#' @param warn_mem_gb Numeric; approximate memory threshold (GiB) above which a
-#'   warning is issued based on the size of the chains.
-#' @param step_timeout_s Numeric; per-step time limit in seconds for each
-#'   diagnostic phase (ESS, total ESS, R-hat). Use \code{Inf} to disable.
-#' @param runtime_is_total Logical; if \code{FALSE}, \code{runtime_s} is assumed
-#'   to be a per-chain runtime and is multiplied by the number of chains before
-#'   computing \code{ESS_per_sec} and \code{time_s_per_ESS}.
-#' @param use_posterior Character; \code{"never"} or \code{"if_available"} to
-#'   optionally leverage the \pkg{posterior} package for faster and
-#'   rank-normalized ESS/\eqn{\hat{R}}. When unavailable, the function falls
-#'   back to \pkg{coda}-style computations.
-#' @param target_block_ram_gb Numeric; if non-\code{NA}, automatically derives
-#'   \code{cols_by} to target this approximate RAM usage (GiB) per processing
-#'   block, using a conservative safety factor.
-#' @param verbose Logical; if \code{TRUE}, print progress messages and basic
-#'   memory/blocking information.
+#' @param samples An \code{mcmc.list}, \code{mcmc}, or numeric matrix of samples.
+#'   Chains must share at least one common parameter name.
+#' @param runtime_s Numeric scalar; total runtime in seconds associated with the
+#'   MCMC run(s), assumed to be the wall-clock time for the full set of chains.
 #'
-#' @return
-#' A \code{data.frame} with one row per parameter and the following columns:
+#' @return A \code{data.frame} with one row per parameter and the classic columns
+#' expected by \code{\link{compute_diag_from_mcmc}}:
 #' \describe{
 #'   \item{target}{Parameter name (column name in the MCMC object).}
-#'   \item{ESS}{Effective sample size used for efficiency summaries
-#'              (worst-chain ESS).}
-#'   \item{AE_ESS_per_it}{Algorithmic efficiency, defined as
-#'                        \code{ESS / n_iter}.}
-#'   \item{ESS_per_sec}{Computational efficiency, defined as
-#'                      \code{ESS / runtime_s}.}
-#'   \item{time_s_per_ESS}{Seconds per effective sample, defined as
-#'                         \code{runtime_s / ESS}.}
-#'   \item{Rhat}{Gelman–Rubin convergence diagnostic, if requested via
-#'               \code{compute_rhat}; otherwise \code{NA}.}
-#'   \item{Family}{Top-level node family (string before the first \code{"["}
-#'                 in \code{target}).}
+#'   \item{ESS}{Effective sample size used for efficiency summaries (worst-chain ESS).}
+#'   \item{AE_ESS_per_it}{Algorithmic efficiency: \code{ESS / n_iter}.}
+#'   \item{ESS_per_sec}{Computational efficiency: \code{ESS / runtime_s}.}
+#'   \item{time_s_per_ESS}{Seconds per effective sample: \code{runtime_s / ESS}.}
+#'   \item{Family}{Top-level node family (substring of \code{target} before the first \code{"["}).}
 #' }
-#'
-#' @note
-#' This function is intended as a scalable, vectorized backend for
-#' \code{compute_diag_from_mcmc}, preserving its column layout so that existing
-#' downstream code (plots, summaries, bottleneck detectors) continues to work
-#' without modification, even for MCMC outputs with \eqn{\ge 90{,}000}
-#' parameters and up to \eqn{10} chains.
 #'
 #' @seealso
 #' \code{\link{compute_diag_from_mcmc}},
 #' \code{\link[coda]{effectiveSize}},
-#' \code{\link[posterior]{ess_bulk}},
-#' \code{\link[posterior]{rhat}},
-#' Vehtari et al. (2021), \emph{Bayesian Analysis} 16(2):667–718.
-#'
-#' @examples
-#' \dontrun{
-#' diag_alt <- compute_diag_from_mcmc_vect_alt(
-#'   samples             = my_mcmc,
-#'   runtime_s           = 5400,
-#'   compute_rhat        = "both",
-#'   ess_for             = "both",
-#'   target_block_ram_gb = 2
-#' )
-#' head(diag_alt)
-#' }
+#' Vehtari et al. (2021), \emph{Bayesian Analysis} 16(2):667--718.
 #'
 #' @export
 compute_diag_from_mcmc_alt <- function(samples, runtime_s) {

@@ -15,61 +15,66 @@ assess_performance_vect(
 )
 }
 \arguments{
-\item{samples}{A list of MCMC samples or any object that can be converted
-by \code{as_mcmc_list()}.}
+\item{samples}{MCMC samples: a \code{coda::mcmc.list}, \code{coda::mcmc}, a
+matrix/data.frame, or any object accepted by \code{as_mcmc_list()}.}
 
-\item{runtime_s}{Numeric scalar. Total runtime of the MCMC run (seconds).}
+\item{runtime_s}{Numeric scalar; total runtime (seconds) corresponding to
+the MCMC run(s) that produced \code{samples}. This is used to compute CE.}
 
-\item{rhat_thresh}{Numeric scalar. Threshold used to flag R-hat values
-indicating lack of convergence. Default is 1.01.}
+\item{rhat_thresh}{Numeric scalar; threshold used to flag lack of convergence
+based on \eqn{\hat{R}}. Default is 1.01.}
 
-\item{ess_type}{Character string specifying which ESS definition to use.
-Either \code{"bulk"} (default) or \code{"tail"}.}
+\item{ess_type}{Character; ESS definition to use. One of \code{"bulk"} or
+\code{"tail"} (default = \code{"bulk"}).}
 
-\item{drop_const}{Logical. Whether parameters with zero (or near-zero)
-variance across all chains should be excluded prior to computing
-diagnostics. Default is \code{TRUE}.}
+\item{drop_const}{Logical; if \code{TRUE}, drop parameters with zero or
+near-zero variance across all chains before computing diagnostics.}
 
-\item{tol_var}{Numeric scalar. Variance tolerance used to identify
-constant or near-constant parameters. Default is 0.}
+\item{tol_var}{Numeric scalar; variance tolerance used to identify near-constant
+parameters (default = 0).}
+
+\item{drop_na}{Logical; if \code{TRUE}, drop rows with missing diagnostics
+before computing summaries (default = \code{TRUE}).}
 }
 \value{
-A named list containing:
+A named list with:
 \describe{
-\item{\code{summary}}{A one-row tibble summarizing global diagnostics.}
-\item{\code{per_param}}{A tibble containing ESS, Rhat, AE, and CE
-for each parameter.}
-\item{\code{dropped_zero_var}}{A character vector listing parameters
-excluded due to zero or near-zero variance.}
+\item{\code{summary}}{A one-row tibble/data.frame summarising global
+diagnostics (e.g. median ESS, max \eqn{\hat{R}}, AE/CE summaries).}
+\item{\code{per_param}}{A tibble/data.frame with per-parameter ESS,
+\eqn{\hat{R}}, AE, and CE.}
+\item{\code{dropped_zero_var}}{Character vector of parameters removed due
+to zero or near-zero variance (when \code{drop_const=TRUE}).}
 }
 }
 \description{
-Compute per-parameter and global performance diagnostics from an MCMC sample
-set using vectorised implementations of convergence metrics.
-Metrics include Effective Sample Size (ESS), Gelman–Rubin R-hat,
-Algorithmic Efficiency (AE = ESS / total draws), and Computational
-Efficiency (CE = ESS / runtime in seconds).
+Compute per-parameter and global performance diagnostics from MCMC output
+using vectorised implementations of convergence and efficiency metrics.
+The main outputs are Effective Sample Size (ESS), Gelman--Rubin \eqn{\hat{R}},
+Algorithmic Efficiency (AE), and Computational Efficiency (CE).
 }
 \details{
-The function first coerces the input to an \code{mcmc.list} object and then
-converts it to a \pkg{posterior} draws object to compute diagnostics in a
-vectorised manner.
+The function first coerces \code{samples} to a \code{coda::mcmc.list}
+(via \code{as_mcmc_list()}), then converts it to a \pkg{posterior} draws
+object to compute diagnostics in a vectorised manner.
 
-The following metrics are computed:
+Computed metrics:
 \itemize{
 \item \strong{ESS}: Effective Sample Size per parameter, computed using
-\code{posterior::ess_bulk()} or \code{posterior::ess_tail()}.
-\item \strong{Rhat}: Gelman–Rubin convergence diagnostic computed via
+\code{posterior::ess_bulk()} (bulk ESS) or \code{posterior::ess_tail()}
+(tail ESS), controlled by \code{ess_type}.
+\item \strong{Rhat}: Gelman--Rubin convergence diagnostic computed with
 \code{posterior::rhat()} (requires at least two chains).
-\item \strong{AE}: Algorithmic efficiency, defined as ESS divided by
-the total number of retained post-burnin draws.
-\item \strong{CE}: Computational efficiency, defined as ESS divided by
-the total runtime in seconds.
+\item \strong{AE}: Algorithmic efficiency, defined as
+\code{ESS / n_draws}, where \code{n_draws} is the number of retained
+post-burn-in draws per chain (after thinning).
+\item \strong{CE}: Computational efficiency, defined as \code{ESS / runtime_s}.
 }
 
-Optionally, parameters with zero (or near-zero) variance across all chains
-can be excluded prior to diagnostic computation to avoid numerical failures
-in ESS estimation.
+To improve robustness in high-dimensional models, parameters with zero or
+near-zero variance across chains can be removed prior to computing ESS and
+\eqn{\hat{R}} (\code{drop_const = TRUE}). Optionally, rows with missing
+diagnostics can be removed from summaries (\code{drop_na = TRUE}).
 }
 \examples{
 \dontrun{
@@ -77,16 +82,16 @@ res <- run_baseline_config(build_M, niter = 2000, nburnin = 500, thin = 2)
 perf <- assess_performance_vect(
   res$samples,
   runtime_s = res$runtime_s,
-  ess_type = "bulk"
+  ess_type  = "bulk"
 )
 perf$summary
 }
 
 }
 \seealso{
-coda::effectiveSize,
-coda::gelman.diag,
-posterior::ess_bulk,
-posterior::ess_tail,
-posterior::rhat
+\code{\link[coda]{effectiveSize}},
+\code{\link[coda]{gelman.diag}},
+\code{\link[posterior]{ess_bulk}},
+\code{\link[posterior]{ess_tail}},
+\code{\link[posterior]{rhat}}
 }

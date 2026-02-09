@@ -2,7 +2,7 @@
 % Please edit documentation in R/plots.R
 \name{plot_strategies_from_test_result_hmc_fast}
 \alias{plot_strategies_from_test_result_hmc_fast}
-\title{Plot HMC-only strategy comparisons (fast path)}
+\title{Plot HMC-only strategy comparisons (robust fast path)}
 \usage{
 plot_strategies_from_test_result_hmc_fast(
   res,
@@ -10,26 +10,28 @@ plot_strategies_from_test_result_hmc_fast(
   per = c("target", "family"),
   top_k = 40,
   top_by = c("CE", "AE", "Rhat"),
-  show_rhat_label = TRUE
+  show_rhat_label = TRUE,
+  verbose = TRUE
 )
 }
 \arguments{
-\item{res}{Result object from \code{test_strategy_family_fast()} or
-\code{configure_hmc_safely()} in HMC-only mode.}
+\item{res}{Result list containing res$diag_tbl (from compute_diag_from_mcmc_vect()).}
 
 \item{out_dir}{Output directory for plots; created if needed.}
 
-\item{per}{Aggregation level: \code{"target"} or \code{"family"}.}
+\item{per}{Aggregation level: "target" or "family".}
 
-\item{top_k}{Integer; number of keys kept for plotting.}
+\item{top_k}{Number of items to plot.}
 
-\item{top_by}{Metric used to rank keys: \code{"CE"} or \code{"AE"}.}
+\item{top_by}{Ranking metric: "CE", "AE", or "Rhat".}
 
-\item{show_rhat_label}{Logical; if \code{TRUE}, show Rhat labels on bars.}
+\item{show_rhat_label}{If TRUE, prints Rhat text on bars (can be cluttered).}
+
+\item{verbose}{Print progress messages.}
 }
 \value{
-Invisibly, a list with aggregated data and ggplot objects.
+Invisibly, list(plot=..., data=..., file=...)
 }
 \description{
-Plot HMC-only strategy comparisons (fast path)
+Plot HMC-only strategy comparisons (robust fast path)
 }

@@ -164,54 +164,57 @@ assess_performance <- function(samples, runtime_s, rhat_thresh = 1.01) {
 
 #' Assess MCMC performance metrics (ESS, R-hat, AE, CE) using vectorised backends
 #'
-#' Compute per-parameter and global performance diagnostics from an MCMC sample
-#' set using vectorised implementations of convergence metrics.
-#' Metrics include Effective Sample Size (ESS), Gelman–Rubin R-hat,
-#' Algorithmic Efficiency (AE = ESS / total draws), and Computational
-#' Efficiency (CE = ESS / runtime in seconds).
+#' Compute per-parameter and global performance diagnostics from MCMC output
+#' using vectorised implementations of convergence and efficiency metrics.
+#' The main outputs are Effective Sample Size (ESS), Gelman--Rubin \eqn{\hat{R}},
+#' Algorithmic Efficiency (AE), and Computational Efficiency (CE).
 #'
 #' @details
-#' The function first coerces the input to an \code{mcmc.list} object and then
-#' converts it to a \pkg{posterior} draws object to compute diagnostics in a
-#' vectorised manner.
+#' The function first coerces \code{samples} to a \code{coda::mcmc.list}
+#' (via \code{as_mcmc_list()}), then converts it to a \pkg{posterior} draws
+#' object to compute diagnostics in a vectorised manner.
 #'
-#' The following metrics are computed:
+#' Computed metrics:
 #' \itemize{
 #'   \item \strong{ESS}: Effective Sample Size per parameter, computed using
-#'     \code{posterior::ess_bulk()} or \code{posterior::ess_tail()}.
-#'   \item \strong{Rhat}: Gelman–Rubin convergence diagnostic computed via
-#'     \code{posterior::rhat()} (requires at least two chains).
-#'   \item \strong{AE}: Algorithmic efficiency, defined as ESS divided by
-#'     the total number of retained post-burnin draws.
-#'   \item \strong{CE}: Computational efficiency, defined as ESS divided by
-#'     the total runtime in seconds.
+#'         \code{posterior::ess_bulk()} (bulk ESS) or \code{posterior::ess_tail()}
+#'         (tail ESS), controlled by \code{ess_type}.
+#'   \item \strong{Rhat}: Gelman--Rubin convergence diagnostic computed with
+#'         \code{posterior::rhat()} (requires at least two chains).
+#'   \item \strong{AE}: Algorithmic efficiency, defined as
+#'         \code{ESS / n_draws}, where \code{n_draws} is the number of retained
+#'         post-burn-in draws per chain (after thinning).
+#'   \item \strong{CE}: Computational efficiency, defined as \code{ESS / runtime_s}.
 #' }
 #'
-#' Optionally, parameters with zero (or near-zero) variance across all chains
-#' can be excluded prior to diagnostic computation to avoid numerical failures
-#' in ESS estimation.
+#' To improve robustness in high-dimensional models, parameters with zero or
+#' near-zero variance across chains can be removed prior to computing ESS and
+#' \eqn{\hat{R}} (\code{drop_const = TRUE}). Optionally, rows with missing
+#' diagnostics can be removed from summaries (\code{drop_na = TRUE}).
 #'
-#' @param samples A list of MCMC samples or any object that can be converted
-#'   by \code{as_mcmc_list()}.
-#' @param runtime_s Numeric scalar. Total runtime of the MCMC run (seconds).
-#' @param rhat_thresh Numeric scalar. Threshold used to flag R-hat values
-#'   indicating lack of convergence. Default is 1.01.
-#' @param ess_type Character string specifying which ESS definition to use.
-#'   Either \code{"bulk"} (default) or \code{"tail"}.
-#' @param drop_const Logical. Whether parameters with zero (or near-zero)
-#'   variance across all chains should be excluded prior to computing
-#'   diagnostics. Default is \code{TRUE}.
-#' @param tol_var Numeric scalar. Variance tolerance used to identify
-#'   constant or near-constant parameters. Default is 0.
+#' @param samples MCMC samples: a \code{coda::mcmc.list}, \code{coda::mcmc}, a
+#'   matrix/data.frame, or any object accepted by \code{as_mcmc_list()}.
+#' @param runtime_s Numeric scalar; total runtime (seconds) corresponding to
+#'   the MCMC run(s) that produced \code{samples}. This is used to compute CE.
+#' @param rhat_thresh Numeric scalar; threshold used to flag lack of convergence
+#'   based on \eqn{\hat{R}}. Default is 1.01.
+#' @param ess_type Character; ESS definition to use. One of \code{"bulk"} or
+#'   \code{"tail"} (default = \code{"bulk"}).
+#' @param drop_const Logical; if \code{TRUE}, drop parameters with zero or
+#'   near-zero variance across all chains before computing diagnostics.
+#' @param tol_var Numeric scalar; variance tolerance used to identify near-constant
+#'   parameters (default = 0).
+#' @param drop_na Logical; if \code{TRUE}, drop rows with missing diagnostics
+#'   before computing summaries (default = \code{TRUE}).
 #'
-#' @return
-#' A named list containing:
+#' @return A named list with:
 #' \describe{
-#'   \item{\code{summary}}{A one-row tibble summarizing global diagnostics.}
-#'   \item{\code{per_param}}{A tibble containing ESS, Rhat, AE, and CE
-#'     for each parameter.}
-#'   \item{\code{dropped_zero_var}}{A character vector listing parameters
-#'     excluded due to zero or near-zero variance.}
+#'   \item{\code{summary}}{A one-row tibble/data.frame summarising global
+#'     diagnostics (e.g. median ESS, max \eqn{\hat{R}}, AE/CE summaries).}
+#'   \item{\code{per_param}}{A tibble/data.frame with per-parameter ESS,
+#'     \eqn{\hat{R}}, AE, and CE.}
+#'   \item{\code{dropped_zero_var}}{Character vector of parameters removed due
+#'     to zero or near-zero variance (when \code{drop_const=TRUE}).}
 #' }
 #'
 #' @examples
@@ -220,17 +223,17 @@ assess_performance <- function(samples, runtime_s, rhat_thresh = 1.01) {
 #' perf <- assess_performance_vect(
 #'   res$samples,
 #'   runtime_s = res$runtime_s,
-#'   ess_type = "bulk"
+#'   ess_type  = "bulk"
 #' )
 #' perf$summary
 #' }
 #'
 #' @seealso
-#' coda::effectiveSize,
-#' coda::gelman.diag,
-#' posterior::ess_bulk,
-#' posterior::ess_tail,
-#' posterior::rhat
+#' \code{\link[coda]{effectiveSize}},
+#' \code{\link[coda]{gelman.diag}},
+#' \code{\link[posterior]{ess_bulk}},
+#' \code{\link[posterior]{ess_tail}},
+#' \code{\link[posterior]{rhat}}
 #'
 #' @export
 assess_performance_vect <- function(samples,
@@ -271,8 +274,8 @@ assess_performance_vect <- function(samples,
         keep <- setdiff(colnames(mat), dropped_na)
         ml[[i]] <- coda::mcmc(
           mat[, keep, drop = FALSE],
-          start = start(ml[[i]]),
-          thin  = thin(ml[[i]])
+          start = stats::start(ml[[i]]),
+          thin  = coda::thin(ml[[i]])
         )
       }
       class(ml) <- "mcmc.list"
@@ -299,8 +302,8 @@ assess_performance_vect <- function(samples,
         keep <- setdiff(colnames(mat), dropped_zero_var)
         ml[[i]] <- coda::mcmc(
           mat[, keep, drop = FALSE],
-          start = start(ml[[i]]),
-          thin  = thin(ml[[i]])
+          start = stats::start(ml[[i]]),
+          thin  = coda::thin(ml[[i]])
         )
       }
       class(ml) <- "mcmc.list"
@@ -699,25 +702,78 @@ identify_bottlenecks_family <- function(samples, runtime_s,
                                         auto_configure = TRUE,
                                         rhat_threshold = 1.01,
                                         ess_per_s_min = 0) {
+
   stopifnot(is.numeric(runtime_s), length(runtime_s) == 1L, is.finite(runtime_s))
 
-  # --- base metrics
-  ap <- assess_performance(samples, runtime_s, rhat_thresh = rhat_threshold)
-  pp <- as.data.frame(ap$per_param)
-
-  # --- helper: columns present in samples ---
-  .sample_cols <- function(smp) {
-    if (is.null(smp)) return(character(0))
-    x <- try(as.data.frame(smp[[1]]), silent = TRUE)
-    if (inherits(x, "try-error")) {
-      x <- try(as.data.frame(smp), silent = TRUE)
-      if (inherits(x, "try-error")) return(character(0))
+  ## ================================================================
+  ## Robustification: accept BOTH sequential and parallel outputs
+  ## - sequential: usually coda::mcmc.list already
+  ## - parallel baseline: often list of matrices / data.frames / mcmc
+  ## ================================================================
+  .as_mcmc <- function(x) {
+    if (inherits(x, "mcmc")) return(x)
+    if (is.data.frame(x)) x <- as.matrix(x)
+    if (is.matrix(x)) {
+      return(coda::mcmc(x))
     }
-    colnames(x)
+    # Some nimble returns list-like with $samples, handle lightly
+    if (is.list(x) && !inherits(x, "mcmc.list") && !is.null(x$samples)) {
+      return(.as_mcmc(x$samples))
+    }
+    stop("identify_bottlenecks_family: cannot coerce chain to coda::mcmc (class: ",
+         paste(class(x), collapse = "/"), ").")
   }
 
-  # --- helper: derive sampler-attached targets via getSamplers() ---
-  .derive_sampler_params_from_conf <- function(mcmc_conf, samples, ignore_patterns, model, auto_configure) {
+  .harmonize_mcmc_list <- function(smp) {
+    if (inherits(smp, "mcmc.list")) {
+      ml <- smp
+    } else if (inherits(smp, "mcmc")) {
+      ml <- coda::mcmc.list(smp)
+    } else if (is.list(smp)) {
+      # typical parallel baseline: list of matrices or mcmc
+      ml <- coda::mcmc.list(lapply(smp, .as_mcmc))
+    } else {
+      # single matrix/data.frame
+      ml <- coda::mcmc.list(.as_mcmc(smp))
+    }
+
+    # Ensure consistent parameter sets across chains (Rhat needs aligned columns)
+    cols_list <- lapply(ml, function(ch) colnames(as.matrix(ch)))
+    common <- Reduce(intersect, cols_list)
+    if (!length(common)) {
+      stop("identify_bottlenecks_family: no common parameters across chains (cannot compute Rhat/ESS robustly).")
+    }
+    # reorder each chain to the same column order
+    ml2 <- coda::mcmc.list(lapply(ml, function(ch) {
+      m <- as.matrix(ch)
+      coda::mcmc(m[, common, drop = FALSE])
+    }))
+    ml2
+  }
+
+  # Coerce/harmonize once, for all downstream diagnostics
+  samples_ml <- .harmonize_mcmc_list(samples)
+
+  ## If only 1 chain, Gelman-Rubin is undefined -> keep NA but still compute ESS etc.
+  n_chains <- length(samples_ml)
+  if (n_chains < 2L) {
+    # assess_performance may return NA Rhat anyway; keep going.
+    # We do not stop because ESS/CE/AE still meaningful.
+  }
+
+  ## ---------- base metrics ----------
+  ap <- assess_performance(samples_ml, runtime_s, rhat_thresh = rhat_threshold)
+  pp <- as.data.frame(ap$per_param)
+
+  ## ---------- helper: columns present in samples ----------
+  .sample_cols <- function(smp_ml) {
+    if (is.null(smp_ml)) return(character(0))
+    # after harmonization, all chains share cols
+    colnames(as.matrix(smp_ml[[1]]))
+  }
+
+  ## ---------- helper: derive sampler-attached targets via getSamplers() ----------
+  .derive_sampler_params_from_conf <- function(mcmc_conf, samples_ml, ignore_patterns, model, auto_configure) {
     cfg <- mcmc_conf
     if (is.null(cfg) && isTRUE(auto_configure) && !is.null(model)) {
       cfg <- try(nimble::configureMCMC(model), silent = TRUE)
@@ -730,7 +786,7 @@ identify_bottlenecks_family <- function(samples, runtime_s,
         tgts <- unique(unlist(lapply(sams, function(s) s$target), use.names = FALSE))
       }
     }
-    cols <- .sample_cols(samples)
+    cols <- .sample_cols(samples_ml)
     if (length(ignore_patterns)) {
       re <- paste(ignore_patterns, collapse = "|")
       tgts <- tgts[!grepl(re, tgts, perl = TRUE)]
@@ -739,18 +795,18 @@ identify_bottlenecks_family <- function(samples, runtime_s,
     unique(tgts)
   }
 
-  # --- derive sampler params if not provided ---
+  ## ---------- derive sampler params if not provided ----------
   if (is.null(sampler_params) || !length(sampler_params)) {
     sampler_params <- .derive_sampler_params_from_conf(
       mcmc_conf       = mcmc_conf,
-      samples         = samples,
+      samples_ml      = samples_ml,
       ignore_patterns = ignore_patterns,
       model           = model,
       auto_configure  = auto_configure
     )
   }
 
-  # --- enforce sampler-only filter ---
+  ## ---------- enforce sampler-only filter ----------
   if (isTRUE(strict_sampler_only)) {
     if (!length(sampler_params)) {
       stop("identify_bottlenecks_family: strict_sampler_only=TRUE but no sampler-attached parameters could be derived. ",
@@ -767,10 +823,10 @@ identify_bottlenecks_family <- function(samples, runtime_s,
          "Check that your samples contain the monitored stochastic nodes.")
   }
 
-  # --- 1) add family
+  ## ---------- add family ----------
   pp$family <- .family_of(pp$parameter)
 
-  # --- 2) family medians
+  ## ---------- family medians ----------
   agg <- function(df) {
     data.frame(
       ESS_med   = stats::median(df$ESS, na.rm = TRUE),
@@ -784,12 +840,12 @@ identify_bottlenecks_family <- function(samples, runtime_s,
   per_family <- do.call(rbind, lapply(split(pp, pp$family), agg))
   per_family$family <- rownames(per_family); rownames(per_family) <- NULL
 
-  # --- 3) time-to-target
+  ## ---------- time-to-target ----------
   per_family$slow_node_time <- ifelse(per_family$CE_med > 0, ess_threshold / per_family$CE_med, Inf)
   per_family$meet_target     <- is.finite(per_family$slow_node_time) & (per_family$slow_node_time <= runtime_s)
   per_family$below_ess_per_s <- if (isTRUE(ess_per_s_min > 0)) per_family$CE_med < ess_per_s_min else FALSE
 
-  # --- 4) degenerates
+  ## ---------- degenerates ----------
   is_degen   <- !is.finite(per_family$ESS_med) | (per_family$ESS_med <= 0) |
     !is.finite(per_family$AE_med)  | !is.finite(per_family$CE_med)
   degenerate <- per_family[is_degen, , drop = FALSE]
@@ -820,7 +876,7 @@ identify_bottlenecks_family <- function(samples, runtime_s,
     ))
   }
 
-  # --- 5) ranks (CE low, AE low, slow_node_time high)
+  ## ---------- ranks ----------
   CE_rank   <- rank(valid$CE_med,           ties.method = "min", na.last = "keep")
   AE_rank   <- rank(valid$AE_med,           ties.method = "min", na.last = "keep")
   TIME_rank <- rank(-valid$slow_node_time,  ties.method = "min", na.last = "keep")
@@ -860,7 +916,7 @@ identify_bottlenecks_family <- function(samples, runtime_s,
     stringsAsFactors = FALSE
   )
 
-  # --- reorder columns (CE → AE → slow_node_time)
+  ## ---------- reorder ----------
   .reorder_cols_family <- function(df) {
     cols <- c("family","n_members","ESS_med","CE_med","AE_med","Rhat_med",
               "slow_node_time","meet_target","below_ess_per_s",
@@ -873,7 +929,7 @@ identify_bottlenecks_family <- function(samples, runtime_s,
   degenerate <- .reorder_cols_family(degenerate)
   valid      <- .reorder_cols_family(valid)
 
-  # --- top3 (deduplicated)
+  ## ---------- top3 ----------
   mk_top3 <- function(df, axis_label) {
     if (is.null(df) || !nrow(df)) return(NULL)
     k <- min(3L, nrow(df))
@@ -904,7 +960,6 @@ identify_bottlenecks_family <- function(samples, runtime_s,
     top3       = top3
   )
 }
-
 
 #' Merge two MCMC sample objects into a single mcmc.list
 #'

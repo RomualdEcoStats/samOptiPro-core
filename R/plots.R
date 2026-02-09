@@ -1,24 +1,48 @@
-# plots.R --
+# plots.R ---------------------------------------------------------------
+# Robust plotting helper for HMC/NUTS results built from compute_diag_from_mcmc_vect()
+# - fixes missing columns (AE_ESS_per_it, CE_ESS_per_s, Rhat)
+# - fixes target column when absent (uses Parameter if present)
+# - supports per = "target" or "family"
+# - writes figures and prints lightweight progress messages
+
 #' @keywords internal
 #' @noRd
-enrich_hmc_diag_tbl_for_plots <- function(res) {
-  if (is.null(res$diag_tbl)) {
-    stop("L'objet 'res' ne contient pas de diag_tbl.")
-  }
-  diag_tbl <- res$diag_tbl
+enrich_hmc_diag_tbl_for_plots <- function(res,
+                                          prefer_rhat = c("split", "classic"),
+                                          target_col_priority = c("target", "Target", "parameter", "Parameter")) {
+  prefer_rhat <- match.arg(prefer_rhat)
 
-  # 1) AE_ESS_per_it: mapped to AE_worst (or AE_total)
+  if (is.null(res) || !is.list(res)) stop("`res` must be a list.")
+  if (is.null(res$diag_tbl)) stop("`res$diag_tbl` is NULL. Run compute_diag_from_mcmc_vect() first.")
+  diag_tbl <- res$diag_tbl
+  if (!is.data.frame(diag_tbl)) diag_tbl <- as.data.frame(diag_tbl)
+
+  # --- ensure a target column exists (plotting relies on it) ---
+  tgt <- NULL
+  for (nm in target_col_priority) {
+    if (nm %in% names(diag_tbl)) { tgt <- nm; break }
+  }
+  if (is.null(tgt)) {
+    # last resort: create a generic id
+    diag_tbl$target <- paste0("param_", seq_len(nrow(diag_tbl)))
+  } else {
+    diag_tbl$target <- as.character(diag_tbl[[tgt]])
+  }
+
+  # --- AE_ESS_per_it: map to AE_worst/AE_total if available ---
   if (!"AE_ESS_per_it" %in% names(diag_tbl)) {
     if ("AE_worst" %in% names(diag_tbl)) {
       diag_tbl$AE_ESS_per_it <- diag_tbl$AE_worst
     } else if ("AE_total" %in% names(diag_tbl)) {
       diag_tbl$AE_ESS_per_it <- diag_tbl$AE_total
+    } else if ("AE" %in% names(diag_tbl)) {
+      diag_tbl$AE_ESS_per_it <- diag_tbl$AE
     } else {
       diag_tbl$AE_ESS_per_it <- NA_real_
     }
   }
 
-  # 2) CE_ESS_per_s: mapped to ESS_per_sec_worst / total / ESS_per_sec / ESS_per_s
+  # --- CE_ESS_per_s: map to ESS_per_sec_* if available ---
   if (!"CE_ESS_per_s" %in% names(diag_tbl)) {
     if ("ESS_per_sec_worst" %in% names(diag_tbl)) {
       diag_tbl$CE_ESS_per_s <- diag_tbl$ESS_per_sec_worst
@@ -28,30 +52,239 @@ enrich_hmc_diag_tbl_for_plots <- function(res) {
       diag_tbl$CE_ESS_per_s <- diag_tbl$ESS_per_sec
     } else if ("ESS_per_s" %in% names(diag_tbl)) {
       diag_tbl$CE_ESS_per_s <- diag_tbl$ESS_per_s
+    } else if ("time_s_per_ESS_worst" %in% names(diag_tbl)) {
+      # invert if only time per ESS exists
+      z <- diag_tbl$time_s_per_ESS_worst
+      diag_tbl$CE_ESS_per_s <- ifelse(is.finite(z) & z > 0, 1 / z, NA_real_)
+    } else if ("time_s_per_ESS_total" %in% names(diag_tbl)) {
+      z <- diag_tbl$time_s_per_ESS_total
+      diag_tbl$CE_ESS_per_s <- ifelse(is.finite(z) & z > 0, 1 / z, NA_real_)
     } else {
       diag_tbl$CE_ESS_per_s <- NA_real_
     }
   }
 
-  # 3) Generic Rhat (from classic/split if available)
+  # --- Rhat: choose split/classic priority, fallback to any available column ---
   if (!"Rhat" %in% names(diag_tbl)) {
     rhat <- rep(NA_real_, nrow(diag_tbl))
+    have_split   <- "Rhat_split"   %in% names(diag_tbl)
+    have_classic <- "Rhat_classic" %in% names(diag_tbl)
 
-    if ("Rhat_classic" %in% names(diag_tbl)) {
-      rhat <- diag_tbl$Rhat_classic
+    if (prefer_rhat == "split") {
+      if (have_split)   rhat <- diag_tbl$Rhat_split
+      if (have_classic) rhat[is.na(rhat)] <- diag_tbl$Rhat_classic[is.na(rhat)]
+    } else {
+      if (have_classic) rhat <- diag_tbl$Rhat_classic
+      if (have_split)   rhat[is.na(rhat)] <- diag_tbl$Rhat_split[is.na(rhat)]
     }
-    if ("Rhat_split" %in% names(diag_tbl)) {
-      idx <- is.na(rhat) & !is.na(diag_tbl$Rhat_split)
-      rhat[idx] <- diag_tbl$Rhat_split[idx]
+
+    # extra fallbacks
+    if (!have_split && !have_classic) {
+      cand <- intersect(c("rhat", "R_hat", "Rhat_bulk", "Rhat_tail"), names(diag_tbl))
+      if (length(cand)) rhat <- diag_tbl[[cand[1]]]
     }
 
     diag_tbl$Rhat <- rhat
+  }
+
+  # sanitize finite values
+  for (nm in c("AE_ESS_per_it", "CE_ESS_per_s", "Rhat")) {
+    if (nm %in% names(diag_tbl)) {
+      z <- diag_tbl[[nm]]
+      z[!is.finite(z)] <- NA_real_
+      diag_tbl[[nm]] <- z
+    }
   }
 
   res$diag_tbl <- diag_tbl
   res
 }
 
+#' Plot HMC-only strategy comparisons (robust fast path)
+#'
+#' @param res Result list containing res$diag_tbl (from compute_diag_from_mcmc_vect()).
+#' @param out_dir Output directory for plots; created if needed.
+#' @param per Aggregation level: "target" or "family".
+#' @param top_k Number of items to plot.
+#' @param top_by Ranking metric: "CE", "AE", or "Rhat".
+#' @param show_rhat_label If TRUE, prints Rhat text on bars (can be cluttered).
+#' @param verbose Print progress messages.
+#'
+#' @return Invisibly, list(plot=..., data=..., file=...)
+#' @export
+plot_strategies_from_test_result_hmc_fast <- function(
+    res,
+    out_dir         = NULL,
+    per             = c("target", "family"),
+    top_k           = 40,
+    top_by          = c("CE", "AE", "Rhat"),
+    show_rhat_label = TRUE,
+    verbose         = TRUE
+) {
+  if (!requireNamespace("ggplot2", quietly = TRUE)) stop("Package 'ggplot2' is required for plotting.")
+
+  if (is.null(res$diag_tbl)) stop("`res$diag_tbl` is missing.")
+  per    <- match.arg(per)
+  top_by <- match.arg(top_by)
+
+  # Always enrich to guarantee required columns
+  res <- enrich_hmc_diag_tbl_for_plots(res)
+  diag_tbl <- res$diag_tbl
+
+  needed <- c("target", "AE_ESS_per_it", "CE_ESS_per_s", "Rhat")
+  miss <- setdiff(needed, names(diag_tbl))
+  if (length(miss)) stop("diag_tbl is missing required columns: ", paste(miss, collapse = ", "))
+
+  metric_col <- switch(top_by,
+                       "CE"   = "CE_ESS_per_s",
+                       "AE"   = "AE_ESS_per_it",
+                       "Rhat" = "Rhat")
+
+  if (verbose) {
+    message(sprintf("[plots] per=%s | metric=%s | top_k=%d", per, metric_col, as.integer(top_k)))
+  }
+
+  ## Convergence threshold (fixed, as requested)
+  rhat_thr <- 1.01
+
+  # Rhat categories (based on threshold 1.01)
+  rhat <- diag_tbl$Rhat
+  rhat_cat <- rep(NA_character_, length(rhat))
+  rhat_cat[is.na(rhat)] <- "Rhat NA"
+  rhat_cat[!is.na(rhat) & rhat < rhat_thr] <- sprintf("< %.2f", rhat_thr)
+  rhat_cat[!is.na(rhat) & rhat >= rhat_thr & rhat < 1.05] <- sprintf("%.2f-1.05", rhat_thr)
+  rhat_cat[!is.na(rhat) & rhat >= 1.05] <- ">= 1.05"
+  diag_tbl$rhat_cat <- factor(
+    rhat_cat,
+    levels = c(sprintf("< %.2f", rhat_thr), sprintf("%.2f-1.05", rhat_thr), ">= 1.05", "Rhat NA")
+  )
+
+  ## A compact "elegant" theme for vertical barplots
+  theme_elegant <- ggplot2::theme_minimal(base_size = 12) +
+    ggplot2::theme(
+      panel.grid.major.x = ggplot2::element_blank(),
+      panel.grid.minor = ggplot2::element_blank(),
+      axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 8)),
+      axis.title.y = ggplot2::element_text(margin = ggplot2::margin(r = 8)),
+      axis.text.x  = ggplot2::element_text(angle = 45, hjust = 1, vjust = 1),
+      legend.position = "right",
+      plot.title = ggplot2::element_text(face = "bold"),
+      plot.subtitle = ggplot2::element_text(size = 10)
+    )
+
+  if (per == "target") {
+    plot_tbl <- diag_tbl
+    plot_tbl <- plot_tbl[!is.na(plot_tbl[[metric_col]]), , drop = FALSE]
+    if (!nrow(plot_tbl)) stop("No rows with non-NA metric for per='target'.")
+
+    plot_tbl <- plot_tbl[order(-plot_tbl[[metric_col]]), , drop = FALSE]
+    if (nrow(plot_tbl) > top_k) plot_tbl <- plot_tbl[seq_len(top_k), , drop = FALSE]
+
+    ## Order so bars are left->right increasing (nicer vertical barplot)
+    plot_tbl$target <- factor(plot_tbl$target, levels = plot_tbl$target[order(plot_tbl[[metric_col]])])
+
+    p <- ggplot2::ggplot(plot_tbl, ggplot2::aes(x = target, y = .data[[metric_col]], fill = rhat_cat)) +
+      ggplot2::geom_col(width = 0.82) +
+      ggplot2::labs(
+        x = "Targets",
+        y = metric_col,
+        fill = "Rhat",
+        title = sprintf("Top %d targets by %s (HMC/NUTS)", as.integer(top_k), metric_col),
+        subtitle = sprintf("Fill color indicates Rhat class (threshold %.2f)", rhat_thr)
+      ) +
+      theme_elegant
+
+    ## If plotting Rhat itself, add threshold line at 1.01
+    if (identical(metric_col, "Rhat")) {
+      p <- p + ggplot2::geom_hline(yintercept = rhat_thr, linetype = "dashed", linewidth = 0.6)
+    }
+
+    ## Optional labels (kept, but adapted to vertical bars)
+    if (isTRUE(show_rhat_label)) {
+      p <- p + ggplot2::geom_text(
+        ggplot2::aes(label = ifelse(is.na(Rhat), "NA", sprintf("%.3f", Rhat))),
+        vjust = -0.35,
+        size = 3
+      )
+      ymax <- max(plot_tbl[[metric_col]], na.rm = TRUE)
+      if (is.finite(ymax) && ymax > 0) p <- p + ggplot2::expand_limits(y = ymax * 1.10)
+    }
+
+  } else { # per == "family"
+    if (!"Family" %in% names(diag_tbl)) stop("per='family' requested but diag_tbl has no column 'Family'.")
+
+    agg_median <- function(v) stats::median(v, na.rm = TRUE)
+
+    ae_by_family <- aggregate(diag_tbl$AE_ESS_per_it, by = list(Family = diag_tbl$Family), FUN = agg_median)
+    names(ae_by_family)[2] <- "AE_ESS_per_it"
+
+    ce_by_family <- aggregate(diag_tbl$CE_ESS_per_s, by = list(Family = diag_tbl$Family), FUN = agg_median)
+    names(ce_by_family)[2] <- "CE_ESS_per_s"
+
+    rhat_by_family <- aggregate(diag_tbl$Rhat, by = list(Family = diag_tbl$Family), FUN = agg_median)
+    names(rhat_by_family)[2] <- "Rhat"
+
+    plot_tbl <- Reduce(function(x, y) merge(x, y, by = "Family", all = TRUE),
+                       list(ae_by_family, ce_by_family, rhat_by_family))
+
+    # rhat_cat by family (using same threshold logic)
+    rf <- plot_tbl$Rhat
+    rc <- rep(NA_character_, length(rf))
+    rc[is.na(rf)] <- "Rhat NA"
+    rc[!is.na(rf) & rf < rhat_thr] <- sprintf("< %.2f", rhat_thr)
+    rc[!is.na(rf) & rf >= rhat_thr & rf < 1.05] <- sprintf("%.2f-1.05", rhat_thr)
+    rc[!is.na(rf) & rf >= 1.05] <- ">= 1.05"
+    plot_tbl$rhat_cat <- factor(
+      rc,
+      levels = c(sprintf("< %.2f", rhat_thr), sprintf("%.2f-1.05", rhat_thr), ">= 1.05", "Rhat NA")
+    )
+
+    plot_tbl <- plot_tbl[!is.na(plot_tbl[[metric_col]]), , drop = FALSE]
+    if (!nrow(plot_tbl)) stop("No rows with non-NA metric for per='family'.")
+
+    plot_tbl <- plot_tbl[order(-plot_tbl[[metric_col]]), , drop = FALSE]
+    if (nrow(plot_tbl) > top_k) plot_tbl <- plot_tbl[seq_len(top_k), , drop = FALSE]
+
+    ## Order so bars are left->right increasing
+    plot_tbl$Family <- factor(plot_tbl$Family, levels = plot_tbl$Family[order(plot_tbl[[metric_col]])])
+
+    p <- ggplot2::ggplot(plot_tbl, ggplot2::aes(x = Family, y = .data[[metric_col]], fill = rhat_cat)) +
+      ggplot2::geom_col(width = 0.82) +
+      ggplot2::labs(
+        x = "Node family",
+        y = metric_col,
+        fill = "Median Rhat",
+        title = sprintf("Top %d families by %s (HMC/NUTS)", as.integer(top_k), metric_col),
+        subtitle = sprintf("Median metric per family; Rhat threshold %.2f", rhat_thr)
+      ) +
+      theme_elegant +
+      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, vjust = 1))
+
+    if (identical(metric_col, "Rhat")) {
+      p <- p + ggplot2::geom_hline(yintercept = rhat_thr, linetype = "dashed", linewidth = 0.6)
+    }
+
+    if (isTRUE(show_rhat_label)) {
+      p <- p + ggplot2::geom_text(
+        ggplot2::aes(label = ifelse(is.na(Rhat), "NA", sprintf("%.3f", Rhat))),
+        vjust = -0.35,
+        size = 3
+      )
+      ymax <- max(plot_tbl[[metric_col]], na.rm = TRUE)
+      if (is.finite(ymax) && ymax > 0) p <- p + ggplot2::expand_limits(y = ymax * 1.10)
+    }
+  }
+
+  file_out <- NULL
+  if (!is.null(out_dir)) {
+    if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+    file_out <- file.path(out_dir, sprintf("diag_hmc_%s_top%d_by_%s.png", per, as.integer(top_k), top_by))
+    ggplot2::ggsave(filename = file_out, plot = p, width = 10, height = 6, dpi = 300)
+    if (verbose) message("[plots] saved: ", file_out)
+  }
+
+  invisible(list(plot = p, data = plot_tbl, file = file_out))
+}
 
 #' Plot MCMC Bottlenecks by Node or Family
 #'
@@ -1135,270 +1368,120 @@ plot_convergence_rhat_sampled_fast <- function(
     }
   }
 
+  # -------------------------------------------------------------------
+  # Batch generation of convergence and performance diagnostic plots
+  # (HMC / NUTS – one-call convenience wrapper)
+  #
+  # This helper function generates, in a single call, all standard
+  # convergence and efficiency plots used in the WGNAS / GEREM vignettes:
+  #  - R-hat diagnostics (convergence)
+  #  - Algorithmic efficiency (ESS per iteration)
+  #  - Computational efficiency (ESS per second)
+  # both at the target level and, when available, at the family level.
+  #
+  # The function assumes that:
+  #  - res$samples is an mcmc.list
+  #  - res$diag_tbl has been produced by compute_diag_from_mcmc_vect()
+  #    (or will be enriched automatically if needed).
+  #
+  # Output figures are saved to disk and are ready for inclusion in
+  # reports, vignettes, or supplementary materials.
+  # -------------------------------------------------------------------
 
-#' Plot HMC-only strategy comparisons (fast path)
-#'
-#' @param res Result object from \code{test_strategy_family_fast()} or
-#'   \code{configure_hmc_safely()} in HMC-only mode.
-#' @param out_dir Output directory for plots; created if needed.
-#' @param per Aggregation level: \code{"target"} or \code{"family"}.
-#' @param top_k Integer; number of keys kept for plotting.
-#' @param top_by Metric used to rank keys: \code{"CE"} or \code{"AE"}.
-#' @param show_rhat_label Logical; if \code{TRUE}, show Rhat labels on bars.
-#'
-#'
-#' @return Invisibly, a list with aggregated data and ggplot objects.
-#' @export
-plot_strategies_from_test_result_hmc_fast <- function(
+  #' Generate all convergence and performance diagnostic plots (HMC/NUTS)
+  #'
+  #' @param res Result object containing at least \code{res$diag_tbl}.
+  #' @param out_dir Output directory where figures will be written.
+  #' @param top_k_target Number of targets shown in target-level plots.
+  #' @param top_k_family Number of families shown in family-level plots.
+  #' @param verbose Logical; print progress messages.
+  #'
+  #' @return Invisibly returns TRUE.
+  #' @export
+  generate_all_convergence_and_metric_plots <- function(
     res,
-    out_dir        = NULL,
-    per            = c("target", "family"),
-    top_k          = 40,
-    top_by         = c("CE", "AE", "Rhat"),
-    show_rhat_label = TRUE
-) {
-  if (is.null(res$diag_tbl)) {
-    stop("L'objet 'res' ne contient pas de diag_tbl.")
-  }
-  diag_tbl <- res$diag_tbl
+    out_dir,
+    top_k_target = 40,
+    top_k_family = 20,
+    verbose = TRUE
+  ) {
 
-  per    <- match.arg(per)
-  top_by <- match.arg(top_by)
-
-
-  needed <- c("AE_ESS_per_it", "CE_ESS_per_s", "Rhat")
-  missing <- setdiff(needed, names(diag_tbl))
-  if (length(missing) > 0L) {
-    stop("Missing columns in diag_tbl : ", paste(missing, collapse = ", "),
-         ". Did you call enrich_hmc_diag_tbl_for_plots correctly?() ?")
-  }
-
-  # --- choice of ranking metric ---
-  metric_col <- switch(
-    top_by,
-    "CE"   = "CE_ESS_per_s",
-    "AE"   = "AE_ESS_per_it",
-    "Rhat" = "Rhat"
-  )
-
-  # Cleaning NA/Inf/NaN
-  metric <- diag_tbl[[metric_col]]
-  metric[!is.finite(metric)] <- NA_real_
-  diag_tbl[[metric_col]] <- metric
-
-  # --- Rhat's color classification ---
-  rhat <- diag_tbl$Rhat
-  rhat_cat <- rep(NA_character_, length(rhat))
-
-  rhat_cat[is.na(rhat)]                  <- "Rhat NA"
-  rhat_cat[!is.na(rhat) & rhat < 1.05]  <- "< 1.05"
-  rhat_cat[!is.na(rhat) & rhat >= 1.05 & rhat < 1.1] <- "1.05-1.10"
-  rhat_cat[!is.na(rhat) & rhat >= 1.1]  <- ">= 1.10"
-
-  diag_tbl$rhat_cat <- factor(
-    rhat_cat,
-    levels = c("< 1.05", "1.05-1.10", ">= 1.10", "Rhat NA")
-  )
-
-  # --- Construction of the table for the plot ---
-  if (per == "target") {
-
-    if (!"target" %in% names(diag_tbl)) {
-      stop("diag_tbl does not contain a 'target' column'.")
+    if (is.null(res$diag_tbl)) {
+      stop("res$diag_tbl is missing. Run compute_diag_from_mcmc_vect() first.")
     }
 
-    plot_tbl <- diag_tbl
-
-    # NA filter on the selected metric
-    ok <- !is.na(plot_tbl[[metric_col]])
-    plot_tbl <- plot_tbl[ok, , drop = FALSE]
-
-    if (nrow(plot_tbl) == 0L) {
-      stop("No valid lines (NA metric everywhere) for per = 'target'.")
-    }
-
-    # descending sort
-    o <- order(-plot_tbl[[metric_col]])
-    plot_tbl <- plot_tbl[o, , drop = FALSE]
-
-    # top_k
-    if (nrow(plot_tbl) > top_k) {
-      plot_tbl <- plot_tbl[seq_len(top_k), , drop = FALSE]
-    }
-
-    # order of targets on the chart
-    plot_tbl$target <- factor(
-      plot_tbl$target,
-      levels = rev(plot_tbl$target[order(plot_tbl[[metric_col]])])
-    )
-
-    title_txt <- sprintf("Top %d targets par %s (HMC/NUTS)", top_k, metric_col)
-
-    p <- ggplot2::ggplot(
-      plot_tbl,
-      ggplot2::aes_string(x = "target", y = metric_col, fill = "rhat_cat")
-    ) +
-      ggplot2::geom_col() +
-      ggplot2::coord_flip() +
-      ggplot2::labs(
-        x = "Target",
-        y = metric_col,
-        fill = "Rhat",
-        title = title_txt,
-        subtitle = "Color = Rhat class"
-      ) +
-      ggplot2::theme_bw() +
-      ggplot2::theme(
-        axis.text.y = ggplot2::element_text(size = 6)
-      )
-
-    if (show_rhat_label) {
-      p <- p +
-        ggplot2::geom_text(
-          ggplot2::aes_string(
-            x = "target",
-            y = metric_col,
-            label = "sprintf('Rhat=%.2f', Rhat)"
-          ),
-          hjust = -0.05,
-          size  = 2.5
-        ) +
-        ggplot2::expand_limits(y = max(plot_tbl[[metric_col]], na.rm = TRUE) * 1.1)
-    }
-
-  } else if (per == "family") {
-
-    if (!"Family" %in% names(diag_tbl)) {
-      stop("per='family' requested but diag_tbl does not contain 'Family'.")
-    }
-
-    # family aggregation with R base
-    ae_by_family <- aggregate(
-      diag_tbl$AE_ESS_per_it,
-      by = list(Family = diag_tbl$Family),
-      FUN = function(z) median(z, na.rm = TRUE)
-    )
-    names(ae_by_family)[names(ae_by_family) == "x"] <- "AE_ESS_per_it"
-
-    ce_by_family <- aggregate(
-      diag_tbl$CE_ESS_per_s,
-      by = list(Family = diag_tbl$Family),
-      FUN = function(z) median(z, na.rm = TRUE)
-    )
-    names(ce_by_family)[names(ce_by_family) == "x"] <- "CE_ESS_per_s"
-
-    rhat_by_family <- aggregate(
-      diag_tbl$Rhat,
-      by = list(Family = diag_tbl$Family),
-      FUN = function(z) median(z, na.rm = TRUE)
-    )
-    names(rhat_by_family)[names(rhat_by_family) == "x"] <- "Rhat"
-
-    plot_tbl <- Reduce(function(x, y) merge(x, y, by = "Family", all = TRUE),
-                       list(ae_by_family, ce_by_family, rhat_by_family))
-
-    # recalc rhat_cat by family
-    rhat_f <- plot_tbl$Rhat
-    rhat_cat_f <- rep(NA_character_, length(rhat_f))
-    rhat_cat_f[is.na(rhat_f)]                        <- "Rhat NA"
-    rhat_cat_f[!is.na(rhat_f) & rhat_f < 1.05]       <- "< 1.05"
-    rhat_cat_f[!is.na(rhat_f) & rhat_f >= 1.05 & rhat_f < 1.1] <- "1.05-1.10"
-    rhat_cat_f[!is.na(rhat_f) & rhat_f >= 1.1]       <- ">= 1.10"
-
-    plot_tbl$rhat_cat <- factor(
-      rhat_cat_f,
-      levels = c("< 1.05", "1.05-1.10", ">= 1.10", "Rhat NA")
-    )
-
-    # NA filter on the selected metric
-    ok <- !is.na(plot_tbl[[metric_col]])
-    plot_tbl <- plot_tbl[ok, , drop = FALSE]
-
-    if (nrow(plot_tbl) == 0L) {
-      stop("No valid family (NA metric everywhere) for per = 'family'.")
-    }
-
-    # descending sort
-    o <- order(-plot_tbl[[metric_col]])
-    plot_tbl <- plot_tbl[o, , drop = FALSE]
-
-    if (nrow(plot_tbl) > top_k) {
-      plot_tbl <- plot_tbl[seq_len(top_k), , drop = FALSE]
-    }
-
-    plot_tbl$Family <- factor(
-      plot_tbl$Family,
-      levels = rev(plot_tbl$Family[order(plot_tbl[[metric_col]])])
-    )
-
-    title_txt <- sprintf("Top %d families by %s (HMC/NUTS)", top_k, metric_col)
-
-    p <- ggplot2::ggplot(
-      plot_tbl,
-      ggplot2::aes_string(x = "Family", y = metric_col, fill = "rhat_cat")
-    ) +
-      ggplot2::geom_col() +
-      ggplot2::coord_flip() +
-      ggplot2::labs(
-        x = "Family",
-        y = metric_col,
-        fill = "Rhat",
-        title = title_txt,
-        subtitle = "Color = Rhat class (median by family)"
-      ) +
-      ggplot2::theme_bw() +
-      ggplot2::theme(
-        axis.text.y = ggplot2::element_text(size = 7)
-      )
-
-    if (show_rhat_label) {
-      p <- p +
-        ggplot2::geom_text(
-          ggplot2::aes_string(
-            x = "Family",
-            y = metric_col,
-            label = "sprintf('Rhat=%.2f', Rhat)"
-          ),
-          hjust = -0.05,
-          size  = 2.5
-        ) +
-        ggplot2::expand_limits(y = max(plot_tbl[[metric_col]], na.rm = TRUE) * 1.1)
-    }
-  } else {
-    stop("Unsupported value 'per': ", per)
-  }
-
-
-  if (!is.null(out_dir)) {
     if (!dir.exists(out_dir)) {
       dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
     }
 
-    fname <- file.path(
-      out_dir,
-      sprintf("diag_hmc_%s_top%d_by_%s.png", per, top_k, top_by)
+    if (isTRUE(verbose)) {
+      message("[plots] Generating convergence and efficiency diagnostics...")
+    }
+
+    ## ---- Target-level plots ----
+    plot_strategies_from_test_result_hmc_fast(
+      res     = res,
+      out_dir = out_dir,
+      per     = "target",
+      top_k   = top_k_target,
+      top_by  = "CE",
+      verbose = verbose
     )
 
-    ggplot2::ggsave(
-      filename = fname,
-      plot     = p,
-      width    = 8,
-      height   = 6,
-      dpi      = 300
+    plot_strategies_from_test_result_hmc_fast(
+      res     = res,
+      out_dir = out_dir,
+      per     = "target",
+      top_k   = top_k_target,
+      top_by  = "AE",
+      verbose = verbose
     )
-  }
 
-  invisible(list(plot = p, data = plot_tbl))
-}
+    plot_strategies_from_test_result_hmc_fast(
+      res     = res,
+      out_dir = out_dir,
+      per     = "target",
+      top_k   = top_k_target,
+      top_by  = "Rhat",
+      verbose = verbose
+    )
 
+    ## ---- Family-level plots (if available) ----
+    if ("Family" %in% names(res$diag_tbl)) {
 
-  root_of <- function(x) sub("\\[.*", "", x)
-  .mk_dir <- function(p) { if (!dir.exists(p)) dir.create(p, recursive = TRUE, showWarnings = FALSE) }
+      plot_strategies_from_test_result_hmc_fast(
+        res     = res,
+        out_dir = out_dir,
+        per     = "family",
+        top_k   = top_k_family,
+        top_by  = "CE",
+        verbose = verbose
+      )
 
+      plot_strategies_from_test_result_hmc_fast(
+        res     = res,
+        out_dir = out_dir,
+        per     = "family",
+        top_k   = top_k_family,
+        top_by  = "AE",
+        verbose = verbose
+      )
 
-  save_fig <- function(p, base, w = 8, h = 5.2, dpi = 180) {
-    ggplot2::ggsave(file.path(out_dir, paste0(base, ".pdf")), p, width = w, height = h)
-    ggplot2::ggsave(file.path(out_dir, paste0(base, ".png")), p, width = w, height = h, dpi = dpi)
+      plot_strategies_from_test_result_hmc_fast(
+        res     = res,
+        out_dir = out_dir,
+        per     = "family",
+        top_k   = top_k_family,
+        top_by  = "Rhat",
+        verbose = verbose
+      )
+    }
+
+    if (isTRUE(verbose)) {
+      message("[plots] All convergence and metric plots successfully generated.")
+    }
+
+    invisible(TRUE)
   }
 
 

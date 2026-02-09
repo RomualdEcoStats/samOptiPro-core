@@ -274,11 +274,11 @@ sampler_targets <- function(conf) {
   if (!length(vars)) return(character(0))
   vars <- unique(trimws(as.character(vars))); vars <- vars[nzchar(vars)]
 
-  # tous les noeuds connus, pour filtrage final
+  # all known nodes, for final filtering
   all_nodes <- try(model$getNodeNames(stochOnly = FALSE, includeRHSonly = FALSE), silent = TRUE)
   if (inherits(all_nodes, "try-error") || is.null(all_nodes)) all_nodes <- character(0)
 
-  # essaie d'utiliser la metadonnee de forme (mins/maxs) quand dispo
+  # try to use shape metadata (min/max) when available
   var_to_nodes <- function(v) {
     vi <- try(model$getVarInfo(v), silent = TRUE)
     if (!inherits(vi, "try-error") && !is.null(vi) && length(vi$nDim)) {
@@ -294,12 +294,12 @@ sampler_targets <- function(conf) {
         } else cand <- character(0)
       }
     } else {
-      # fallback: prend tout ce qui commence par "v[" ou est egal a "v"
+      # fallback: takes everything that starts with “v[” or is equal to “v”
       cand <- all_nodes[ all_nodes == v | startsWith(all_nodes, paste0(v, "[")) ]
-      # eclate les notations compactes si necessaire
+      # break up compact ratings if necessary
       cand <- unlist(lapply(cand, .us_expand_compact_node), use.names = FALSE)
     }
-    # garde seulement ce que le modele connait
+    # keep only what the model knows
     cand[cand %in% all_nodes]
   }
 
@@ -311,7 +311,7 @@ sampler_targets <- function(conf) {
 #' @keywords internal
 .us_sanitize_monitors <- function(x) {
   x <- .us_tokenize_monitors(x)
-  # vire nombres nus (ex "1", "2.", "3.0") ET tokens de log
+  # remove bare numbers (e.g., “1,” “2.”, “3.0”) AND log tokens
   bad <- grepl("^\\d+(?:\\.\\d*)?$", x) | x %in% c("thin", "=", ":", ",")
   unique(x[!bad])
 }
@@ -321,9 +321,9 @@ sampler_targets <- function(conf) {
 .us_tokenize_monitors <- function(x) {
   if (is.null(x)) return(character(0))
   x <- as.character(x)
-  # remplace separateurs courants par des espaces
+  # replace common separators with spaces
   x <- gsub("[=:\\|;]", " ", x, perl = TRUE)
-  # split sur virgule OU espaces contigus
+  # split on comma OR contiguous spaces
   parts <- unlist(strsplit(x, "[,\\s]+", perl = TRUE), use.names = FALSE)
   parts <- trimws(parts)
   parts[nzchar(parts)]
@@ -353,13 +353,128 @@ sampler_targets <- function(conf) {
         } else cand <- character(0)
       }
     } else {
-      # fallback: prend tout ce qui commence par "v[" ou est egal a "v"
+      # fallback: takes everything that starts with “v[” or is equal to “v”
       cand <- all_nodes[ all_nodes == v | startsWith(all_nodes, paste0(v, "[")) ]
-      # eclate les notations compactes si necessaire
+      # break up compact ratings if necessary
       cand <- unlist(lapply(cand, .us_expand_compact_node), use.names = FALSE)
     }
-    # garde seulement ce que le modele connait
+    # keep only what the model knows
     cand[cand %in% all_nodes]
   }
 
+  #' Extract sampled-only monitors from a configureMCMC object
+  #'
+  #' @param conf nimble::MCMCconf returned by nimble::configureMCMC()
+  #' @param monitors character vector of base node names (your monitor vector)
+  #' @param strict logical; if TRUE, error if none are sampled
+  #' @param keep_order logical; if TRUE keep original order
+  #' @return character vector monitors_sampled with attributes for diagnostics
+  #' @export
+  monitors_sampled_from_conf <- function(conf,
+                                         monitors,
+                                         strict = FALSE,
+                                         keep_order = TRUE) {
+
+    stopifnot(is.character(monitors))
+    if (!length(monitors)) stop("`monitors` is empty.")
+
+    # NIMBLE conf is often a reference object, not a list
+    if (is.null(conf) || is.null(conf$getSamplers) || !is.function(conf$getSamplers)) {
+      stop("`conf` must be a NIMBLE configureMCMC object exposing `$getSamplers()`.")
+    }
+
+    samplers <- conf$getSamplers()
+    if (!length(samplers)) stop("No samplers found in the MCMC configuration.")
+
+    # Robust extraction of 'target' across possible sampler object types
+    get_target <- function(s) {
+      if (is.null(s)) return(NULL)
+      # Most common: list-like with $target
+      if (!is.null(s$target)) return(s$target)
+      # Sometimes: list-like with [["target"]]
+      if (!is.null(s[["target"]])) return(s[["target"]])
+      # Rare: accessor method
+      if (!is.null(s$getTarget) && is.function(s$getTarget)) return(s$getTarget())
+      NULL
+    }
+
+    targets_list <- lapply(samplers, get_target)
+    sampler_targets <- unique(unlist(targets_list, use.names = FALSE))
+
+    if (!length(sampler_targets) || all(is.na(sampler_targets))) {
+      stop("Sampler targets could not be extracted from `conf$getSamplers()` output.")
+    }
+
+    # Base-node reduction: "x[1,2]" -> "x"
+    sampler_nodes <- unique(sub("\\[.*$", "", sampler_targets))
+
+    out <- monitors[monitors %in% sampler_nodes]
+    if (!keep_order) out <- sort(out)
+
+    if (isTRUE(strict) && !length(out)) {
+      stop("None of the requested monitors are sampled according to this MCMC configuration.")
+    }
+
+    attr(out, "sampler_targets") <- sampler_targets
+    attr(out, "sampler_nodes")   <- sampler_nodes
+    attr(out, "dropped")         <- setdiff(monitors, out)
+    attr(out, "n_kept")          <- length(out)
+    attr(out, "n_dropped")       <- length(setdiff(monitors, out))
+
+    out
+  }
+
+
+  #' One-pass build (uncompiled) + configureMCMC + monitors_sampled
+  #'
+  #' @param monitors character vector of requested monitors
+  #' @param chain_id integer(1)
+  #' @param strict logical
+  #' @param keep_order logical
+  #' @param buildDerivs logical passed to nimbleModel
+  #' @return list(model=m, conf=conf.mcmc, monitors_sampled=..., chain_id=...)
+  #' @export
+  monitors_sampled_safe <- function(monitors,
+                                    chain_id = 1L,
+                                    strict = FALSE,
+                                    keep_order = TRUE,
+                                    buildDerivs = TRUE) {
+
+    stopifnot(is.character(monitors))
+    chain_id <- as.integer(chain_id)
+
+    if (!exists("model.nimble", inherits = TRUE)) stop("Object `model.nimble` not found.")
+    if (!exists("Const_nimble", inherits = TRUE)) stop("Object `Const_nimble` not found.")
+    if (!exists("Data_nimble", inherits = TRUE))  stop("Object `Data_nimble` not found.")
+    if (!exists("inits_nimble", inherits = TRUE)) stop("Object `inits_nimble` not found.")
+
+    inits <- get("inits_nimble", inherits = TRUE)
+    stopifnot(is.list(inits), chain_id >= 1L, chain_id <= length(inits))
+
+    m <- nimble::nimbleModel(
+      code        = get("model.nimble",  inherits = TRUE),
+      name        = sprintf("Model (chain %d)", chain_id),
+      constants   = get("Const_nimble",  inherits = TRUE),
+      data        = get("Data_nimble",   inherits = TRUE),
+      inits       = inits[[chain_id]],
+      buildDerivs = isTRUE(buildDerivs)
+    )
+    m$initializeInfo()
+
+    conf.mcmc <- nimble::configureMCMC(m)
+
+    monitors_sampled <- monitors_sampled_from_conf(
+      conf       = conf.mcmc,
+      monitors   = monitors,
+      strict     = strict,
+      keep_order = keep_order
+    )
+
+    list(
+      model            = m,
+      conf             = conf.mcmc,
+      monitors_sampled = monitors_sampled,
+      chain_id         = chain_id
+    )
+  }
 

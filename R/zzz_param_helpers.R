@@ -1,5 +1,6 @@
 # zzz_param_helpers.R -- internal stubs for legacy helpers
 
+
 #' @keywords internal
 get_param_df <- function(...) {
   stop("get_param_df() is not implemented in this release of samOptiPro. ",

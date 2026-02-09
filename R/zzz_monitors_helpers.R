@@ -22,10 +22,12 @@ utils::globalVariables(c(
   "Rhat_median", "TIME_rank", "__sampler__", "all_nodes",
   "base", "bins", "built", "diag_tbl", "key", "key_f", "m",
   "ok_grid", "out_dir", "per", "sdir", "st", "top_by", "top_k",
-  "valid", "itB","model","msg","...","..","type",":=", "median_ESS"
+  "valid", "itB","model","msg","...","..","type",":=", "median_ESS","::",":::"
 ))
 
-
+#' @importFrom stats runif start
+#' @importFrom utils tail
+NULL
 #' Compile a nimble MCMC for a given build object
 #'
 #' Always compiles the MCMC against the same R-level model used during the
@@ -942,3 +944,177 @@ to_mlist <- function(x) {
   if (is.null(x)) return(NULL)
   coda::mcmc.list(coda::as.mcmc(as.data.frame(x)))
 }
+
+## ---- Internal functions (5) ----
+#' @keywords internal
+.fresh_build <- function(build_fn,
+                         chain_id = NULL,
+                         export_global = FALSE,
+                         monitors = NULL,
+                         thin = 1L,
+                         opts = samOptiPro_options()) {
+
+  stopifnot(is.function(build_fn))
+
+  `%||%` <- function(x, y) if (is.null(x)) y else x
+
+  # --- detect builder signature (non-breaking) ---
+  fmls <- try(names(formals(build_fn)), silent = TRUE)
+  if (inherits(fmls, "try-error") || is.null(fmls)) fmls <- character(0)
+  has_chain  <- "chain_id"      %in% fmls
+  has_export <- "export_global" %in% fmls
+
+  # (1) Build the “build” (supports the factory pattern)
+  built <- NULL
+  if (!is.null(chain_id) && has_chain) {
+    chain_id <- as.integer(chain_id)
+    if (has_export) {
+      built <- build_fn(chain_id = chain_id, export_global = isTRUE(export_global))
+    } else {
+      built <- build_fn(chain_id = chain_id)
+    }
+  } else {
+    built <- build_fn()
+  }
+  if (is.function(built)) built <- built()
+
+  if (!is.list(built) || is.null(built$model)) {
+    stop("samOptiPro: build_fn() must return a list with at least $model.")
+  }
+
+  # (2) Verify the NIMBLE signature and retrieve the R-level model
+  mdl <- built$model
+  if (!.sop_is_model(mdl)) {
+    stop("samOptiPro: build_fn()$model does not resemble a NIMBLE model (classes: ",
+         paste(class(mdl), collapse = "/"), ")")
+  }
+  mdl <- .sop_get_uncompiled_model(mdl)
+
+  # (3) Compile the model if necessary
+  cmod <- built$cmodel %||% try(nimble::compileNimble(mdl), silent = TRUE)
+  if (inherits(cmod, "try-error") || is.null(cmod)) {
+    stop("samOptiPro: model compilation failure.")
+  }
+
+  # (4) Monitors & configuration MCMC
+  mons_in <- monitors %||% built$monitors
+  conf <- .configure_with_monitors(
+    mdl,
+    monitors = mons_in,
+    thin     = thin,
+    thin2    = thin,
+    opts     = opts
+  )
+
+  # (5) Standardized output (+ propagate chain_id when used)
+  out <- list(
+    model           = mdl,
+    cmodel          = cmod,
+    conf            = conf,
+    monitors        = attr(conf, "._sop_monitors_roots")  %||% character(0),
+    monitors2       = attr(conf, "._sop_monitors2_roots") %||% character(0),
+    monitors_nodes  = attr(conf, "._sop_monitors_nodes")  %||% character(0),
+    monitors2_nodes = attr(conf, "._sop_monitors2_nodes") %||% character(0)
+  )
+
+  if (!is.null(chain_id) && has_chain) out$chain_id <- as.integer(chain_id)
+
+  out
+}
+
+
+#' @keywords internal
+.merge_mcmc <- function(samples, samples2) {
+  grab_mcpar <- function(obj) {
+    if (inherits(obj, "mcmc.list") && length(obj)) return(attr(obj[[1]], "mcpar"))
+    if (inherits(obj, "mcmc"))                     return(attr(obj, "mcpar"))
+    NULL
+  }
+  mp <- grab_mcpar(samples); if (is.null(mp)) mp <- grab_mcpar(samples2)
+  start <- if (!is.null(mp)) mp[1] else 1L
+  thin  <- if (!is.null(mp)) mp[3] else 1L
+
+  s1 <- .safe_as_mcmc_list(samples,  start = start, thin = thin)
+  s2 <- .safe_as_mcmc_list(samples2, start = start, thin = thin)
+
+  if (is.null(s1) && is.null(s2))
+    stop("No samples (samples/samples2) were produced.")
+
+  if (is.null(s2)) return(s1)
+  if (is.null(s1)) return(s2)
+
+  stopifnot(length(s1) == length(s2))
+  coda::mcmc.list(lapply(seq_along(s1), function(i) {
+    m1 <- as.matrix(s1[[i]]); m2 <- as.matrix(s2[[i]])
+    if (NCOL(m1) == 0L) return(s2[[i]])
+    if (NCOL(m2) == 0L) return(s1[[i]])
+    mp <- attr(s1[[i]], "mcpar"); if (is.null(mp)) mp <- attr(s2[[i]], "mcpar")
+    start <- if (!is.null(mp)) mp[1] else 1L
+    thin  <- if (!is.null(mp)) mp[3] else 1L
+    end   <- if (!is.null(mp)) mp[2] else (start + (NROW(m1) - 1L) * thin)
+    coda::mcmc(cbind(m1, m2), start = start, end = end, thin = thin)
+  }))
+}
+
+
+#' @keywords internal
+.run_and_collect <- function(cmcmc, niter, nburnin, thin, nchains = 1L) {
+  t0 <- proc.time()
+  res <- nimble::runMCMC(
+    cmcmc,
+    niter    = as.integer(niter),
+    nburnin  = as.integer(nburnin),
+    thin     = as.integer(thin),
+    nchains  = as.integer(nchains),
+    samplesAsCodaMCMC = FALSE,  # <- to ensure a return {samples, samples2}
+    summary  = FALSE,
+    WAIC     = FALSE
+  )
+  t1 <- proc.time()
+  runtime_s <- unname((t1 - t0)[["elapsed"]])
+  if (!is.finite(runtime_s)) runtime_s <- NA_real_
+
+  # ‘res’ is a list with $samples and possibly $samples2
+  list(
+    samples   = res$samples,
+    samples2  = res$samples2 %||% NULL,
+    runtime_s = as.numeric(runtime_s)
+  )
+}
+
+
+#' @keywords internal
+.safe_as_mcmc_list <- function(x, start = 1L, thin = 1L) {
+  if (is.null(x)) return(NULL)
+  if (inherits(x, "mcmc.list")) return(x)
+  if (inherits(x, "mcmc"))      return(coda::mcmc.list(x))
+  if (is.matrix(x) || is.data.frame(x)) {
+    if (NCOL(x) == 0L) return(NULL)
+    return(coda::mcmc.list(coda::mcmc(as.matrix(x), start = start, thin = thin)))
+  }
+  if (is.list(x)) {
+    lst <- lapply(x, function(mat) {
+      if (is.null(mat)) return(NULL)
+      if (is.matrix(mat) || is.data.frame(mat)) {
+        if (NCOL(mat) == 0L) return(NULL)
+        return(coda::mcmc(as.matrix(mat), start = start, thin = thin))
+      }
+      if (inherits(mat, "mcmc")) return(mat)
+      NULL
+    })
+    lst <- Filter(Negate(is.null), lst)
+    if (!length(lst)) return(NULL)
+    return(coda::mcmc.list(lst))
+  }
+  NULL
+}
+
+
+grab_mcpar <- function(obj) {
+  if (inherits(obj, "mcmc.list") && length(obj)) return(attr(obj[[1]], "mcpar"))
+  if (inherits(obj, "mcmc"))                     return(attr(obj, "mcpar"))
+  NULL
+}
+
+
+
