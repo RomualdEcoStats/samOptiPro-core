@@ -1165,7 +1165,7 @@ configure_hmc_safely_parallel_bis <- function(
     show_compiler_output = FALSE,
     seed = 1L,
     n_cores = nchains,
-    samplesAsCodaMCMC = TRUE,
+    samplesAsCodaMCMC = FALSE,  # aligned with baseline default
     opts = NULL
 ) {
   stopifnot(is.function(build_fn) || (is.character(build_fn) && length(build_fn) == 1L))
@@ -1190,7 +1190,7 @@ configure_hmc_safely_parallel_bis <- function(
   `%||%` <- function(x, y) if (is.null(x)) y else x
   opts <- if (is.null(opts)) list() else opts
 
-  ## ---- Builder resolution strategy (same logic as baseline_bis) ----
+  ## ---- Builder resolution strategy ----
   build_fn_name <- NULL
   build_fn_ns   <- NULL
   build_fn_text <- opts$build_fn_text %||% NULL
@@ -1204,6 +1204,8 @@ configure_hmc_safely_parallel_bis <- function(
     build_fn <- NULL
   } else if (is.function(build_fn)) {
     if (!is.null(opts$build_fn_name)) build_fn_name <- as.character(opts$build_fn_name)
+  } else {
+    stop("build_fn must be a function or a single character string (function name).")
   }
 
   if (!is.null(opts$build_fn_ns))   build_fn_ns   <- as.character(opts$build_fn_ns)
@@ -1229,7 +1231,10 @@ configure_hmc_safely_parallel_bis <- function(
   cluster_type <- opts$cluster_type %||% "PSOCK"
   outfile      <- opts$outfile %||% ""
 
-  resetFunctions <- isTRUE(opts$resetFunctions %||% FALSE)  # IMPORTANT: default FALSE to avoid needless recompiles
+  prefer_run_object <- isTRUE(opts$prefer_run_object %||% TRUE)
+  reset_on_run      <- isTRUE(opts$reset_on_run %||% TRUE)
+
+  resetFunctions <- isTRUE(opts$resetFunctions %||% FALSE)
   gc_worker      <- isTRUE(opts$gc_worker %||% TRUE)
 
   mcmc_time   <- isTRUE(opts$mcmc_time %||% TRUE)
@@ -1238,9 +1243,8 @@ configure_hmc_safely_parallel_bis <- function(
   worker_libpaths <- opts$worker_libpaths %||% NULL
   worker_packages <- opts$worker_packages %||% character(0)
 
-  conf_return <- opts$conf_return %||% "chain1"  # "none"|"chain1"|"by_chain"|"rds"
+  conf_return <- opts$conf_return %||% "chain1"
   conf_dir    <- opts$conf_dir %||% tempdir()
-
   stopifnot(conf_return %in% c("none", "chain1", "by_chain", "rds"))
 
   ## ---- Start cluster ----
@@ -1267,7 +1271,7 @@ configure_hmc_safely_parallel_bis <- function(
     NULL
   })
 
-  ## ---- Inject captured env of builder (fix hindcast_/Const_nimble_ etc.) ----
+  ## ---- Inject captured env of builder ----
   parallel::clusterExport(cl, varlist = c("builder_env_list"), envir = environment())
   parallel::clusterEvalQ(cl, {
     if (!is.null(builder_env_list) && length(builder_env_list)) {
@@ -1304,7 +1308,9 @@ configure_hmc_safely_parallel_bis <- function(
       "resetFunctions", "gc_worker",
       "mcmc_time", "progressBar",
       "inits",
-      "conf_return", "conf_dir"
+      "conf_return", "conf_dir",
+      "nchains",
+      "prefer_run_object", "reset_on_run"
     ),
     envir = environment()
   )
@@ -1317,7 +1323,6 @@ configure_hmc_safely_parallel_bis <- function(
 
     bf <- NULL
 
-    # 1) Namespace resolution
     if (!is.null(build_fn_name) && !is.null(build_fn_ns)) {
       ns <- try(asNamespace(build_fn_ns), silent = TRUE)
       if (!inherits(ns, "try-error") && exists(build_fn_name, envir = ns, inherits = TRUE)) {
@@ -1325,13 +1330,11 @@ configure_hmc_safely_parallel_bis <- function(
       }
     }
 
-    # 2) GlobalEnv resolution (injected)
     if (is.null(bf) && !is.null(build_fn_name) &&
         exists(build_fn_name, envir = .GlobalEnv, inherits = FALSE)) {
       bf <- get(build_fn_name, envir = .GlobalEnv, inherits = FALSE)
     }
 
-    # 3) Exported function object fallback
     if (is.null(bf) && is.null(build_fn_name)) bf <- build_fn
 
     if (is.null(bf) || !is.function(bf)) {
@@ -1340,7 +1343,6 @@ configure_hmc_safely_parallel_bis <- function(
            ".GlobalEnv, then exported function object.")
     }
 
-    ## Prepare chain-specific inits (if any)
     init_i <- NULL
     if (!is.null(inits)) {
       if (is.list(inits) && length(inits) == 1L && !is.null(names(inits))) {
@@ -1352,7 +1354,6 @@ configure_hmc_safely_parallel_bis <- function(
       }
     }
 
-    ## Call builder: try (chain_id, export_global, inits) then fallbacks
     parts <- tryCatch(
       bf(chain_id = chain_id, export_global = FALSE, inits = init_i),
       error = function(e1) {
@@ -1371,7 +1372,6 @@ configure_hmc_safely_parallel_bis <- function(
       stop(sprintf("build_fn failed on chain %d: %s", chain_id, conditionMessage(parts)))
     }
 
-    ## Normalize builder output
     if (inherits(parts, "nimbleModel") || inherits(parts, "modelBaseClass")) {
       parts <- list(model = parts)
     }
@@ -1379,25 +1379,25 @@ configure_hmc_safely_parallel_bis <- function(
       stop("build_fn must return a nimble model (or list(model=...)).")
     }
 
-    ## Compile model ONCE per worker (prefer provided cmodel)
+    ## --- Enforce model/cmodel coherence ---
     cmodel <- NULL
     if (!is.null(parts$cmodel) && inherits(parts$cmodel, "CompiledNimbleModel")) {
-      cmodel <- parts$cmodel
+      rptr <- try(parts$cmodel$getModel(), silent = TRUE)
+      if (!inherits(rptr, "try-error") && !is.null(rptr) && isTRUE(identical(rptr, parts$model))) {
+        cmodel <- parts$cmodel
+      } else {
+        cmodel <- nimble::compileNimble(parts$model, showCompilerOutput = isTRUE(show_compiler_output))
+      }
     } else {
-      cmodel <- nimble::compileNimble(
-        parts$model,
-        showCompilerOutput = isTRUE(show_compiler_output)
-      )
+      cmodel <- nimble::compileNimble(parts$model, showCompilerOutput = isTRUE(show_compiler_output))
     }
 
-    ## HMC config per worker (plein pot)
     conf_hmc <- nimbleHMC::configureHMC(
       parts$model,
       monitors   = monitors,
       enableWAIC = isTRUE(enable_WAIC)
     )
 
-    ## Build + compile MCMC (compile against compiled project)
     Rmcmc <- nimble::buildMCMC(conf_hmc)
     Cmcmc <- nimble::compileNimble(
       Rmcmc,
@@ -1406,39 +1406,43 @@ configure_hmc_safely_parallel_bis <- function(
       showCompilerOutput = isTRUE(show_compiler_output)
     )
 
-    ## Run (useful runtime only)
     t0 <- Sys.time()
-    smp <- nimble::runMCMC(
-      Cmcmc,
-      niter   = as.integer(niter),
-      nburnin = as.integer(nburnin),
-      thin    = as.integer(thin),
-      nchains = 1L,
-      samplesAsCodaMCMC = isTRUE(samplesAsCodaMCMC),
-      summary = FALSE,
-      WAIC    = FALSE
-    )
-    dt <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
 
-    ## Times (optional)
-    st <- NULL
-    if (isTRUE(mcmc_time) && is.function(Cmcmc$getTimes)) {
-      st <- try(Cmcmc$getTimes(), silent = TRUE)
-      if (inherits(st, "try-error")) st <- NULL
+    smp <- NULL
+    if (isTRUE(prefer_run_object) && is.function(Cmcmc$run) && !isTRUE(samplesAsCodaMCMC)) {
+      Cmcmc$run(
+        niter       = as.integer(niter),
+        nburnin     = as.integer(nburnin),
+        thin        = as.integer(thin),
+        time        = isTRUE(mcmc_time),
+        progressBar = isTRUE(progressBar),
+        reset       = isTRUE(reset_on_run)
+      )
+      smp <- as.matrix(Cmcmc$mvSamples)
+    } else {
+      smp <- nimble::runMCMC(
+        Cmcmc,
+        niter   = as.integer(niter),
+        nburnin = as.integer(nburnin),
+        thin    = as.integer(thin),
+        nchains = 1L,
+        samplesAsCodaMCMC = isTRUE(samplesAsCodaMCMC),
+        summary = FALSE,
+        WAIC    = FALSE
+      )
     }
 
-    ## Conf return policy (avoid serialization issues)
-    conf_out <- NULL
-    conf_path <- NULL
+    dt <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
+
+    conf_out  <- NULL
+    conf_path <- NA_character_
 
     if (!identical(conf_return, "none")) {
       if (identical(conf_return, "rds")) {
         dir.create(conf_dir, showWarnings = FALSE, recursive = TRUE)
-        conf_path <- file.path(conf_dir, sprintf("conf_hmc_chain%02d.rds", chain_id))
-        ok <- try(saveRDS(conf_hmc, conf_path), silent = TRUE)
-        if (inherits(ok, "try-error")) {
-          conf_path <- NULL
-        }
+        conf_path_try <- file.path(conf_dir, sprintf("conf_hmc_chain%02d.rds", chain_id))
+        ok <- try(saveRDS(conf_hmc, conf_path_try), silent = TRUE)
+        if (!inherits(ok, "try-error")) conf_path <- conf_path_try
       } else if (identical(conf_return, "by_chain")) {
         conf_out <- conf_hmc
       } else if (identical(conf_return, "chain1") && chain_id == 1L) {
@@ -1452,51 +1456,49 @@ configure_hmc_safely_parallel_bis <- function(
     }
 
     list(
-      chain_id      = chain_id,
-      samples       = smp,
-      runtime_s     = dt,
-      sampler_times = st,
-      conf          = conf_out,
-      conf_path     = conf_path
+      chain_id  = chain_id,
+      samples   = smp,
+      runtime_s = dt,
+      conf      = conf_out,
+      conf_path = conf_path
     )
   }
 
-  parallel::clusterExport(cl, varlist = "worker_fun", envir = environment())
-
-  ## ---- Run ----
   time_start <- Sys.time()
   ans <- parallel::parLapply(cl, X = seq_len(nchains), fun = worker_fun)
   time_end  <- Sys.time()
 
   ans <- ans[order(vapply(ans, `[[`, integer(1), "chain_id"))]
 
-  runtime_s <- as.numeric(difftime(time_end, time_start, units = "secs"))
+  #runtime_s <- as.numeric(difftime(time_end, time_start, units = "secs")) #Overall runtime_s
+  runtime_s <- max(vapply(ans, `[[`, numeric(1), "runtime_s"), na.rm = TRUE)
 
   out <- list(
     samples          = lapply(ans, `[[`, "samples"),
     runtime_s        = runtime_s,
-    runtime_by_chain = vapply(ans, `[[`, numeric(1), "runtime_s"),
-    sampler_times    = lapply(ans, `[[`, "sampler_times")
+    runtime_by_chain = vapply(ans, `[[`, numeric(1), "runtime_s")
   )
 
-  ## conf outputs (robust)
   conf_by_chain <- lapply(ans, `[[`, "conf")
-  conf_paths    <- vapply(ans, `[[`, character(1), "conf_path")
-  conf_paths[conf_paths == ""] <- NA_character_
 
   if (identical(conf_return, "by_chain")) {
     out$conf_by_chain <- conf_by_chain
   } else if (identical(conf_return, "chain1")) {
     out$conf <- conf_by_chain[[1]]
   } else if (identical(conf_return, "rds")) {
+    conf_paths <- vapply(ans, function(x) {
+      p <- x[["conf_path"]]
+      if (is.null(p) || length(p) != 1L || is.na(p) || !nzchar(p)) NA_character_ else p
+    }, character(1))
     out$conf_paths <- conf_paths
-    # convenience: chain1 path
     out$conf_path_chain1 <- conf_paths[1]
   }
 
   if (isTRUE(samplesAsCodaMCMC)) {
     out$samples <- coda::mcmc.list(lapply(out$samples, function(x) {
-      if (inherits(x, "mcmc.list")) x[[1]] else coda::as.mcmc(x)
+      if (inherits(x, "mcmc")) return(x)
+      if (inherits(x, "mcmc.list")) return(x[[1]])
+      coda::as.mcmc(as.matrix(x))
     }))
   }
 

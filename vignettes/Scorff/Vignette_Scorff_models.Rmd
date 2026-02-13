@@ -424,7 +424,7 @@ The function `build_fn()` is the central entry point used by most `samOptiPro`
 tools. It returns the model, its compiled version, the default monitors and the
 model code as plain text.
 
-```{r Definition of auxiliary nimbleFunctions and compiled model object, message=FALSE, warning=FALSE}
+```{r Definition of auxiliary nimbleFunctions and compiled model object,eval= FALSE, message=FALSE, warning=FALSE}
 ## ------------------------------------------------------------------
 ## NIMBLE options (set once, early)
 ## ------------------------------------------------------------------
@@ -546,7 +546,7 @@ exists("m"); exists("cm")
 
 ## `diagnose_model_structure()`: structural and timing bottlenecks
 
-```{r diagnose-structure, message=FALSE, warning=FALSE,fig.show='hide'}
+```{r diagnose-structure, eval= FALSE,message=FALSE, warning=FALSE,fig.show='hide'}
 cat("\n[MODEL STRUCTURE CHECK]\n")
 diag_s <- diagnose_model_structure(
   model              = m,
@@ -590,7 +590,7 @@ Taken together, these diagnostics emphasize that computational bottlenecks in th
 ## `run_structure_and_hmc_test()`: combined structure + HMC/NUTS check
 
 
-```{r structure-hmc-test, message=FALSE, warning=FALSE}
+```{r structure-hmc-test, eval= FALSE,message=FALSE, warning=FALSE}
 out <- run_structure_and_hmc_test(build_M, include_data = FALSE)
 ```
 The structural diagnostic indicates that the model comprises 217 stochastic nodes and 1,365 deterministic nodes, confirming that its computational complexity is largely driven by deterministic transformations rather than by stochastic sampling alone. The non-differentiability scan identifies several non-smooth functions, most notably the use of round. While no individual latent node constitutes a local “showstopper” for gradient-based samplers, the enforcement of strict global differentiability leads to the exclusion of HMC/NUTS for the model as a whole.
@@ -843,7 +843,7 @@ Overall, this vignette demonstrates how detailed computational benchmarking, app
 
 # Step 7 – Visualization and diagnostics
 
-```{r diagnostics-plots, echo=FALSE, message=FALSE, warning=FALSE, results='markup',fig.show='as.is', fig.width=6.5, fig.height=4.5}
+```{r diagnostics-plots, echo=FALSE,eval= FALSE, message=FALSE, warning=FALSE, results='markup',fig.show='as.is', fig.width=6.5, fig.height=4.5}
 
 out_dir <- "outputs/diagnostics"
 dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
@@ -906,7 +906,7 @@ invisible(NULL)
 
 ```
 
-```{r diagnostics-plots2, echo=FALSE, message=FALSE, warning=FALSE, fig.align="center"}
+```{r diagnostics-plots2, echo=FALSE,eval= FALSE, message=FALSE, warning=FALSE, fig.align="center"}
 diag_dir <- "~/samOptiPro_packages_dev/samOptiPro/vignettes/Scorff/outputs/diagnostics"
 
 wanted <- c(

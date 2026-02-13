@@ -22,7 +22,8 @@ utils::globalVariables(c(
   "Rhat_median", "TIME_rank", "__sampler__", "all_nodes",
   "base", "bins", "built", "diag_tbl", "key", "key_f", "m",
   "ok_grid", "out_dir", "per", "sdir", "st", "top_by", "top_k",
-  "valid", "itB","model","msg","...","..","type",":=", "median_ESS","::",":::"
+  "valid", "itB","model","msg","...","..","type",":=", "median_ESS","::",":::",
+  "AE_med", "CE_med", "slow_node_time", "Rhat_med"
 ))
 
 #' @importFrom stats runif start

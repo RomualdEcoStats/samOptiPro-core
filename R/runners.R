@@ -933,8 +933,8 @@ run_baseline_config_parallel_bis <- function(build_fn,
   ans <- parallel::parLapply(cl, X = seq_len(nchains), fun = worker_fun)
   time_end  <- Sys.time()
 
-  runtime_s <- as.numeric(difftime(time_end, time_start, units = "secs"))
-
+  #runtime_s <- as.numeric(difftime(time_end, time_start, units = "secs")) #Overall runtime_s
+  runtime_s <- max(vapply(ans, `[[`, numeric(1), "runtime_s"), na.rm = TRUE)
   out <- list(
     samples          = lapply(ans, `[[`, "samples"),
     runtime_s        = runtime_s,

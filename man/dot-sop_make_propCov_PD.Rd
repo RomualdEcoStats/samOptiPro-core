@@ -6,7 +6,7 @@
 \usage{
 .sop_make_propCov_PD(
   S,
-  jitter_seq = c(0, 1e-10, 1e-08, 1e-06, 1e-04, 0.01),
+  jitter_seq = c(0, 0.0000000001, 0.00000001, 0.000001, 0.0001, 0.01),
   shrink_grid = c(0, 0.05, 0.1, 0.2, 0.4)
 )
 }

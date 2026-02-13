@@ -1746,7 +1746,7 @@ cat("monitor_sampled <- c(",
 
 # Step 3 – Building and compiling the model
 
-```{r Building and compiling, message=FALSE, warning=FALSE}
+```{r Building and compiling, eval=FALSE,message=FALSE, warning=FALSE}
 
 monitor_sampled <- c("N2", "h5_NAC_1", "h8_NAC_1", "h8_NAC_3", "h6_hw", "h9_hw", "h6_hw_delSp", "h9_hw_delSp", "logit_theta3", "logit_theta4", "tau_theta3", "tau_theta4", "logit_theta3_pr", "N1_pr", "log_N9_pr", "N2_pr")
 
@@ -1833,7 +1833,7 @@ exists("m"); exists("cm")
 
 ## `diagnose_model_structure()`: structural and timing bottlenecks
 
-```{r diagnose-structure, message=TRUE, warning=FALSE,fig.show='hide'}
+```{r diagnose-structure, message=TRUE, eval= FALSE, warning=FALSE,fig.show='hide'}
 cat("\n[MODEL STRUCTURE CHECK]\n")
 diag_s <- diagnose_model_structure(
   model              = m,
@@ -1876,7 +1876,7 @@ This first diagnostic test therefore reveals a clear distinction between biologi
 
 ## `run_structure_and_hmc_test()`: combined structure + HMC/NUTS check
 
-```{r structure-hmc-test, message=TRUE, warning=FALSE}
+```{r structure-hmc-test, message=TRUE,eval= FALSE, warning=FALSE}
 out <- run_structure_and_hmc_test(build_M, include_data = FALSE)
 ```
 
@@ -1949,7 +1949,7 @@ bot2$top3
 ```
 
 
-```{r baseline parallel-run-WGNAS , eval=TRUE, echo=TRUE, message=TRUE, warning=FALSE}
+```{r baseline parallel-run-WGNAS , eval=FALSE, echo=TRUE, message=TRUE, warning=FALSE}
 n.iter   <- 300000
 n.burnin <- 25000
 n.thin   <- 250
@@ -1987,7 +1987,7 @@ samples_ml <- as_mcmc_list_sop(
 
 
 runtime_s <- res_b$runtime_s
-runtime_s
+runtime_s <-29897.09
 
 ## --- make sure the objects exist (exported by build_M when first called)
 stopifnot(exists("m"), exists("conf.mcmc"))
@@ -2020,24 +2020,12 @@ diag_tbl <- compute_diag_from_mcmc_alt(
   runtime_s = res_b$runtime_s
 )
 
-## 2) Use the *actual* MCMC configuration used to run the chain(s)
-## Prefer: exported `conf` (from build_M(export_global=TRUE))
-## Fallback: conf from res object if available
-if (!exists("conf", inherits = TRUE)) {
-  if (!is.null(res_b$conf_by_chain)) {
-    conf <- res_b$conf_by_chain[[1]]
-  } else if (!is.null(attr(res_b, "conf_by_chain"))) {
-    conf <- attr(res_b, "conf_by_chain")[[1]]
-  } else {
-    stop("No MCMC configuration found: provide `conf` or ensure `res_b` carries `conf_by_chain`.")
-  }
-}
 
-## 3) Generate plots to disk (ensure out_dir is used)
+## 2) Generate plots to disk (ensure out_dir is used)
 plots_bn <- plot_bottlenecks(
   diag_tbl,
   sampled_only = TRUE,
-  conf.mcmc    = conf,
+  conf.mcmc    = conf.mcmc,
   samples_ml   = samples_ml,
   out_dir      = out_dir
 )
@@ -2125,7 +2113,7 @@ plot_strategies_from_test_result_fast(
 ```
 
 
-```{r Run HMC/NUTS parallel, eval=TRUE,message=TRUE, warning=FALSE}
+```{r Run HMC/NUTS parallel, eval=FALSE,message=TRUE, warning=FALSE}
 
 #hmc_full <- configure_hmc_safely_parallel(
   #build_fn    = build_M,

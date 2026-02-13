@@ -198,7 +198,7 @@ create_zone=function(z, izone,tab_series_zones){
 ```
 
 
-```{r dataLoadingFormatting, echo=FALSE, warning=FALSE, message=FALSE}
+```{r dataLoadingFormatting,eval= FALSE, echo=FALSE, warning=FALSE, message=FALSE}
 ####loading time series from WGEEL
 if ((!file.exists(paste("datagerem_nimble2_",CY,".rdata",sep=""))) ){
   
@@ -277,7 +277,7 @@ if ((!file.exists(paste("datagerem_nimble2_",CY,".rdata",sep=""))) ){
 ```
 
 
-```{r buildingZone, echo=FALSE, warning=FALSE, message=FALSE}
+```{r buildingZone, echo=FALSE,eval= FALSE, warning=FALSE, message=FALSE}
 ######building zones
 if ((!file.exists(paste("datagerem_nimble2_",CY,".rdata",sep=""))) ){
   sf::sf_use_s2(FALSE)
@@ -302,7 +302,7 @@ if ((!file.exists(paste("datagerem_nimble2_",CY,".rdata",sep=""))) ){
 ```
 
 
-```{r mapsZones, echo=FALSE,warning=FALSE,message=FALSE, fig.height=16/2.54, fig.cap="Zone definition and available data"}
+```{r mapsZones, echo=FALSE,eval= FALSE,warning=FALSE,message=FALSE, fig.height=16/2.54, fig.cap="Zone definition and available data"}
 sf::sf_use_s2(FALSE)
 worldmap <- ne_countries(scale = 'medium', type = 'map_units',
                          returnclass = 'sf')
@@ -328,7 +328,7 @@ ggplot(europe_cropped)+geom_sf(data=europe_cropped,
   theme_bw()
 ```
 
-```{r availableData, echo=FALSE,tab.cap="Available time series of recruitment"}
+```{r availableData, echo=FALSE,eval= FALSE,tab.cap="Available time series of recruitment"}
 ft <- flextable(series_stat[order(series_stat$zone,series_stat$ser_nameshort),]) %>%
   colformat_num(j="surface") %>%
   set_header_labels(ser_nameshort="Series",
@@ -364,7 +364,7 @@ ggplot(priors,aes(x=x, y=prior))+
 ```
 
 ## Running the model
-```{r runningConfig, echo=FALSE, include=FALSE}
+```{r runningConfig, eval= FALSE,echo=FALSE, include=FALSE}
 if ((!file.exists(paste("datagerem_nimble2_",CY,".rdata",sep=""))) ){
   
   burnin=100000
@@ -834,7 +834,7 @@ geremCode <- nimbleCode({
 
 # Step 2 – Building and compiling the model
 
-```{r Building and compiling, message=FALSE, warning=FALSE}
+```{r Building and compiling, eval= FALSE,message=FALSE, warning=FALSE}
 ## ---- NIMBLE global options ----
 nimble::nimbleOptions(
   buildInterfacesForCompiledNestedNimbleFunctions = TRUE,
@@ -985,7 +985,7 @@ exists("m"); exists("cm")
 
 ## `diagnose_model_structure()`: structural and timing bottlenecks
 
-```{r diagnose-structure, message=TRUE, warning=FALSE}
+```{r diagnose-structure, eval= FALSE,message=TRUE, warning=FALSE}
 cat("\n[MODEL STRUCTURE CHECK]\n")
 diag_s <- diagnose_model_structure(
   model              = m,
@@ -1034,7 +1034,7 @@ The baseline MCMC configuration further reveals substantial heterogeneity in sam
 
 ## `run_structure_and_hmc_test()`: combined structure + HMC/NUTS check
 
-```{r structure-hmc-test, message=TRUE, warning=FALSE}
+```{r structure-hmc-test, eval= FALSE,message=TRUE, warning=FALSE}
 out <- run_structure_and_hmc_test(build_M, include_data = FALSE)
 ```
 
@@ -1052,7 +1052,7 @@ From a practical perspective, the baseline sampler composition—combining Diric
 
 ## Step 4 – Convergence assessment with default samplers (baseline)
 
-```{r baseline parallel-run-GEREM , eval=TRUE, echo=TRUE, message=TRUE, warning=FALSE,results='markup',fig.show='as.is', fig.width=6.5, fig.height=4.5}
+```{r baseline parallel-run-GEREM , eval=FALSE, echo=TRUE, message=TRUE, warning=FALSE,results='markup',fig.show='as.is', fig.width=6.5, fig.height=4.5}
 
 n.iter   <- 150000
 n.burnin <- 100000
@@ -1198,7 +1198,7 @@ Given that the baseline configuration does not achieve full convergence (propcon
 
 # Step 5-Strategy: slice-only sampling (onlySlice)
 
-```{r strategy1-parallel-run, eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE,results='markup',fig.show='as.is', fig.width=6.5, fig.height=4.5}
+```{r strategy1-parallel-run, eval=FALSE, echo=TRUE, message=FALSE, warning=FALSE,results='markup',fig.show='as.is', fig.width=6.5, fig.height=4.5}
 ## ------------------------------------------------------------
 ## Strategy: GEREM (parallel) with strict slice-only samplers
 ## ------------------------------------------------------------
@@ -1355,7 +1355,7 @@ Subsequent optimisation steps can therefore focus on these specific components, 
 
 # Step 6 – Step 5 – Strategy 2: global slice-only sampling with targeted NUTS on \(\beta\)
 
-```{r Strategy2 parallel-run-GEREM , eval=TRUE, echo=TRUE, message=TRUE, warning=FALSE,results='markup',fig.show='as.is', fig.width=6.5, fig.height=4.5}
+```{r Strategy2 parallel-run-GEREM , eval=FALSE, echo=TRUE, message=TRUE, warning=FALSE,results='markup',fig.show='as.is', fig.width=6.5, fig.height=4.5}
 
 #res_slice_like_hist <- run_custom_mcmc_parallel(
   #build_fn   = build_M,

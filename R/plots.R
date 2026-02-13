@@ -172,13 +172,32 @@ plot_strategies_from_test_result_hmc_fast <- function(
       plot.subtitle = ggplot2::element_text(size = 10)
     )
 
+  ## Helper: selection direction
+  ## - For AE/CE: bottlenecks correspond to LOW efficiency -> take smallest values.
+  ## - For Rhat: worst convergence corresponds to HIGH Rhat -> take largest values.
+  select_top_tbl <- function(tbl, metric_col, top_k) {
+    tbl <- tbl[!is.na(tbl[[metric_col]]), , drop = FALSE]
+    if (!nrow(tbl)) return(tbl)
+
+    if (metric_col %in% c("CE_ESS_per_s", "AE_ESS_per_it")) {
+      tbl <- tbl[order(tbl[[metric_col]]), , drop = FALSE]     # ascending (worst efficiency)
+    } else {
+      tbl <- tbl[order(-tbl[[metric_col]]), , drop = FALSE]    # descending (worst Rhat)
+    }
+
+    if (nrow(tbl) > top_k) tbl <- tbl[seq_len(top_k), , drop = FALSE]
+    tbl
+  }
+
+  ## Helper: labels for titles (keep "Top" wording but reflect direction cleanly)
+  title_rank_word <- function(metric_col) {
+    if (metric_col %in% c("CE_ESS_per_s", "AE_ESS_per_it")) "Worst" else "Worst"
+  }
+
   if (per == "target") {
     plot_tbl <- diag_tbl
-    plot_tbl <- plot_tbl[!is.na(plot_tbl[[metric_col]]), , drop = FALSE]
+    plot_tbl <- select_top_tbl(plot_tbl, metric_col, as.integer(top_k))
     if (!nrow(plot_tbl)) stop("No rows with non-NA metric for per='target'.")
-
-    plot_tbl <- plot_tbl[order(-plot_tbl[[metric_col]]), , drop = FALSE]
-    if (nrow(plot_tbl) > top_k) plot_tbl <- plot_tbl[seq_len(top_k), , drop = FALSE]
 
     ## Order so bars are left->right increasing (nicer vertical barplot)
     plot_tbl$target <- factor(plot_tbl$target, levels = plot_tbl$target[order(plot_tbl[[metric_col]])])
@@ -189,7 +208,7 @@ plot_strategies_from_test_result_hmc_fast <- function(
         x = "Targets",
         y = metric_col,
         fill = "Rhat",
-        title = sprintf("Top %d targets by %s (HMC/NUTS)", as.integer(top_k), metric_col),
+        title = sprintf("%s %d targets by %s (HMC/NUTS)", title_rank_word(metric_col), as.integer(top_k), metric_col),
         subtitle = sprintf("Fill color indicates Rhat class (threshold %.2f)", rhat_thr)
       ) +
       theme_elegant
@@ -239,11 +258,8 @@ plot_strategies_from_test_result_hmc_fast <- function(
       levels = c(sprintf("< %.2f", rhat_thr), sprintf("%.2f-1.05", rhat_thr), ">= 1.05", "Rhat NA")
     )
 
-    plot_tbl <- plot_tbl[!is.na(plot_tbl[[metric_col]]), , drop = FALSE]
+    plot_tbl <- select_top_tbl(plot_tbl, metric_col, as.integer(top_k))
     if (!nrow(plot_tbl)) stop("No rows with non-NA metric for per='family'.")
-
-    plot_tbl <- plot_tbl[order(-plot_tbl[[metric_col]]), , drop = FALSE]
-    if (nrow(plot_tbl) > top_k) plot_tbl <- plot_tbl[seq_len(top_k), , drop = FALSE]
 
     ## Order so bars are left->right increasing
     plot_tbl$Family <- factor(plot_tbl$Family, levels = plot_tbl$Family[order(plot_tbl[[metric_col]])])
@@ -254,7 +270,7 @@ plot_strategies_from_test_result_hmc_fast <- function(
         x = "Node family",
         y = metric_col,
         fill = "Median Rhat",
-        title = sprintf("Top %d families by %s (HMC/NUTS)", as.integer(top_k), metric_col),
+        title = sprintf("%s %d families by %s (HMC/NUTS)", title_rank_word(metric_col), as.integer(top_k), metric_col),
         subtitle = sprintf("Median metric per family; Rhat threshold %.2f", rhat_thr)
       ) +
       theme_elegant +
@@ -404,7 +420,7 @@ plot_bottlenecks <- function(diag_tbl,
   as_num <- function(x) suppressWarnings(as.numeric(x))
   save_fig <- function(p, base, w = 8, h = 5.2, dpi = 180) {
     ggplot2::ggsave(file.path(out_dir, paste0(base, ".pdf")), p, width = w, height = h)
-    ggplot2::ggsave(file.path(out_dir, paste0(base, ".png")), p, width = w, height = h, dpi = dpi)
+    ggplot2::ggsave(file.path(out_dir, paste0(base, ".png")), p, width = w, height = h, dpi = dpi, bg = "white")
   }
   agg_safe <- function(formula, data, FUN, ...) {
     if (!is.data.frame(data) || !NROW(data)) return(data.frame())
@@ -444,104 +460,270 @@ plot_bottlenecks <- function(diag_tbl,
     }
   }
 
-  # ---------- metrics ----------
-  d$AE <- if ("AE_ESS_per_it" %in% names(d)) as_num(d$AE_ESS_per_it) else if ("AE" %in% names(d)) as_num(d$AE) else NA_real_
-  d$CE <- if ("ESS_per_sec" %in% names(d)) as_num(d$ESS_per_sec) else if ("ess_per_s" %in% names(d)) as_num(d$ess_per_s) else if ("CE" %in% names(d)) as_num(d$CE) else NA_real_
-  d$ESS_abs <- if ("ESS" %in% names(d)) as_num(d$ESS) else if ("ess" %in% names(d)) as_num(d$ess) else NA_real_
-  d$time_s <- as_num(if ("time_s" %in% names(d)) d$time_s else NA_real_)
+  # ---------- metrics (aligned to bottleneck logic) ----------
+  # AE: higher is better -> bottlenecks are LOW AE
+  d$AE <- if ("AE_ESS_per_it" %in% names(d)) {
+    as_num(d$AE_ESS_per_it)
+  } else if ("AE" %in% names(d)) {
+    as_num(d$AE)
+  } else {
+    NA_real_
+  }
+
+  # CE: higher is better -> bottlenecks are LOW CE
+  d$CE <- if ("CE_ESS_per_s" %in% names(d)) {
+    as_num(d$CE_ESS_per_s)
+  } else if ("ESS_per_sec" %in% names(d)) {
+    as_num(d$ESS_per_sec)
+  } else if ("ess_per_s" %in% names(d)) {
+    as_num(d$ess_per_s)
+  } else if ("ESS_per_sec" %in% names(d)) {
+    as_num(d$ESS_per_sec)
+  } else if ("CE" %in% names(d)) {
+    as_num(d$CE)
+  } else {
+    NA_real_
+  }
+
+  # ESS absolute (optional, only used to infer time if needed)
+  d$ESS_abs <- if ("ESS_med" %in% names(d)) {
+    as_num(d$ESS_med)
+  } else if ("ESS" %in% names(d)) {
+    as_num(d$ESS)
+  } else if ("ess" %in% names(d)) {
+    as_num(d$ess)
+  } else {
+    NA_real_
+  }
+
+  # Time per target: prefer explicit slow_node_time, else time_s, else infer ESS/CE
+  d$time_s <- if ("slow_node_time" %in% names(d)) {
+    as_num(d$slow_node_time)
+  } else if ("time_s" %in% names(d)) {
+    as_num(d$time_s)
+  } else {
+    NA_real_
+  }
+
   infer_ok <- is.finite(d$ESS_abs) & is.finite(d$CE) & d$CE > 0 & !is.finite(d$time_s)
   d$time_s[infer_ok] <- d$ESS_abs[infer_ok] / d$CE[infer_ok]
+
+  # Rhat: higher is worse -> bottlenecks in convergence are HIGH Rhat
   d$Rhat <- if ("Rhat" %in% names(d)) as_num(d$Rhat) else NA_real_
 
-  # ---------- aggregations by family ----------
-  fam_ce   <- agg_safe(CE ~ Family,     d[is.finite(d$CE), ], median, na.rm = TRUE); names(fam_ce)[2]   <- "CE_median"
-  fam_ae   <- agg_safe(AE ~ Family,     d[is.finite(d$AE), ], median, na.rm = TRUE); names(fam_ae)[2]   <- "AE_median"
-  fam_time <- agg_safe(time_s ~ Family, d[is.finite(d$time_s), ], sum,    na.rm = TRUE); names(fam_time)[2] <- "time_sum"
+  # ---------- aggregations by family (bottleneck-oriented) ----------
+  # AE_med: median AE
+  fam_ae <- agg_safe(AE ~ Family, d[is.finite(d$AE), ], stats::median, na.rm = TRUE)
+  names(fam_ae)[2] <- "AE_med"
+
+  # CE_med: median CE
+  fam_ce <- agg_safe(CE ~ Family, d[is.finite(d$CE), ], stats::median, na.rm = TRUE)
+  names(fam_ce)[2] <- "CE_med"
+
+  # Rhat_med: median Rhat
+  fam_rhat <- agg_safe(Rhat ~ Family, d[is.finite(d$Rhat), ], stats::median, na.rm = TRUE)
+  names(fam_rhat)[2] <- "Rhat_med"
+
+  # slow_node_time: MAX per family (align with "slow node" concept; NOT sum)
+  fam_time <- agg_safe(time_s ~ Family, d[is.finite(d$time_s), ], max, na.rm = TRUE)
+  names(fam_time)[2] <- "slow_node_time"
+
+  # n_members: number of targets in family (informative)
+  fam_n <- agg_safe(target ~ Family, d, function(x) length(x))
+  names(fam_n)[2] <- "n_members"
+
+  grouped_data <- Reduce(function(x, y) merge(x, y, by = "Family", all = TRUE),
+                         list(fam_n, fam_ae, fam_ce, fam_time, fam_rhat))
 
   res <- list()
-  grouped_data <- merge(fam_ae, fam_ce, by = "Family", all = TRUE)
-  names(grouped_data)[names(grouped_data) == "AE_median"] <- "MedianAlgorithmicEfficiency"
-  names(grouped_data)[names(grouped_data) == "CE_median"] <- "MedianComputationalEfficiency_tot"
 
-  # ---------- AE and CE by family ----------
+  # ---------- Family bottlenecks (LOW AE, LOW CE, HIGH time) ----------
   if (isTRUE(make_esss_families) && NROW(grouped_data)) {
-    p1 <- ggplot2::ggplot(grouped_data,
-                          ggplot2::aes(x = stats::reorder(Family, MedianAlgorithmicEfficiency),
-                                       y = MedianAlgorithmicEfficiency)) +
-      ggplot2::geom_bar(stat = "identity", fill = "steelblue", width = 0.8) +
-      ggplot2::labs(title = "Median Algorithmic Efficiency by Node Family",
-                    x = "Node Family", y = "Median Algorithmic Efficiency") +
-      ggplot2::theme_minimal(base_size = 12) +
-      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
-    save_fig(p1, "bar_family_algorithmic_eff")
-    res$bar_family_algorithmic_eff <- p1
+    # Worst AE families: lowest AE_med
+    gd_ae <- grouped_data[is.finite(grouped_data$AE_med), , drop = FALSE]
+    if (NROW(gd_ae)) {
+      gd_ae <- gd_ae[order(gd_ae$AE_med, -gd_ae$slow_node_time), , drop = FALSE]
+      gd_ae <- headn(gd_ae, min(as.integer(top_k), NROW(gd_ae)))
+
+      p1 <- ggplot2::ggplot(
+        gd_ae,
+        ggplot2::aes(x = stats::reorder(Family, AE_med), y = AE_med)
+      ) +
+        ggplot2::geom_bar(stat = "identity", fill = "steelblue", width = 0.8) +
+        ggplot2::labs(
+          title = sprintf("Bottleneck families by Algorithmic Efficiency (lowest median AE) [top %d]", as.integer(top_k)),
+          x = "Node Family", y = "Median AE (ESS/iter)"
+        ) +
+        ggplot2::theme_minimal(base_size = 12) +
+        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+      save_fig(p1, "bar_family_AE_bottlenecks")
+      res$bar_family_AE_bottlenecks <- p1
+    }
+
+    # Worst CE families: lowest CE_med
+    gd_ce <- grouped_data[is.finite(grouped_data$CE_med), , drop = FALSE]
+    if (NROW(gd_ce)) {
+      gd_ce <- gd_ce[order(gd_ce$CE_med, -gd_ce$slow_node_time), , drop = FALSE]
+      gd_ce <- headn(gd_ce, min(as.integer(top_k), NROW(gd_ce)))
+
+      p2 <- ggplot2::ggplot(
+        gd_ce,
+        ggplot2::aes(x = stats::reorder(Family, CE_med), y = CE_med)
+      ) +
+        ggplot2::geom_bar(stat = "identity", fill = "darkgreen", width = 0.8) +
+        ggplot2::labs(
+          title = sprintf("Bottleneck families by Computational Efficiency (lowest median CE) [top %d]", as.integer(top_k)),
+          x = "Node Family", y = "Median CE (ESS/s)"
+        ) +
+        ggplot2::theme_minimal(base_size = 12) +
+        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+      save_fig(p2, "bar_family_CE_bottlenecks")
+      res$bar_family_CE_bottlenecks <- p2
+    }
   }
 
   if (isTRUE(make_time_families) && NROW(grouped_data)) {
-    p2 <- ggplot2::ggplot(grouped_data,
-                          ggplot2::aes(x = stats::reorder(Family, MedianComputationalEfficiency_tot),
-                                       y = MedianComputationalEfficiency_tot)) +
-      ggplot2::geom_bar(stat = "identity", fill = "darkgreen", width = 0.8) +
-      ggplot2::labs(title = "Median Computational Efficiency by Node Family",
-                    x = "Node Family", y = "Median Computational Efficiency (ESS/s)") +
-      ggplot2::theme_minimal(base_size = 12) +
-      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
-    save_fig(p2, "bar_family_computational_eff")
-    res$bar_family_computational_eff <- p2
+    # Worst time families: highest slow_node_time
+    gd_t <- grouped_data[is.finite(grouped_data$slow_node_time), , drop = FALSE]
+    if (NROW(gd_t)) {
+      gd_t <- gd_t[order(-gd_t$slow_node_time), , drop = FALSE]
+      gd_t <- headn(gd_t, min(as.integer(top_k), NROW(gd_t)))
+
+      p3 <- ggplot2::ggplot(
+        gd_t,
+        ggplot2::aes(x = stats::reorder(Family, slow_node_time), y = slow_node_time)
+      ) +
+        ggplot2::geom_bar(stat = "identity", fill = "grey50", width = 0.8) +
+        ggplot2::labs(
+          title = sprintf("Bottleneck families by Update Cost (highest slow-node time) [top %d]", as.integer(top_k)),
+          x = "Node Family", y = "Slow-node time (s)"
+        ) +
+        ggplot2::theme_minimal(base_size = 12) +
+        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+      save_fig(p3, "bar_family_TIME_bottlenecks")
+      res$bar_family_TIME_bottlenecks <- p3
+    }
   }
 
-  # ---------- CE by target ----------
+  # ---------- Target bottlenecks by CE (LOW CE, tie-break by HIGH time) ----------
   d_ce <- d[is.finite(d$CE), , drop = FALSE]
   if (isTRUE(make_esss_targets) && NROW(d_ce)) {
-    d_worst <- headn(d_ce[order(d_ce$CE, -d_ce$time_s), ], min(top_k, NROW(d_ce)))
-    p3 <- ggplot2::ggplot(d_worst,
-                          ggplot2::aes(x = stats::reorder(target, CE), y = CE)) +
+    d_worst <- d_ce[order(d_ce$CE, -d_ce$time_s), , drop = FALSE]
+    d_worst <- headn(d_worst, min(as.integer(top_k), NROW(d_worst)))
+
+    p4 <- ggplot2::ggplot(
+      d_worst,
+      ggplot2::aes(x = stats::reorder(target, CE), y = CE)
+    ) +
       ggplot2::geom_bar(stat = "identity", fill = "grey50", width = 0.8) +
-      ggplot2::labs(title = "Worst Targets by Computational Efficiency (ESS/s)",
-                    x = "Targets", y = "ESS/s") +
+      ggplot2::labs(
+        title = sprintf("Worst targets by Computational Efficiency (lowest CE) [top %d]", as.integer(top_k)),
+        x = "Targets", y = "CE (ESS/s)"
+      ) +
       ggplot2::theme_minimal(base_size = 12) +
       ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
-    save_fig(p3, "bar_target_CE_worst")
-    res$bar_target_CE <- p3
+    save_fig(p4, "bar_target_CE_bottlenecks")
+    res$bar_target_CE_bottlenecks <- p4
   }
 
-  # ---------- RHAT ----------
+  # ---------- RHAT: worst targets + worst families ----------
   d_r <- d[is.finite(d$Rhat), , drop = FALSE]
   if (NROW(d_r)) {
-    fam_rhat <- agg_safe(Rhat ~ Family, data = d_r, FUN = stats::median, na.rm = TRUE)
-    names(fam_rhat)[2] <- "median_Rhat"
 
-    if (isTRUE(make_rhat_hist_targets) && NROW(fam_rhat)) {
-      p4 <- ggplot2::ggplot(fam_rhat,
-                            ggplot2::aes(x = stats::reorder(Family, median_Rhat), y = median_Rhat - 1)) +
-        ggplot2::geom_bar(stat = "identity", fill = "orange", color = "black", width = 0.8) +
-        ggplot2::geom_hline(yintercept = (rhat_ref - 1),
-                            linetype = "dashed", color = "red", size = 1) +
-        ggplot2::xlab("Node Family") + ggplot2::ylab("Median Rhat - 1") +
-        ggplot2::theme_bw(base_size = 12) +
-        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 1))
-      save_fig(p4, "rhat_family_bars_template")
-      res$rhat_family_template <- p4
+    # Worst families by median Rhat (highest)
+    if (isTRUE(make_rhat_median_families) && NROW(fam_rhat)) {
+      fr <- fam_rhat[is.finite(fam_rhat$Rhat_med), , drop = FALSE]
+      if (NROW(fr)) {
+        fr <- fr[order(-fr$Rhat_med), , drop = FALSE]
+        fr <- headn(fr, min(as.integer(top_k), NROW(fr)))
+
+        p5 <- ggplot2::ggplot(
+          fr,
+          ggplot2::aes(x = stats::reorder(Family, Rhat_med), y = Rhat_med - 1)
+        ) +
+          ggplot2::geom_bar(stat = "identity", fill = "orange", color = "black", width = 0.8) +
+          ggplot2::geom_hline(yintercept = (rhat_ref - 1),
+                              linetype = "dashed", color = "red", linewidth = 0.8) +
+          ggplot2::xlab("Node Family") + ggplot2::ylab("Median Rhat - 1") +
+          ggplot2::theme_bw(base_size = 12) +
+          ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+        save_fig(p5, "rhat_family_worst_medians")
+        res$rhat_family_worst_medians <- p5
+      }
     }
 
+    # (Kept for backward compatibility) "hist targets" flag previously plotted family bars;
+    # we keep it but make it explicitly "worst families template" (highest median Rhat).
+    if (isTRUE(make_rhat_hist_targets) && NROW(fam_rhat)) {
+      fr2 <- fam_rhat[is.finite(fam_rhat$Rhat_med), , drop = FALSE]
+      if (NROW(fr2)) {
+        fr2 <- fr2[order(-fr2$Rhat_med), , drop = FALSE]
+        fr2 <- headn(fr2, min(as.integer(top_k), NROW(fr2)))
+
+        p6 <- ggplot2::ggplot(
+          fr2,
+          ggplot2::aes(x = stats::reorder(Family, Rhat_med), y = Rhat_med - 1)
+        ) +
+          ggplot2::geom_bar(stat = "identity", fill = "orange", color = "black", width = 0.8) +
+          ggplot2::geom_hline(yintercept = (rhat_ref - 1),
+                              linetype = "dashed", color = "red", linewidth = 0.8) +
+          ggplot2::xlab("Node Family") + ggplot2::ylab("Median Rhat - 1") +
+          ggplot2::theme_bw(base_size = 12) +
+          ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 1))
+        save_fig(p6, "rhat_family_bars_template")
+        res$rhat_family_template <- p6
+      }
+    }
+
+    # Worst targets by Rhat (highest), tie-break by LOW CE
     if (isTRUE(make_rhat_worst_targets)) {
       ord <- order(-d_r$Rhat, d_r$CE)
-      rhat_worst <- headn(d_r[ord, , drop = FALSE], min(top_k, NROW(d_r)))
-      p5 <- ggplot2::ggplot(rhat_worst,
-                            ggplot2::aes(x = stats::reorder(target, Rhat), y = Rhat - 1)) +
+      rhat_worst <- d_r[ord, , drop = FALSE]
+      rhat_worst <- headn(rhat_worst, min(as.integer(top_k), NROW(rhat_worst)))
+
+      p7 <- ggplot2::ggplot(
+        rhat_worst,
+        ggplot2::aes(x = stats::reorder(target, Rhat), y = Rhat - 1)
+      ) +
         ggplot2::geom_bar(stat = "identity", fill = "orange", color = "black", width = 0.8) +
         ggplot2::geom_hline(yintercept = (rhat_ref - 1),
-                            linetype = "dashed", color = "red", size = 1) +
+                            linetype = "dashed", color = "red", linewidth = 0.8) +
         ggplot2::xlab("Targets") + ggplot2::ylab("Rhat - 1") +
         ggplot2::theme_bw(base_size = 12) +
         ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 1))
-      save_fig(p5, "rhat_worst_targets_template")
-      res$rhat_worst_targets <- p5
+      save_fig(p7, "rhat_worst_targets_template")
+      res$rhat_worst_targets <- p7
+    }
+  }
+
+  # ---------- Optional histograms (kept, but focused on bottleneck interpretation) ----------
+  if (isTRUE(make_hist_ae_families) && NROW(grouped_data) && is.finite(sum(grouped_data$AE_med, na.rm = TRUE))) {
+    gd <- grouped_data[is.finite(grouped_data$AE_med), , drop = FALSE]
+    if (NROW(gd)) {
+      p8 <- ggplot2::ggplot(gd, ggplot2::aes(x = AE_med)) +
+        ggplot2::geom_histogram(bins = 30, fill = "steelblue", color = "white") +
+        ggplot2::labs(title = "Distribution of family-level median AE", x = "AE_med", y = "Count") +
+        ggplot2::theme_minimal(base_size = 12)
+      save_fig(p8, "hist_family_AE_med")
+      res$hist_family_AE_med <- p8
+    }
+  }
+
+  if (isTRUE(make_hist_ce_families) && NROW(grouped_data) && is.finite(sum(grouped_data$CE_med, na.rm = TRUE))) {
+    gd <- grouped_data[is.finite(grouped_data$CE_med), , drop = FALSE]
+    if (NROW(gd)) {
+      p9 <- ggplot2::ggplot(gd, ggplot2::aes(x = CE_med)) +
+        ggplot2::geom_histogram(bins = 30, fill = "darkgreen", color = "white") +
+        ggplot2::labs(title = "Distribution of family-level median CE", x = "CE_med", y = "Count") +
+        ggplot2::theme_minimal(base_size = 12)
+      save_fig(p9, "hist_family_CE_med")
+      res$hist_family_CE_med <- p9
     }
   }
 
   invisible(res)
 }
+
 
 #' Fast bottleneck plots (samplers-only) for large models
 #'

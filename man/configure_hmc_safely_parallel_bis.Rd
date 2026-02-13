@@ -16,7 +16,7 @@ configure_hmc_safely_parallel_bis(
   show_compiler_output = FALSE,
   seed = 1L,
   n_cores = nchains,
-  samplesAsCodaMCMC = TRUE,
+  samplesAsCodaMCMC = FALSE,
   opts = NULL
 )
 }
